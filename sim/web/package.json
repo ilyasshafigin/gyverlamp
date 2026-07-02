@@ -1,0 +1,15 @@
+{
+  "name": "gyverlamp-sim-web",
+  "version": "0.1.0",
+  "description": "Static HTTP server for the GyverLamp WASM simulator UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:wasm": "cd ../wasm \u0026\u0026 ./build.sh",
+    "sim": "npm run build:wasm \u0026\u0026 node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}

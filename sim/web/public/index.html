@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GyverLamp Simulator</title>
+  <style>
+    :root {
+      --bg: #0b0c0f;
+      --surface: #16181d;
+      --surface-2: #1e2128;
+      --border: #2a2e36;
+      --text: #e8eaed;
+      --text-secondary: #9aa0a6;
+      --accent: #0ea5e9;
+      --accent-2: #f59e0b;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(22, 24, 29, 0.85);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .status-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.connecting::before {
+      animation: pulse 1.2s infinite;
+    }
+
+    .status-badge.connected {
+      color: var(--success);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .status-badge.reconnecting {
+      color: var(--accent-2);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .status-badge.disconnected,
+    .status-badge.error {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .simulator {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .simulator {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        padding: 12px;
+        gap: 12px;
+      }
+      .panel {
+        order: 2;
+        max-height: none;
+      }
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .matrix-wrap {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    #matrix {
+      width: min(100%, calc(100vh - 220px), 720px);
+      min-width: min(100%, 320px);
+      height: auto;
+      display: block;
+      border-radius: 4px;
+      background: #000;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 20px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    @media (max-width: 480px) {
+      #matrix {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    #matrix.diffuser {
+      image-rendering: auto;
+      border-radius: 14px;
+    }
+
+    .stage-info {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .status-detail {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .status-detail .label {
+      color: var(--text-secondary);
+    }
+
+    .status-detail .value {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .telemetry {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .telemetry > div {
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .telemetry .label {
+      display: block;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .telemetry .value {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    select {
+      width: 100%;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 52px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .slider-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-row label {
+      margin: 0;
+      font-size: 0.85rem;
+    }
+
+    .slider-row input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .slider-row span {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .slider-row.dim {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .toggle-btn.active {
+      background: rgba(14, 165, 233, 0.14);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #262a32;
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #061018;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: #38bdf8;
+      border-color: #38bdf8;
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    #cylinderCanvas {
+      display: none;
+      width: min(100%, calc(100vh - 220px), 720px);
+      min-width: min(100%, 320px);
+      height: auto;
+      aspect-ratio: 1 / 1;
+      background: #000;
+      border-radius: 4px;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 20px 60px rgba(0, 0, 0, 0.55);
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #cylinderCanvas:active {
+      cursor: grabbing;
+    }
+
+    @media (max-width: 480px) {
+      #cylinderCanvas {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1>GyverLamp Simulator</h1>
+    <div id="connectionStatus" class="status-badge connecting"><span class="text">Connecting…</span></div>
+  </header>
+
+  <main class="simulator">
+    <section class="stage">
+      <div class="matrix-wrap">
+        <canvas id="matrix" width="16" height="16"></canvas>
+        <canvas id="cylinderCanvas"></canvas>
+      </div>
+      <div id="stageInfo" class="stage-info">Waiting for frames…</div>
+    </section>
+
+    <aside class="panel">
+      <section class="card status-card">
+        <h2>Status / Telemetry</h2>
+        <div id="statusDetail" class="status-detail">
+          <span class="label">Effect:</span> <span class="value">—</span><br>
+          <span class="label">Palette:</span> <span class="value">—</span>
+        </div>
+        <div class="telemetry">
+          <div>
+            <span class="label">Frame</span>
+            <span id="frameInfo" class="value">—</span>
+          </div>
+          <div>
+            <span class="label">Last frame</span>
+            <span id="lastFrameAge" class="value">—</span>
+          </div>
+          <div>
+            <span class="label">Render</span>
+            <span id="renderInfo" class="value">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Effect</h2>
+        <label for="effect">Effect</label>
+        <select id="effect"></select>
+        <label for="palette">Palette</label>
+        <select id="palette"></select>
+      </section>
+
+      <section class="card">
+        <h2>Parameters</h2>
+        <div class="slider-row">
+          <label for="brightness">Brightness</label>
+          <input id="brightness" type="range" min="0" max="255" value="255">
+          <span id="brightnessValue">255</span>
+        </div>
+        <div class="slider-row">
+          <label for="speed">Speed</label>
+          <input id="speed" type="range" min="0" max="255" value="128">
+          <span id="speedValue">128</span>
+        </div>
+        <div class="slider-row">
+          <label for="scale">Scale</label>
+          <input id="scale" type="range" min="0" max="255" value="128">
+          <span id="scaleValue">128</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Audio</h2>
+        <div id="audioStatusDetail" class="status-detail">
+          <span class="label">Mic:</span> <span id="audioStatusValue" class="value">Loading…</span>
+        </div>
+        <div class="btn-row" style="margin-bottom:10px">
+          <button id="audioMicToggle" type="button" class="primary" disabled>Enable mic</button>
+        </div>
+        <div id="audioControls" hidden>
+          <label for="audioMode">Mode</label>
+          <select id="audioMode">
+            <option value="0">Off</option>
+            <option value="1">Brightness</option>
+            <option value="2">Speed</option>
+            <option value="3">Scale</option>
+            <option value="4">Effect</option>
+          </select>
+          <label for="audioBand">Band</label>
+          <select id="audioBand">
+            <option value="0">Level</option>
+            <option value="1">Bass</option>
+            <option value="2">Treble</option>
+          </select>
+          <div class="slider-row">
+            <label for="audioAmount">Amount</label>
+            <input id="audioAmount" type="range" min="0" max="255" value="0">
+            <span id="audioAmountValue">0</span>
+          </div>
+          <div class="slider-row">
+            <label for="micGain">Mic gain</label>
+            <input id="micGain" type="range" min="25" max="400" value="100">
+            <span id="micGainValue">100%</span>
+          </div>
+          <div class="telemetry">
+            <div>
+              <span class="label">Level</span>
+              <span id="audioLevelValue" class="value">—</span>
+            </div>
+            <div>
+              <span class="label">Bass</span>
+              <span id="audioBassValue" class="value">—</span>
+            </div>
+            <div>
+              <span class="label">Treble</span>
+              <span id="audioTrebleValue" class="value">—</span>
+            </div>
+          </div>
+          <div class="telemetry" style="margin-top:8px">
+            <div>
+              <span class="label">Available</span>
+              <span id="audioAvailableValue" class="value">—</span>
+            </div>
+            <div>
+              <span class="label">ADC underruns</span>
+              <span id="audioUnderrunsValue" class="value">—</span>
+            </div>
+            <div>
+              <span class="label">Overflows</span>
+              <span id="audioOverflowsValue" class="value">—</span>
+            </div>
+          </div>
+          <p class="hint">Mic starts only after click. If unavailable, effects use simulator fallback.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Render</h2>
+        <div class="toggle-row">
+          <button id="diffuserSharp" type="button" class="toggle-btn active">Sharp</button>
+          <button id="diffuserDiffused" type="button" class="toggle-btn">Diffused</button>
+          <button id="diffuserCylinder" type="button" class="toggle-btn">Cylinder</button>
+        </div>
+        <div id="blurRow" class="slider-row dim">
+          <label for="diffuserBlur">Blur</label>
+          <input id="diffuserBlur" type="range" min="0" max="100" value="30" disabled>
+          <span id="diffuserBlurValue">30%</span>
+        </div>
+        <div id="bloomRow" class="slider-row dim">
+          <label for="diffuserBloom">Bloom</label>
+          <input id="diffuserBloom" type="range" min="0" max="100" value="80" disabled>
+          <span id="diffuserBloomValue">80%</span>
+        </div>
+        <p class="hint">Sharp shows raw pixels. Diffused simulates a white shade. Cylinder wraps the matrix around a 3D lamp; the same shade filters apply — drag to spin.</p>
+      </section>
+
+      <section class="card">
+        <h2>Playback</h2>
+        <div class="btn-row">
+          <button id="pause" type="button" class="primary">Pause</button>
+          <button id="step" type="button" disabled>Step</button>
+          <button id="resetDefaults" type="button">Reset</button>
+        </div>
+        <p class="hint">Space pauses or resumes. Right arrow steps one frame while paused. R resets the current effect.</p>
+      </section>
+
+      <section class="card">
+        <h2>Power</h2>
+        <div class="btn-row">
+          <button id="powerOn" type="button">On</button>
+          <button id="powerOff" type="button">Off</button>
+          <button id="powerToggle" type="button">Toggle</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Effect Step</h2>
+        <div class="btn-row">
+          <button id="effectPrev" type="button">Prev</button>
+          <button id="effectNext" type="button">Next</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Notification</h2>
+        <div class="btn-row" style="margin-bottom:10px">
+          <input id="notifyTextInput" type="text" placeholder="Text message" maxlength="160" style="flex:1;min-width:0;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:0.9rem;">
+          <button id="notifyTextSend" type="button" class="primary">Send</button>
+        </div>
+        <div class="btn-row" style="margin-bottom:10px">
+          <button id="notifyUser" type="button">Notify</button>
+          <button id="notifyWarning" type="button">Warning</button>
+          <button id="notifyAlarm" type="button">Alarm</button>
+          <button id="notifyClear" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Button</h2>
+        <div class="btn-row" style="margin-bottom:10px">
+          <button id="btnPress" type="button">Press</button>
+          <button id="btnRelease" type="button">Release</button>
+          <button id="btnTap" type="button" class="primary">Tap</button>
+        </div>
+        <div class="btn-row" style="margin-bottom:10px">
+          <button id="btnDouble" type="button">Double</button>
+          <button id="btnTriple" type="button">Triple</button>
+          <button id="btnHold" type="button">Hold</button>
+          <button id="btnStep" type="button">Step</button>
+        </div>
+        <p class="hint">Button simulation maps to production TouchButton semantics. Double/triple/hold/step are ignored while power is off. Tap toggles power or dismisses an active notification.</p>
+      </section>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

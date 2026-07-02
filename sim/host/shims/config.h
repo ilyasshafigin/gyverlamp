@@ -1,0 +1,16 @@
+#pragma once
+
+#include "FastLED.h"
+#include "Arduino.h"
+
+#define WIDTH FIRMWARE_WIDTH
+#define HEIGHT FIRMWARE_HEIGHT
+#define NUM_LEDS FIRMWARE_NUM_LEDS
+
+#define CONNECTION_ANGLE FIRMWARE_CONNECTION_ANGLE
+#define STRIP_DIRECTION  FIRMWARE_STRIP_DIRECTION
+
+#define CURRENT_LIMIT 0
+#define COLOR_ORDER 0
+#define LED_TYPE 0
+#define LED_PIN 0

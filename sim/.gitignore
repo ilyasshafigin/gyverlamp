@@ -1,0 +1,5 @@
+node_modules/
+build/
+web/public/wasm/
+.DS_Store
+*.log

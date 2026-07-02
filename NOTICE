@@ -1,0 +1,49 @@
+GyverLamp firmware
+Copyright (C) 2026 ilyasshafigin
+SPDX-License-Identifier: GPL-3.0-or-later
+
+This firmware links against the following third-party libraries declared in
+platformio.ini (lib_deps). See each project's LICENSE file for full terms.
+
+  FastLED
+    https://github.com/FastLED/FastLED
+    Licensed under the MIT License
+
+  GyverLibs/Settings
+    https://github.com/GyverLibs/Settings
+    Licensed under the GNU General Public License v3.0
+
+  paulino/HaMqttEntities
+    Copyright (c) Paulino Ruiz de Clavijo Vazquez <pruiz@us.es>
+    https://github.com/paulino/ha-mqtt-entities
+    Licensed under the Apache License, Version 2.0
+
+  GyverLibs/EncButton
+    https://github.com/GyverLibs/EncButton
+    Licensed under the MIT License
+
+  hmueller01/pubsubclient3  (fork of knolleary/PubSubClient)
+    Copyright (c) 2008-2020 Nicholas O'Leary
+    Copyright (c) 2025 Holger Mueller
+    https://github.com/hmueller01/pubsubclient3
+    Licensed under the MIT License
+
+  yiannisbourkelas/Uptime Library
+    Copyright (c) Yiannis Bourkelas
+    https://github.com/YiannisBourkelis/Uptime-Library
+    Licensed under the GNU General Public License v3.0
+
+  esphome/ESPAsyncWebServer-esphome  (fork of me-no-dev/ESPAsyncWebServer)
+    https://github.com/esphome/ESPAsyncWebServer
+    Licensed under the GNU Lesser General Public License v3.0
+
+  esphome/ESPAsyncTCP-esphome  (fork of me-no-dev/ESPAsyncTCP)
+    https://github.com/esphome/ESPAsyncTCP
+    Licensed under the GNU Lesser General Public License v3.0
+
+Platform and framework (build toolchain, not bundled source):
+
+  esp8266/Arduino core
+    https://github.com/esp8266/Arduino
+    LGPL-2.1 (core); bundled components vary (BearSSL MIT, LittleFS BSD-3,
+    SPIFFS MIT, uzlib Zlib, Espressif NONOS SDK MIT)
