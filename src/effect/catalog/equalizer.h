@@ -7,9 +7,9 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Equalizer;
   static constexpr const char* NAME = "Equalizer";
   static constexpr EffectSettingsSpec SETTINGS = {
-    255,  // brightness
-    128,  // speed
-    40,   // scale
+    255, // brightness
+    128, // speed
+    40,  // scale
   };
 
   void setup(EffectContext& ctx) override;

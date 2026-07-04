@@ -4,13 +4,10 @@ namespace AudioModulation {
 
   uint8_t selectAudioBand(const AudioFrame& audio, AudioBand band) {
     switch (band) {
-    case AudioBand::Bass:
-      return audio.bass;
-    case AudioBand::Treble:
-      return audio.treble;
-    case AudioBand::Level:
-    default:
-      return audio.level;
+      case AudioBand::Bass: return audio.bass;
+      case AudioBand::Treble: return audio.treble;
+      case AudioBand::Level:
+      default: return audio.level;
     }
   }
 
@@ -19,11 +16,7 @@ namespace AudioModulation {
     return base + boost;
   }
 
-  RuntimeEffectSettings applyModulation(
-    EffectSettings settings,
-    const AudioFrame& audio,
-    const AudioConfig& config
-  ) {
+  RuntimeEffectSettings applyModulation(EffectSettings settings, const AudioFrame& audio, const AudioConfig& config) {
     RuntimeEffectSettings runtime = RuntimeEffectSettings::fromSettings(settings);
 
     if (!audio.available || config.mode == AudioMode::Off || config.mode == AudioMode::Effect) {
@@ -33,23 +26,18 @@ namespace AudioModulation {
     const uint8_t signal = selectAudioBand(audio, config.band);
 
     switch (config.mode) {
-    case AudioMode::Brightness:
-      runtime.brightness = applyAudioBoost(settings.brightness, signal, config.amount);
-      break;
+      case AudioMode::Brightness:
+        runtime.brightness = applyAudioBoost(settings.brightness, signal, config.amount);
+        break;
 
-    case AudioMode::Speed:
-      runtime.speed = applyAudioBoost(settings.speed, signal, config.amount);
-      break;
+      case AudioMode::Speed: runtime.speed = applyAudioBoost(settings.speed, signal, config.amount); break;
 
-    case AudioMode::Scale:
-      runtime.scale = applyAudioBoost(settings.scale, signal, config.amount);
-      break;
+      case AudioMode::Scale: runtime.scale = applyAudioBoost(settings.scale, signal, config.amount); break;
 
-    default:
-      break;
+      default: break;
     }
 
     return runtime;
   }
 
-}
+} // namespace AudioModulation

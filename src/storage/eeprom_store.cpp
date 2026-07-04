@@ -72,7 +72,7 @@ namespace {
     return static_cast<AudioBand>(raw);
   }
 
-}
+} // namespace
 
 void EepromStore::init() {
   EEPROM.begin(EEPROM_SIZE);
@@ -217,7 +217,8 @@ bool EepromStore::readPowerState() {
 }
 
 void EepromStore::writePowerState(bool powerOn) {
-  EEPROM.write(EEPROM_POWER_STATE_ADDR, static_cast<uint8_t>(powerOn)); EEPROM.commit();
+  EEPROM.write(EEPROM_POWER_STATE_ADDR, static_cast<uint8_t>(powerOn));
+  EEPROM.commit();
 }
 
 uint16_t EepromStore::readAutoOffMinutes() {
@@ -360,7 +361,8 @@ bool EepromStore::writeAudioConfig(const AudioConfig& config) {
 
 void EepromStore::ensureEffectSettings(const EffectSettings* effects) {
   uint8_t initializedCount = EEPROM.read(EEPROM_EFFECT_SETTINGS_COUNT_ADDR);
-  if (initializedCount == 0xFF || initializedCount > static_cast<uint8_t>(EEPROM_EFFECT_SETTINGS_CAPACITY)) initializedCount = 0;
+  if (initializedCount == 0xFF || initializedCount > static_cast<uint8_t>(EEPROM_EFFECT_SETTINGS_CAPACITY))
+    initializedCount = 0;
   if (initializedCount >= Effects::COUNT) return;
 
   for (uint8_t i = initializedCount; i < Effects::COUNT; i++) {

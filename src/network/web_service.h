@@ -39,21 +39,20 @@ public:
     TimeService& time,
     TouchButton& button,
     WifiService& wifi
-  ) :
-    _audio(audio),
-    _eeprom(eeprom),
-    _effects(effects),
-    _mqtt(mqtt),
-    _notifications(notifications),
-    _power(power),
-    _rotation(rotation),
-    _webSettings(webSettings),
-    _settings(settings),
-    _stateNotifier(stateNotifier),
-    _time(time),
-    _wifi(wifi),
-    _button(button) {
-  }
+  )
+    : _audio(audio),
+      _eeprom(eeprom),
+      _effects(effects),
+      _mqtt(mqtt),
+      _notifications(notifications),
+      _power(power),
+      _rotation(rotation),
+      _webSettings(webSettings),
+      _settings(settings),
+      _stateNotifier(stateNotifier),
+      _time(time),
+      _wifi(wifi),
+      _button(button) {}
 
   void init();
   void tick();

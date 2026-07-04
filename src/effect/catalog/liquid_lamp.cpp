@@ -29,8 +29,8 @@ static const float BASE_DISTURB_MAX = 0.625f * min(WIDTH, HEIGHT);
 // Отступ от границ для отключения физики: ~18.75% от высоты
 static const float BOUNDARY_MARGIN = max(2.0f, 0.1875f * HEIGHT);
 
-float    liquidLampHot[enlargedObjectMaxCount];
-float    liquidLampSpf[enlargedObjectMaxCount];
+float liquidLampHot[enlargedObjectMaxCount];
+float liquidLampSpf[enlargedObjectMaxCount];
 unsigned liquidLampMX[enlargedObjectMaxCount];
 unsigned liquidLampSC[enlargedObjectMaxCount];
 unsigned liquidLampTR[enlargedObjectMaxCount];
@@ -59,7 +59,8 @@ inline void LiquidLampPosition() {
 
     // Бесшовное зацикливание по X
     if (trackingObjectPosX[i] >= WIDTH) trackingObjectPosX[i] -= WIDTH;
-    else if (trackingObjectPosX[i] < 0) trackingObjectPosX[i] += WIDTH;
+    else if (trackingObjectPosX[i] < 0)
+      trackingObjectPosX[i] += WIDTH;
 
     // Ограничение по Y
     if (trackingObjectPosY[i] > HEIGHT - 1) trackingObjectPosY[i] = HEIGHT - 1;
@@ -72,29 +73,35 @@ void LiquidLampPhysic() {
     // Отключаем физику у границ
     if (trackingObjectPosY[i] < BOUNDARY_MARGIN || trackingObjectPosY[i] > HEIGHT - 1 - BOUNDARY_MARGIN) continue;
 
-    for (uint8_t j = i + 1; j < enlargedObjectNum; j++) {  // Оптимизация: j = i+1
+    for (uint8_t j = i + 1; j < enlargedObjectNum; j++) { // Оптимизация: j = i+1
       if (trackingObjectPosY[j] < BOUNDARY_MARGIN || trackingObjectPosY[j] > HEIGHT - 1 - BOUNDARY_MARGIN) continue;
 
       // Радиус взаимодействия масштабируется с размером матрицы
       float radius = (trackingObjectShift[i] + trackingObjectShift[j]) * 0.5f;
 
       // Быстрая проверка коллизий
-      if (fabs(trackingObjectPosX[i] - trackingObjectPosX[j]) > radius * 2 ||
-        fabs(trackingObjectPosY[i] - trackingObjectPosY[j]) > radius * 2) continue;
+      if (
+        fabs(trackingObjectPosX[i] - trackingObjectPosX[j]) > radius * 2 ||
+        fabs(trackingObjectPosY[i] - trackingObjectPosY[j]) > radius * 2
+      )
+        continue;
 
       // Бесшовное расстояние по X
-      float dx = min(fabs(trackingObjectPosX[i] - trackingObjectPosX[j]), WIDTH - fabs(trackingObjectPosX[i] - trackingObjectPosX[j]));
+      float dx = min(
+        fabs(trackingObjectPosX[i] - trackingObjectPosX[j]), WIDTH - fabs(trackingObjectPosX[i] - trackingObjectPosX[j])
+      );
       float dy = fabs(trackingObjectPosY[i] - trackingObjectPosY[j]);
       float dist = sqrt3(dx * dx + dy * dy);
 
-      if (dist <= radius && dist > 0.01f) {  // Защита от деления на ноль
+      if (dist <= radius && dist > 0.01f) { // Защита от деления на ноль
         float nx = (trackingObjectPosX[j] - trackingObjectPosX[i]) / dist;
         float ny = (trackingObjectPosY[j] - trackingObjectPosY[i]) / dist;
 
         // Импульс с учётом массы
-        float p = 2 * (trackingObjectSpeedX[i] * nx + trackingObjectSpeedY[i] * ny -
-          trackingObjectSpeedX[j] * nx - trackingObjectSpeedY[j] * ny) /
-          (trackingObjectState[i] + trackingObjectState[j]);
+        float p = 2 *
+                  (trackingObjectSpeedX[i] * nx + trackingObjectSpeedY[i] * ny - trackingObjectSpeedX[j] * nx -
+                   trackingObjectSpeedY[j] * ny) /
+                  (trackingObjectState[i] + trackingObjectState[j]);
 
         float pnx = p * nx, pny = p * ny;
 
@@ -110,12 +117,12 @@ void LiquidLampPhysic() {
 // генератор палитр для Жидкой лампы (c) SottNick
 // HSV-точки градиента: { индекс, смещениеОттенка, насыщенность, яркость }.
 static const uint8_t MBVioletColors_arr[5][4] PROGMEM = {
-  {0  , 0  , 255, 255}, //  0, 255,   0,   0, // red
-  //{1  , 108, 161, 122}, //  1,  46, 123,  87, // seaBlue
-    {1  , 155, 209, 255}, //  1,  46, 124, 255, // сделал поярче цвет воды
-    {80 , 170, 255, 140}, // 80,   0,   0, 139, // DarkBlue
-    {150, 213, 255, 128}, //150, 128,   0, 128, // purple
-    {255, 0  , 255, 255}  //255, 255,   0,   0  // red again
+  {0, 0, 255, 255},     //  0, 255,   0,   0, // red
+                        //{1  , 108, 161, 122}, //  1,  46, 123,  87, // seaBlue
+  {1, 155, 209, 255},   //  1,  46, 124, 255, // сделал поярче цвет воды
+  {80, 170, 255, 140},  // 80,   0,   0, 139, // DarkBlue
+  {150, 213, 255, 128}, //150, 128,   0, 128, // purple
+  {255, 0, 255, 255}    //255, 255,   0,   0  // red again
 };
 
 static const bool isColored = true;
@@ -125,7 +132,8 @@ void EffectLiquidLamp::setup(EffectContext& ctx) {
     hue = ctx.scale;
     deltaHue = !(hue & 0x01);
 
-    uint16_t objectCount = constrain((static_cast<uint16_t>(WIDTH) * static_cast<uint16_t>(HEIGHT)) / 10U, 2U, enlargedObjectMaxCount);
+    uint16_t objectCount =
+      constrain((static_cast<uint16_t>(WIDTH) * static_cast<uint16_t>(HEIGHT)) / 10U, 2U, enlargedObjectMaxCount);
     enlargedObjectNum = static_cast<uint8_t>(objectCount);
   } else {
     hue = random8();
@@ -161,7 +169,7 @@ void EffectLiquidLamp::setup(EffectContext& ctx) {
 
 void EffectLiquidLamp::render(EffectContext& ctx) {
   // Speedfactor: масштабируется с размером для постоянной визуальной скорости
-  speedfactor = (ctx.speed / 64.0f + 0.1f) / SCALE_FACTOR;  // Компенсация размера матрицы
+  speedfactor = (ctx.speed / 64.0f + 0.1f) / SCALE_FACTOR; // Компенсация размера матрицы
 
   bool rebuildPalette = false;
 
@@ -196,10 +204,14 @@ void EffectLiquidLamp::render(EffectContext& ctx) {
 
       for (uint8_t i = 0; i < enlargedObjectNum; i++) {
         // Быстрое отсечение: если пиксель далеко от пузыря — пропускаем
-        if (fabs(x - trackingObjectPosX[i]) > liquidLampTR[i] || fabs(y - trackingObjectPosY[i]) > liquidLampTR[i]) continue;
+        if (fabs(x - trackingObjectPosX[i]) > liquidLampTR[i] || fabs(y - trackingObjectPosY[i]) > liquidLampTR[i])
+          continue;
 
         // Бесшовное расстояние по X
-        float dx = min(fabs(trackingObjectPosX[i] - static_cast<float>(x)), WIDTH - fabs(trackingObjectPosX[i] - static_cast<float>(x)));
+        float dx = min(
+          fabs(trackingObjectPosX[i] - static_cast<float>(x)),
+          WIDTH - fabs(trackingObjectPosX[i] - static_cast<float>(x))
+        );
         float dy = fabs(trackingObjectPosY[i] - static_cast<float>(y));
         float d = sqrt3(dx * dx + dy * dy);
 

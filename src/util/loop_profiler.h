@@ -37,13 +37,11 @@ public:
   static void resetMax();
   static void tick();
 
-  template <typename Func>
-  static void measure(Section section, Func&& func) {
+  template <typename Func> static void measure(Section section, Func&& func) {
     begin(section);
     func();
     end(section);
   }
-
 
   static const Sample& get(Section section) { return _samples[section]; }
 
@@ -60,9 +58,6 @@ private:
   static void end(Section) {}
   static void resetMax() {}
   static void tick() {}
-  template <typename Func>
-  static void measure(Section section, Func&& func) {
-    func();
-  }
+  template <typename Func> static void measure(Section section, Func&& func) { func(); }
 #endif
 };

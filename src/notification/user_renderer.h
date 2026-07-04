@@ -11,11 +11,8 @@ class RunningText;
 
 class UserNotificationRenderer {
 public:
-  explicit UserNotificationRenderer(
-    RunningText& runningText
-  ) :
-    _runningText(runningText) {
-  }
+  explicit UserNotificationRenderer(RunningText& runningText)
+    : _runningText(runningText) {}
 
   void render(NotificationOverlay& overlay, const NotificationSnapshot& notification);
 

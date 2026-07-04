@@ -10,14 +10,18 @@ namespace {
 
   String formatClock(uint8_t hrs, uint8_t mins, bool showSeparator) {
     char buf[16];
-    snprintf(buf, sizeof(buf), "%02u%c%02u      ",
+    snprintf(
+      buf,
+      sizeof(buf),
+      "%02u%c%02u      ",
       static_cast<unsigned>(hrs),
       showSeparator ? ':' : ' ',
-      static_cast<unsigned>(mins));
+      static_cast<unsigned>(mins)
+    );
     return String(buf);
   }
 
-}  // namespace
+} // namespace
 
 void EffectClock::setup(EffectContext& ctx) {
   _offset = ctx.width;
@@ -70,4 +74,3 @@ void EffectClock::rebuildText(EffectContext& ctx) {
   const uint8_t mins = ctx.time.getMinutes();
   _text = formatClock(hrs, mins, _separatorVisible);
 }
-

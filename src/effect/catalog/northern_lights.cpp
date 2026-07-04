@@ -14,13 +14,15 @@
 //   - вместо набора палитр в оригинальном эффекте сделан генератор палитр
 //   - генератор палитр для Северного сияния (c) SottNick
 
-#define AURORA_COLOR_RANGE 10 // (+/-10 единиц оттенка) диапазон, в котором плавает цвет сияния относительно выбранного оттенка
-#define AURORA_COLOR_PERIOD 2 // (2 раза в минуту) частота, с которой происходит колебание выбранного оттенка в разрешённом диапазоне
+#define AURORA_COLOR_RANGE \
+  10 // (+/-10 единиц оттенка) диапазон, в котором плавает цвет сияния относительно выбранного оттенка
+#define AURORA_COLOR_PERIOD \
+  2 // (2 раза в минуту) частота, с которой происходит колебание выбранного оттенка в разрешённом диапазоне
 
 // HSV-точки градиента: { индекс, смещениеОттенка, насыщенность, яркость }.
 static const uint8_t MBAuroraColors_arr[5][4] PROGMEM = {
-  {0  , 0 , 255,   0},// black
-  {80 , 0 , 255, 255},
+  {0, 0, 255, 0}, // black
+  {80, 0, 255, 255},
   {130, 25, 220, 255},
   {180, 25, 185, 255},
   {255, 25, 155, 255} //245
@@ -86,7 +88,13 @@ void EffectNorthernLights::render(EffectContext& ctx) {
     const uint8_t t = fabs(static_cast<float>(HEIGHT) / 2.0 - static_cast<float>(y)) * emitterX;
     for (uint8_t x = 0; x < WIDTH; x++) {
       polarTimer++;
-      ctx.led.drawPixel(x, y, ColorFromPalette(rgbPalette, qsub8(inoise8(polarTimer % 2 + x * ff_z, y * 16 + polarTimer % 16, polarTimer / speedfactor), t)));
+      ctx.led.drawPixel(
+        x,
+        y,
+        ColorFromPalette(
+          rgbPalette, qsub8(inoise8(polarTimer % 2 + x * ff_z, y * 16 + polarTimer % 16, polarTimer / speedfactor), t)
+        )
+      );
     }
   }
 }

@@ -8,7 +8,8 @@ class EepromStore;
 
 class SettingsRepository {
 public:
-  explicit SettingsRepository(EepromStore& eeprom): _eeprom(eeprom) {}
+  explicit SettingsRepository(EepromStore& eeprom)
+    : _eeprom(eeprom) {}
 
   void init();
   void tick(Effects::Id currentEffectId);

@@ -105,12 +105,16 @@ void TouchButton::tick() {
       uint8_t newBrightness = effectSettings.brightness;
       if (_brightDirection) {
         if (effectSettings.brightness < 10U) newBrightness = effectSettings.brightness + 1U;
-        else if (effectSettings.brightness < 250U) newBrightness = effectSettings.brightness + 5U;
-        else newBrightness = 255U;
+        else if (effectSettings.brightness < 250U)
+          newBrightness = effectSettings.brightness + 5U;
+        else
+          newBrightness = 255U;
       } else {
         if (effectSettings.brightness > 15U) newBrightness = effectSettings.brightness - 5U;
-        else if (effectSettings.brightness > 1U) newBrightness = effectSettings.brightness - 1U;
-        else newBrightness = 1U;
+        else if (effectSettings.brightness > 1U)
+          newBrightness = effectSettings.brightness - 1U;
+        else
+          newBrightness = 1U;
       }
       _effects.setEffectBrightness(newBrightness);
       _notifications.onButtonBrightness(newBrightness, _brightDirection);
@@ -121,9 +125,13 @@ void TouchButton::tick() {
 
 #else
 
-void TouchButton::detect() {}
-void TouchButton::init() {}
-bool TouchButton::setEnabled(bool enabled) {}
-void TouchButton::tick() {}
+void TouchButton::detect() {
+}
+void TouchButton::init() {
+}
+bool TouchButton::setEnabled(bool enabled) {
+}
+void TouchButton::tick() {
+}
 
 #endif

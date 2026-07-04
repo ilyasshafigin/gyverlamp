@@ -5,13 +5,10 @@ class NotificationController;
 
 class OtaService {
 public:
-  explicit OtaService(
-    FrameRenderer& frameRenderer,
-    NotificationController& notifications
-  )
+  explicit OtaService(FrameRenderer& frameRenderer, NotificationController& notifications)
 #ifdef USE_OTA
     : _frameRenderer(frameRenderer),
-    _notifications(notifications) {
+      _notifications(notifications) {
   }
 #else
   {

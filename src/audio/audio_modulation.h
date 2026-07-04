@@ -9,10 +9,6 @@ namespace AudioModulation {
   uint8_t selectAudioBand(const AudioFrame& audio, AudioBand band);
   uint8_t applyAudioBoost(uint8_t base, uint8_t signal, uint8_t amount);
 
-  RuntimeEffectSettings applyModulation(
-    EffectSettings settings,
-    const AudioFrame& audio,
-    const AudioConfig& config
-  );
+  RuntimeEffectSettings applyModulation(EffectSettings settings, const AudioFrame& audio, const AudioConfig& config);
 
-}
+} // namespace AudioModulation

@@ -99,20 +99,51 @@ constexpr uint8_t EEPROM_AUDIO_MARKER = 0xA6;
 constexpr int EEPROM_EFFECT_SETTINGS_BASE = EEPROM_AUDIO_BLOCK_ADDR + EEPROM_AUDIO_BLOCK_SIZE; // 300
 constexpr uint8_t EEPROM_EFFECT_SETTINGS_CAPACITY = 50;
 
-
-static_assert(EEPROM_LAYOUT_META_ADDR + EEPROM_LAYOUT_META_SIZE <= EEPROM_WIFI_BLOCK_ADDR, "EEPROM layout metadata must not overlap WiFi block");
+static_assert(
+  EEPROM_LAYOUT_META_ADDR + EEPROM_LAYOUT_META_SIZE <= EEPROM_WIFI_BLOCK_ADDR,
+  "EEPROM layout metadata must not overlap WiFi block"
+);
 static_assert(EEPROM_WIFI_CONFIG_SIZE <= EEPROM_WIFI_BLOCK_SIZE, "EEPROM WiFi payload must fit into WiFi block");
-static_assert(EEPROM_WIFI_BLOCK_ADDR + EEPROM_WIFI_BLOCK_SIZE <= EEPROM_MQTT_BLOCK_ADDR, "EEPROM WiFi block must not overlap MQTT block");
+static_assert(
+  EEPROM_WIFI_BLOCK_ADDR + EEPROM_WIFI_BLOCK_SIZE <= EEPROM_MQTT_BLOCK_ADDR,
+  "EEPROM WiFi block must not overlap MQTT block"
+);
 static_assert(EEPROM_MQTT_CONFIG_SIZE <= EEPROM_MQTT_BLOCK_SIZE, "EEPROM MQTT payload must fit into MQTT block");
-static_assert(EEPROM_MQTT_BLOCK_ADDR + EEPROM_MQTT_BLOCK_SIZE <= EEPROM_SYSTEM_STATE_BLOCK_ADDR, "EEPROM MQTT block must not overlap system state block");
-static_assert(EEPROM_SYSTEM_STATE_BLOCK_ADDR + EEPROM_SYSTEM_STATE_BLOCK_SIZE <= EEPROM_EFFECT_STATE_BLOCK_ADDR, "EEPROM system state block must not overlap effect state block");
-static_assert(EEPROM_EFFECT_STATE_BLOCK_ADDR + EEPROM_EFFECT_STATE_BLOCK_SIZE <= EEPROM_ROTATION_BLOCK_ADDR, "EEPROM effect state block must not overlap rotation block");
-static_assert(EEPROM_ROTATION_BLOCK_ADDR + EEPROM_ROTATION_BLOCK_SIZE <= EEPROM_AUTO_POWER_BLOCK_ADDR, "EEPROM rotation block must not overlap auto power block");
-static_assert(EEPROM_AUTO_POWER_BLOCK_ADDR + EEPROM_AUTO_POWER_BLOCK_SIZE <= EEPROM_NOTIFICATION_BLOCK_ADDR, "EEPROM auto power block must not overlap notification block");
-static_assert(EEPROM_NOTIFICATION_BLOCK_ADDR + EEPROM_NOTIFICATION_BLOCK_SIZE <= EEPROM_AUDIO_BLOCK_ADDR, "EEPROM notification block must not overlap audio config");
-static_assert(EEPROM_AUDIO_BLOCK_ADDR + EEPROM_AUDIO_BLOCK_SIZE <= EEPROM_EFFECT_SETTINGS_BASE, "EEPROM audio config must not overlap effect settings");
-static_assert(Effects::COUNT <= EEPROM_EFFECT_SETTINGS_CAPACITY, "EEPROM effect settings capacity is too small for Effects::COUNT");
-static_assert(EEPROM_EFFECT_SETTINGS_BASE + EEPROM_EFFECT_SETTINGS_CAPACITY * sizeof(EffectSettings) <= EEPROM_SIZE, "EEPROM effect settings must fit into EEPROM_SIZE");
+static_assert(
+  EEPROM_MQTT_BLOCK_ADDR + EEPROM_MQTT_BLOCK_SIZE <= EEPROM_SYSTEM_STATE_BLOCK_ADDR,
+  "EEPROM MQTT block must not overlap system state block"
+);
+static_assert(
+  EEPROM_SYSTEM_STATE_BLOCK_ADDR + EEPROM_SYSTEM_STATE_BLOCK_SIZE <= EEPROM_EFFECT_STATE_BLOCK_ADDR,
+  "EEPROM system state block must not overlap effect state block"
+);
+static_assert(
+  EEPROM_EFFECT_STATE_BLOCK_ADDR + EEPROM_EFFECT_STATE_BLOCK_SIZE <= EEPROM_ROTATION_BLOCK_ADDR,
+  "EEPROM effect state block must not overlap rotation block"
+);
+static_assert(
+  EEPROM_ROTATION_BLOCK_ADDR + EEPROM_ROTATION_BLOCK_SIZE <= EEPROM_AUTO_POWER_BLOCK_ADDR,
+  "EEPROM rotation block must not overlap auto power block"
+);
+static_assert(
+  EEPROM_AUTO_POWER_BLOCK_ADDR + EEPROM_AUTO_POWER_BLOCK_SIZE <= EEPROM_NOTIFICATION_BLOCK_ADDR,
+  "EEPROM auto power block must not overlap notification block"
+);
+static_assert(
+  EEPROM_NOTIFICATION_BLOCK_ADDR + EEPROM_NOTIFICATION_BLOCK_SIZE <= EEPROM_AUDIO_BLOCK_ADDR,
+  "EEPROM notification block must not overlap audio config"
+);
+static_assert(
+  EEPROM_AUDIO_BLOCK_ADDR + EEPROM_AUDIO_BLOCK_SIZE <= EEPROM_EFFECT_SETTINGS_BASE,
+  "EEPROM audio config must not overlap effect settings"
+);
+static_assert(
+  Effects::COUNT <= EEPROM_EFFECT_SETTINGS_CAPACITY, "EEPROM effect settings capacity is too small for Effects::COUNT"
+);
+static_assert(
+  EEPROM_EFFECT_SETTINGS_BASE + EEPROM_EFFECT_SETTINGS_CAPACITY * sizeof(EffectSettings) <= EEPROM_SIZE,
+  "EEPROM effect settings must fit into EEPROM_SIZE"
+);
 
 constexpr int EEPROM_EFFECT_SETTINGS_ADDR(int effectIndex) {
   return EEPROM_EFFECT_SETTINGS_BASE + 3 * effectIndex;

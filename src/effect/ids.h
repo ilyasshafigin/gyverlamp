@@ -31,10 +31,14 @@ namespace Effects {
     INVALID = 255,
   };
 
-  constexpr uint8_t toIndex(Id id) { return static_cast<uint8_t>(id); }
-  constexpr Id toId(uint8_t raw) { return static_cast<Id>(raw); }
+  constexpr uint8_t toIndex(Id id) {
+    return static_cast<uint8_t>(id);
+  }
+  constexpr Id toId(uint8_t raw) {
+    return static_cast<Id>(raw);
+  }
 
   constexpr uint8_t COUNT = toIndex(Id::COUNT);
   constexpr Id DEFAULT_ID = Id::Color;
 
-}
+} // namespace Effects

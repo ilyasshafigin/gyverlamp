@@ -10,7 +10,7 @@
 // Таблица обычно хранится в PROGMEM.
 // Это не готовая FastLED-палитра, а компактное описание,
 // из которого buildShiftedHsvGradientPalette() собирает CRGBPalette16.
-using HsvGradientStopTable = const uint8_t(*)[4];
+using HsvGradientStopTable = const uint8_t (*)[4];
 
 // Собирает 16-цветную RGB-палитру FastLED из компактных HSV-точек градиента.
 //

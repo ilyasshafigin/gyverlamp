@@ -17,9 +17,10 @@ void EffectShadows::render(EffectContext& ctx) {
   uint8_t sat8 = beatsin88(87, 220, 250);
   uint8_t brightdepth = beatsin88(341, 96, 224);
   uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
-  uint8_t msmultiplier = beatsin88(map(ctx.speed, 1, 255, 100, 255), 32, map(ctx.speed, 1, 255, 60, 255));//beatsin88(147, 23, 60);
+  uint8_t msmultiplier =
+    beatsin88(map(ctx.speed, 1, 255, 100, 255), 32, map(ctx.speed, 1, 255, 60, 255)); //beatsin88(147, 23, 60);
 
-  uint16_t hue16 = sHue16;//gHue * 256;
+  uint16_t hue16 = sHue16; //gHue * 256;
   uint16_t hueinc16 = beatsin88(113, 1, 3000);
 
   sPseudotime += ctx.deltaMs * msmultiplier;
@@ -39,7 +40,9 @@ void EffectShadows::render(EffectContext& ctx) {
 
     CRGB newcolor;
     if (ctx.palette) {
-      newcolor = ColorFromPalette(*ctx.palette, hue8, map8(bri8, map(ctx.scale, 32, 255, 32, 125), map(ctx.scale, 32, 255, 125, 250)));
+      newcolor = ColorFromPalette(
+        *ctx.palette, hue8, map8(bri8, map(ctx.scale, 32, 255, 32, 125), map(ctx.scale, 32, 255, 125, 250))
+      );
     } else {
       newcolor = CHSV(hue8, sat8, map8(bri8, map(ctx.scale, 32, 255, 32, 125), map(ctx.scale, 32, 255, 125, 250)));
     }

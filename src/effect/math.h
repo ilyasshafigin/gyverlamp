@@ -5,7 +5,8 @@
 
 uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
 uint8_t mapcos8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);
-uint8_t beatcos8(accum88 beats_per_minute, uint8_t lowest, uint8_t highest, uint32_t timebase = 0, uint8_t phase_offset = 0);
+uint8_t
+beatcos8(accum88 beats_per_minute, uint8_t lowest, uint8_t highest, uint32_t timebase = 0, uint8_t phase_offset = 0);
 
 // Преобразует фазу 0..7 в значение волны 0..255 по типу синусоиды.
 // Период повторяется каждые 8 значений.
@@ -22,13 +23,8 @@ static inline float sqrt3(const float x) {
 }
 
 //аналог ардуино функции map(), но только для float
-static inline float fmap(
-  const float x,
-  const float in_min,
-  const float in_max,
-  const float out_min,
-  const float out_max
-) {
+static inline float
+fmap(const float x, const float in_min, const float in_max, const float out_min, const float out_max) {
   return (out_max - out_min) * (x - in_min) / (in_max - in_min) + out_min;
 }
 

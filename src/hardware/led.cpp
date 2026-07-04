@@ -12,8 +12,8 @@ static uint16_t ledXYFunction(uint16_t x, uint16_t y, uint16_t width, uint16_t h
   }
 }
 
-Led::Led() :
-  _xyMap(fl::XYMap::constructWithUserFunction(WIDTH, HEIGHT, ledXYFunction)) {
+Led::Led()
+  : _xyMap(fl::XYMap::constructWithUserFunction(WIDTH, HEIGHT, ledXYFunction)) {
 }
 
 void Led::init() {
@@ -25,13 +25,23 @@ void Led::init() {
 }
 
 //void Led::clearLeds() { fill_solid(_leds, NUM_LEDS, CRGB::Black); } - не работает
-void Led::clearLeds() { FastLED.clear(); }
-void Led::showLeds(uint8_t brightness) { FastLED.show(brightness); }
-void Led::blackout() { FastLED.clear(true); }
+void Led::clearLeds() {
+  FastLED.clear();
+}
+void Led::showLeds(uint8_t brightness) {
+  FastLED.show(brightness);
+}
+void Led::blackout() {
+  FastLED.clear(true);
+}
 
-void Led::clearLedsBuff() { fill_solid(_ledsbuff, NUM_LEDS, CRGB::Black); }
+void Led::clearLedsBuff() {
+  fill_solid(_ledsbuff, NUM_LEDS, CRGB::Black);
+}
 
-void Led::copyLedsBuffToLeds() { fl::memcpy(_leds, _ledsbuff, sizeof(_leds)); }
+void Led::copyLedsBuffToLeds() {
+  fl::memcpy(_leds, _ledsbuff, sizeof(_leds));
+}
 
 // по мотивам
 // https://gist.github.com/sutaburosu/32a203c2efa2bb584f4b846a91066583
@@ -41,11 +51,8 @@ void Led::drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color) {
   // extract the fractional parts and derive their inverses
   uint8_t xx = (xt - static_cast<int>(xt)) * 255, yy = (yt - static_cast<int>(yt)) * 255, ix = 255 - xx, iy = 255 - yy;
   // calculate the intensities for each affected pixel
-#define WU_WEIGHT(a,b) ((uint8_t) (((a)*(b)+(a)+(b))>>8))
-  uint8_t wu[4] = {
-     WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy),
-     WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)
-  };
+#define WU_WEIGHT(a, b) ((uint8_t)(((a) * (b) + (a) + (b)) >> 8))
+  uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy), WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
   // multiply the intensities by the colour, and saturating-add them to the pixels
   for (uint8_t i = 0; i < 4; i++) {
     int16_t xn = x + (i & 1), yn = y + ((i >> 1) & 1);

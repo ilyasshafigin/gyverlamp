@@ -27,7 +27,9 @@ void UserNotificationRenderer::renderNotify(NotificationOverlay& overlay, uint32
   overlay.drawVerticalWave(CRGB(120, 210, 255), startedMs, 1800, 0, 250);
 }
 
-void UserNotificationRenderer::renderText(NotificationOverlay& overlay, const String& text, const CRGB& color, uint32_t startedMs) {
+void UserNotificationRenderer::renderText(
+  NotificationOverlay& overlay, const String& text, const CRGB& color, uint32_t startedMs
+) {
   if (_lastText != text || _lastTextStartedMs != startedMs) {
     _lastText = text;
     _lastTextStartedMs = startedMs;

@@ -29,16 +29,23 @@
 //   }
 // }
 
-void buildHsvGradientPalette(CRGBPalette16& out, HsvGradientStopTable palette, uint8_t hue, uint8_t rows, bool isInvert) {
+void buildHsvGradientPalette(
+  CRGBPalette16& out, HsvGradientStopTable palette, uint8_t hue, uint8_t rows, bool isInvert
+) {
   int8_t lastSlotUsed = -1;
   uint8_t istart8, iend8;
   CRGB rgbstart, rgbend;
 
   // начинаем с нуля
   if (isInvert) {
-    hsv2rgb_spectrum(CHSV(256 + hue - pgm_read_byte(&palette[0][1]), pgm_read_byte(&palette[0][2]), pgm_read_byte(&palette[0][3])), rgbstart);
+    hsv2rgb_spectrum(
+      CHSV(256 + hue - pgm_read_byte(&palette[0][1]), pgm_read_byte(&palette[0][2]), pgm_read_byte(&palette[0][3])),
+      rgbstart
+    );
   } else {
-    hsv2rgb_spectrum(CHSV(hue + pgm_read_byte(&palette[0][1]), pgm_read_byte(&palette[0][2]), pgm_read_byte(&palette[0][3])), rgbstart);
+    hsv2rgb_spectrum(
+      CHSV(hue + pgm_read_byte(&palette[0][1]), pgm_read_byte(&palette[0][2]), pgm_read_byte(&palette[0][3])), rgbstart
+    );
   }
 
   // начальный индекс палитры
@@ -48,9 +55,14 @@ void buildHsvGradientPalette(CRGBPalette16& out, HsvGradientStopTable palette, u
     int indexend = pgm_read_byte(&palette[i][0]);
 
     if (isInvert) {
-      hsv2rgb_spectrum(CHSV(256 + hue - pgm_read_byte(&palette[i][1]), pgm_read_byte(&palette[i][2]), pgm_read_byte(&palette[i][3])), rgbend);
+      hsv2rgb_spectrum(
+        CHSV(256 + hue - pgm_read_byte(&palette[i][1]), pgm_read_byte(&palette[i][2]), pgm_read_byte(&palette[i][3])),
+        rgbend
+      );
     } else {
-      hsv2rgb_spectrum(CHSV(hue + pgm_read_byte(&palette[i][1]), pgm_read_byte(&palette[i][2]), pgm_read_byte(&palette[i][3])), rgbend);
+      hsv2rgb_spectrum(
+        CHSV(hue + pgm_read_byte(&palette[i][1]), pgm_read_byte(&palette[i][2]), pgm_read_byte(&palette[i][3])), rgbend
+      );
     }
 
     istart8 = indexstart / 16;

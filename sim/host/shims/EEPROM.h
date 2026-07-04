@@ -9,7 +9,7 @@
 // with an in-memory buffer so the simulator boots with firmware-like defaults
 // without hardware.
 class EepromClass {
- public:
+public:
   uint16_t begin(uint16_t size) {
     _size = size <= capacity ? size : capacity;
     return _size;
@@ -25,14 +25,12 @@ class EepromClass {
     _data[address] = value;
   }
 
-  template <typename T>
-  void put(int address, const T& value) {
+  template <typename T> void put(int address, const T& value) {
     if (address < 0 || address + static_cast<int>(sizeof(T)) > static_cast<int>(_size)) return;
     std::memcpy(&_data[address], &value, sizeof(T));
   }
 
-  template <typename T>
-  void get(int address, T& value) const {
+  template <typename T> void get(int address, T& value) const {
     if (address < 0 || address + static_cast<int>(sizeof(T)) > static_cast<int>(_size)) {
       std::memset(&value, 0, sizeof(T));
       return;
@@ -44,7 +42,7 @@ class EepromClass {
 
   uint16_t length() const { return _size; }
 
- private:
+private:
   static constexpr uint16_t capacity = 512;
   uint16_t _size = capacity;
   uint8_t _data[capacity] = {};

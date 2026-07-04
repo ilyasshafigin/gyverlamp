@@ -3,7 +3,7 @@
 #include "running_text.h"
 #include "text_renderer.h"
 
-#define TEXT_HEIGHT 2     // высота, на которой бежит текст (от низа матрицы)
+#define TEXT_HEIGHT 2 // высота, на которой бежит текст (от низа матрицы)
 
 void RunningText::reset() {
   _offset = _width - 1;

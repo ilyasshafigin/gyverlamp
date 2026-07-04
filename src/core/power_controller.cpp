@@ -9,7 +9,7 @@
 namespace {
   constexpr uint16_t FADE_ON_MS = 400;
   constexpr uint16_t FADE_OFF_MS = 350;
-}
+} // namespace
 
 void PowerController::init() {
   _on = _eeprom.readPowerState();

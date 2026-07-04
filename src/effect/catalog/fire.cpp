@@ -20,40 +20,45 @@
 //  uint8_t .sat; => shiftValue[HEIGHT] (не хватило двухмерного массива на насыщенность)
 //  uint8_t .val; => noise3d[1][WIDTH][HEIGHT]
 
-#define FLAME_MAX_DY        256 // максимальная вертикальная скорость перемещения языков пламени за кадр.  имеется в виду 256/256 =   1 пиксель за кадр
-#define FLAME_MIN_DY        128 // минимальная вертикальная скорость перемещения языков пламени за кадр.   имеется в виду 128/256 = 0.5 пикселя за кадр
-#define FLAME_MAX_DX         32 // максимальная горизонтальная скорость перемещения языков пламени за кадр. имеется в виду 32/256 = 0.125 пикселя за кадр
-#define FLAME_MIN_DX       (-FLAME_MAX_DX)
-#define FLAME_MAX_VALUE     255 // максимальная начальная яркость языка пламени
-#define FLAME_MIN_VALUE     176 // минимальная начальная яркость языка пламени
+#define FLAME_MAX_DY \
+  256 // максимальная вертикальная скорость перемещения языков пламени за кадр.  имеется в виду 256/256 =   1 пиксель за кадр
+#define FLAME_MIN_DY \
+  128 // минимальная вертикальная скорость перемещения языков пламени за кадр.   имеется в виду 128/256 = 0.5 пикселя за кадр
+#define FLAME_MAX_DX \
+  32 // максимальная горизонтальная скорость перемещения языков пламени за кадр. имеется в виду 32/256 = 0.125 пикселя за кадр
+#define FLAME_MIN_DX (-FLAME_MAX_DX)
+#define FLAME_MAX_VALUE 255 // максимальная начальная яркость языка пламени
+#define FLAME_MIN_VALUE 176 // минимальная начальная яркость языка пламени
 
 //пришлось изобрести очередную функцию субпиксельной графики. на этот раз бесшовная по ИКСу, работающая в цветовом пространстве HSV и без смешивания цветов
 void wu_pixel_maxV(int16_t item) {
   //uint8_t xx = trackingObjectPosX[item] & 0xff, yy = trackingObjectPosY[item] & 0xff, ix = 255 - xx, iy = 255 - yy;
-  uint8_t xx = (trackingObjectPosX[item] - (int)trackingObjectPosX[item]) * 255, yy = (trackingObjectPosY[item] - (int)trackingObjectPosY[item]) * 255, ix = 255 - xx, iy = 255 - yy;
+  uint8_t xx = (trackingObjectPosX[item] - (int)trackingObjectPosX[item]) * 255,
+          yy = (trackingObjectPosY[item] - (int)trackingObjectPosY[item]) * 255, ix = 255 - xx, iy = 255 - yy;
   // calculate the intensities for each affected pixel
-#define WU_WEIGHT(a,b) ((uint8_t) (((a)*(b)+(a)+(b))>>8))
-  uint8_t wu[4] = { WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy), WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)
-  };
+#define WU_WEIGHT(a, b) ((uint8_t)(((a) * (b) + (a) + (b)) >> 8))
+  uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy), WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
   // multiply the intensities by the colour, and saturating-add them to the pixels
   for (uint8_t i = 0; i < 4; i++) {
     uint8_t x1 = (int8_t)(trackingObjectPosX[item] + (i & 1)) % WIDTH; //делаем бесшовный по ИКСу
     uint8_t y1 = (int8_t)(trackingObjectPosY[item] + ((i >> 1) & 1));
     if (y1 < HEIGHT && trackingObjectHue[item] * wu[i] >> 8 >= noise3d[1][x1][y1]) {
       noise3d[0][x1][y1] = trackingObjectShift[item];
-      shiftValue[y1] = 255U;//saturation;
+      shiftValue[y1] = 255U; //saturation;
       noise3d[1][x1][y1] = trackingObjectHue[item] * wu[i] >> 8;
     }
   }
 }
-
 
 void EffectFire::setup(EffectContext& ctx) {
   int16_t i, j;
 
   // чистим массив объектов от того, что не похоже на языки пламени
   for (i = 0; i < trackingObjectMaxCount; i++) {
-    if (trackingObjectState[i] > 30U || trackingObjectPosY[i] >= HEIGHT || trackingObjectPosX[i] >= WIDTH || trackingObjectPosY[i] <= 0) {
+    if (
+      trackingObjectState[i] > 30U || trackingObjectPosY[i] >= HEIGHT || trackingObjectPosX[i] >= WIDTH ||
+      trackingObjectPosY[i] <= 0
+    ) {
       trackingObjectHue[i] = 0U;
       trackingObjectState[i] = random8(20);
     }

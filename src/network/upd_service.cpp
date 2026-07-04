@@ -9,17 +9,16 @@
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
 
-
 namespace {
   uint8_t parseUint8(const char* value) {
     return static_cast<uint8_t>(constrain(atoi(value), 0, 255));
   }
 
   uint8_t parseFixedUint8(const char* value) {
-    char buffer[3] = { value[0], value[1], '\0' };
+    char buffer[3] = {value[0], value[1], '\0'};
     return parseUint8(buffer);
   }
-}
+} // namespace
 
 void UpdService::init() {
   Udp.begin(_port);
@@ -43,7 +42,7 @@ void UpdService::tick() {
     return;
   }
 
-  char reply[REPLY_BUFFER_SIZE + 1] = { 0 };
+  char reply[REPLY_BUFFER_SIZE + 1] = {0};
   handlePacket(packet, length, reply, sizeof(reply));
   sendReply(reply);
 }
@@ -187,17 +186,13 @@ void UpdService::handlePowerOff(char* reply, size_t replySize) {
   writeCurrentState(reply, replySize);
 }
 
-void UpdService::handleAlarmSet(uint8_t alarmIndex, UpdService::AlarmAction action, uint16_t time, char* reply, size_t replySize) {
+void UpdService::handleAlarmSet(
+  uint8_t alarmIndex, UpdService::AlarmAction action, uint16_t time, char* reply, size_t replySize
+) {
   switch (action) {
-  case AlarmAction::Enable:
-    snprintf(reply, replySize, "ALM_SET%u ON", alarmIndex + 1);
-    break;
-  case AlarmAction::Disable:
-    snprintf(reply, replySize, "ALM_SET%u OFF", alarmIndex + 1);
-    break;
-  case AlarmAction::SetTime:
-    snprintf(reply, replySize, "ALM_SET%u %u", alarmIndex + 1, time);
-    break;
+    case AlarmAction::Enable: snprintf(reply, replySize, "ALM_SET%u ON", alarmIndex + 1); break;
+    case AlarmAction::Disable: snprintf(reply, replySize, "ALM_SET%u OFF", alarmIndex + 1); break;
+    case AlarmAction::SetTime: snprintf(reply, replySize, "ALM_SET%u %u", alarmIndex + 1, time); break;
   }
 }
 
@@ -249,7 +244,9 @@ void UpdService::handleButton(bool enabled, char* reply, size_t replySize) {
 
 #else
 
-void UpdService::init() {}
-void UpdService::tick() {}
+void UpdService::init() {
+}
+void UpdService::tick() {
+}
 
 #endif

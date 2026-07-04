@@ -48,7 +48,9 @@ void SystemNotificationRenderer::renderMqtt(NotificationOverlay& overlay, Connec
   }
 }
 
-void SystemNotificationRenderer::renderOta(NotificationOverlay& overlay, OtaState state, uint8_t percent, uint32_t startedMs) {
+void SystemNotificationRenderer::renderOta(
+  NotificationOverlay& overlay, OtaState state, uint8_t percent, uint32_t startedMs
+) {
   if (state == OtaState::Running) {
     // OTA — бирюзовый прогресс по верхнему кольцу.
     // Если прогресс почему-то 0, всё равно видно вращение.

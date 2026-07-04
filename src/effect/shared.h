@@ -9,11 +9,11 @@
 
 #define MAX_DIMENSION (max(WIDTH, HEIGHT))
 
-#define CENTER_X_MINOR        (static_cast<uint8_t>((WIDTH / 2U) - ((WIDTH - 1U) & 0x01U)))
-#define CENTER_Y_MINOR        (static_cast<uint8_t>((HEIGHT / 2U) - ((HEIGHT - 1U) & 0x01U)))
-#define CENTER_X_MAJOR        (static_cast<uint8_t>(WIDTH / 2U + (WIDTH % 2U)))
-#define CENTER_Y_MAJOR        (static_cast<uint8_t>(HEIGHT / 2U + (HEIGHT % 2U)))
-#define HALF_HEIGHT           (static_cast<uint8_t>((HEIGHT + 1) / 2))
+#define CENTER_X_MINOR (static_cast<uint8_t>((WIDTH / 2U) - ((WIDTH - 1U) & 0x01U)))
+#define CENTER_Y_MINOR (static_cast<uint8_t>((HEIGHT / 2U) - ((HEIGHT - 1U) & 0x01U)))
+#define CENTER_X_MAJOR (static_cast<uint8_t>(WIDTH / 2U + (WIDTH % 2U)))
+#define CENTER_Y_MAJOR (static_cast<uint8_t>(HEIGHT / 2U + (HEIGHT % 2U)))
+#define HALF_HEIGHT (static_cast<uint8_t>((HEIGHT + 1) / 2))
 
 constexpr uint8_t NUM_LAYERSMAX = 2;
 
@@ -49,14 +49,14 @@ extern uint8_t shiftValue[HEIGHT];
 
 // максимальное количество отслеживаемых объектов (очень влияет на расход памяти)
 constexpr uint8_t trackingObjectMaxCount = 100U;
-extern float   trackingObjectPosX[trackingObjectMaxCount];
-extern float   trackingObjectPosY[trackingObjectMaxCount];
-extern float   trackingObjectSpeedX[trackingObjectMaxCount];
-extern float   trackingObjectSpeedY[trackingObjectMaxCount];
-extern float   trackingObjectShift[trackingObjectMaxCount];
+extern float trackingObjectPosX[trackingObjectMaxCount];
+extern float trackingObjectPosY[trackingObjectMaxCount];
+extern float trackingObjectSpeedX[trackingObjectMaxCount];
+extern float trackingObjectSpeedY[trackingObjectMaxCount];
+extern float trackingObjectShift[trackingObjectMaxCount];
 extern uint8_t trackingObjectHue[trackingObjectMaxCount];
 extern uint8_t trackingObjectState[trackingObjectMaxCount];
-extern bool    trackingObjectIsShift[trackingObjectMaxCount];
+extern bool trackingObjectIsShift[trackingObjectMaxCount];
 // максимальное количество сложных отслеживаемых объектов (меньше, чем trackingObjectMaxCount)
 constexpr uint8_t enlargedObjectMaxCount = WIDTH * 2;
 // используемое в эффекте количество объектов
@@ -74,10 +74,6 @@ bool everyMs(uint8_t& latch, uint16_t intervalMs, uint32_t nowMs = millis());
 void resetEveryMs(uint8_t& latch, uint16_t intervalMs, uint32_t nowMs = millis());
 
 // Масштабирует скорость (1-255) в интервал
-static inline uint16_t speedToIntervalMs(
-  uint8_t speed,
-  uint16_t slowMs,
-  uint16_t fastMs
-) {
+static inline uint16_t speedToIntervalMs(uint8_t speed, uint16_t slowMs, uint16_t fastMs) {
   return map(speed, 1U, 255U, slowMs, fastMs);
 }

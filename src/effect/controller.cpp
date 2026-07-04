@@ -50,8 +50,11 @@ bool EffectController::render(bool force) {
       runtimeSettings.brightness,
       runtimeSettings.speed,
       runtimeSettings.scale,
-      _red, _green, _blue,
-      nowMs, deltaMs,
+      _red,
+      _green,
+      _blue,
+      nowMs,
+      deltaMs,
       palette,
       audio,
       audioConfig,
@@ -59,9 +62,7 @@ bool EffectController::render(bool force) {
       _time
     );
 
-    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() {
-      _currentEffect->render(ctx);
-      });
+    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { _currentEffect->render(ctx); });
 
     return true;
   }
@@ -89,8 +90,11 @@ void EffectController::setupCurrentEffect() {
     runtimeSettings.brightness,
     runtimeSettings.speed,
     runtimeSettings.scale,
-    _red, _green, _blue,
-    nowMs, deltaMs,
+    _red,
+    _green,
+    _blue,
+    nowMs,
+    deltaMs,
     palette,
     audio,
     audioConfig,
@@ -262,7 +266,9 @@ void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t v
   _settings.markEffectSettingsChanged();
 }
 
-Palettes::Id EffectController::getSelectedPalette() const { return _settings.getSelectedPalette(); }
+Palettes::Id EffectController::getSelectedPalette() const {
+  return _settings.getSelectedPalette();
+}
 
 void EffectController::setPalette(Palettes::Id paletteId) {
   const Effects::Id effectId = getSelectedEffectId();

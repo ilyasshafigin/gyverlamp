@@ -26,7 +26,10 @@ public:
   void setAmpliDt(uint32_t ampliDt) { _ampliDt = ampliDt; }
   void setWindow(uint16_t window) { _window = window; }
   void setVolK(uint8_t k) { volF.setK(k); }
-  void setAmpliK(uint8_t k) { maxF.setK(k); minF.setK(k); }
+  void setAmpliK(uint8_t k) {
+    maxF.setK(k);
+    minF.setK(k);
+  }
   void setVolMin(int32_t scale) { _volMin = scale; }
   void setVolMax(int32_t scale) { _volMax = scale; }
   void setTrsh(int32_t trsh) { _trsh = trsh; }
@@ -118,10 +121,10 @@ public:
 
 private:
   int16_t _pin = -1;
-  uint32_t _dt = 500;           // 500 мкс между сэмплами достаточно для музыки
-  uint32_t _period = 4;         // 4 мс между выборами достаточно
+  uint32_t _dt = 500;   // 500 мкс между сэмплами достаточно для музыки
+  uint32_t _period = 4; // 4 мс между выборами достаточно
   uint32_t _ampliDt = 150;
-  uint16_t _window = 20;        // при таком размере окна получаем длительность оцифровки вполне хватает
+  uint16_t _window = 20; // при таком размере окна получаем длительность оцифровки вполне хватает
   uint32_t tmr1 = 0, tmr2 = 0, tmr3 = 0;
   int32_t raw = 0;
   int32_t rawMax = 0;

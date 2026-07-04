@@ -26,12 +26,12 @@ public:
   )
 #ifdef USE_UDP
     : _effects(effects),
-    _power(power),
-    _settings(settings),
-    _stateNotifier(stateNotifier),
-    _time(time),
-    _button(button),
-    _port(port)
+      _power(power),
+      _settings(settings),
+      _stateNotifier(stateNotifier),
+      _time(time),
+      _button(button),
+      _port(port)
 #endif
   {
 #ifndef USE_UDP

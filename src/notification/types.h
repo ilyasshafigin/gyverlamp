@@ -61,8 +61,8 @@ struct NotificationSnapshot {
   CRGB color = CRGB::White;
 
   ButtonNotificationType buttonType = ButtonNotificationType::None;
-  uint8_t buttonValue = 0;      // brightness 0..255
-  bool buttonDirection = true;  // true = clockwise/up, false = counter/down
+  uint8_t buttonValue = 0;     // brightness 0..255
+  bool buttonDirection = true; // true = clockwise/up, false = counter/down
   uint8_t buttonPressCount = 0;
   uint32_t buttonPressMs = 0;
   bool buttonPressing = false;
@@ -76,7 +76,5 @@ struct NotificationFrame {
   uint8_t opacity = 0;
   uint8_t backdropDim = 0;
 
-  bool isVisible() const {
-    return snapshot.isActive() && opacity > 0;
-  }
+  bool isVisible() const { return snapshot.isActive() && opacity > 0; }
 };

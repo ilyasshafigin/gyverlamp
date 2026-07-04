@@ -22,25 +22,30 @@ public:
     uint8_t brightness_,
     uint8_t speed_,
     uint8_t scale_,
-    uint8_t r, uint8_t g, uint8_t b,
-    uint32_t nowMs, uint32_t deltaMs,
+    uint8_t r,
+    uint8_t g,
+    uint8_t b,
+    uint32_t nowMs,
+    uint32_t deltaMs,
     const CRGBPalette16* palette_,
     const AudioFrame& audio_,
     const AudioConfig& audioConfig_,
     Led& led_,
     TimeService& time_
-  ) :
-    brightness(brightness_),
-    speed(speed_),
-    scale(scale_),
-    red(r), green(g), blue(b),
-    nowMs(nowMs), deltaMs(deltaMs),
-    palette(palette_),
-    audio(audio_),
-    audioConfig(audioConfig_),
-    led(led_),
-    time(time_) {
-  }
+  )
+    : brightness(brightness_),
+      speed(speed_),
+      scale(scale_),
+      red(r),
+      green(g),
+      blue(b),
+      nowMs(nowMs),
+      deltaMs(deltaMs),
+      palette(palette_),
+      audio(audio_),
+      audioConfig(audioConfig_),
+      led(led_),
+      time(time_) {}
 
   const uint8_t brightness;
   const uint8_t speed;
@@ -59,7 +64,6 @@ public:
   const AudioConfig& audioConfig;
   Led& led;
   const TimeService& time;
-
 };
 
 class Effect {

@@ -39,11 +39,15 @@ void PicassoGenerate(bool reset) {
 
 void PicassoPosition() {
   for (uint8_t i = 0; i < enlargedObjectNum; i++) {
-    if (trackingObjectPosX[i] + trackingObjectSpeedY[i] >= WIDTH || trackingObjectPosX[i] + trackingObjectSpeedY[i] < 0) {
+    if (
+      trackingObjectPosX[i] + trackingObjectSpeedY[i] >= WIDTH || trackingObjectPosX[i] + trackingObjectSpeedY[i] < 0
+    ) {
       trackingObjectSpeedY[i] = -trackingObjectSpeedY[i];
     }
 
-    if (trackingObjectPosY[i] + trackingObjectShift[i] >= HEIGHT || trackingObjectPosY[i] + trackingObjectShift[i] < 0) {
+    if (
+      trackingObjectPosY[i] + trackingObjectShift[i] >= HEIGHT || trackingObjectPosY[i] + trackingObjectShift[i] < 0
+    ) {
       trackingObjectShift[i] = -trackingObjectShift[i];
     }
 
@@ -59,14 +63,18 @@ void PicassoRoutine1(EffectContext& ctx) {
   for (uint8_t i = 0; i < enlargedObjectNum - 2U; i += 2) {
     if (ctx.palette) {
       ctx.led.drawLineBuff(
-        trackingObjectPosX[i], trackingObjectPosY[i],
-        trackingObjectPosX[i + 1U], trackingObjectPosY[i + 1U],
+        trackingObjectPosX[i],
+        trackingObjectPosY[i],
+        trackingObjectPosX[i + 1U],
+        trackingObjectPosY[i + 1U],
         ColorFromPalette(*ctx.palette, trackingObjectHue[i])
       );
     } else {
       ctx.led.drawLineBuff(
-        trackingObjectPosX[i], trackingObjectPosY[i],
-        trackingObjectPosX[i + 1U], trackingObjectPosY[i + 1U],
+        trackingObjectPosX[i],
+        trackingObjectPosY[i],
+        trackingObjectPosX[i + 1U],
+        trackingObjectPosY[i + 1U],
         CHSV(trackingObjectHue[i], 255U, 255U)
       );
     }
@@ -87,14 +95,18 @@ void PicassoRoutine2(EffectContext& ctx) {
   for (uint8_t i = 0; i < enlargedObjectNum - 1U; i++) {
     if (ctx.palette) {
       ctx.led.drawLineBuff(
-        trackingObjectPosX[i], trackingObjectPosY[i],
-        trackingObjectPosX[i + 1U], trackingObjectPosY[i + 1U],
+        trackingObjectPosX[i],
+        trackingObjectPosY[i],
+        trackingObjectPosX[i + 1U],
+        trackingObjectPosY[i + 1U],
         ColorFromPalette(*ctx.palette, trackingObjectHue[i])
       );
     } else {
       ctx.led.drawLineBuff(
-        trackingObjectPosX[i], trackingObjectPosY[i],
-        trackingObjectPosX[i + 1U], trackingObjectPosY[i + 1U],
+        trackingObjectPosX[i],
+        trackingObjectPosY[i],
+        trackingObjectPosX[i + 1U],
+        trackingObjectPosY[i + 1U],
         CHSV(trackingObjectHue[i], 255U, 255U)
       );
     }

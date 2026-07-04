@@ -1,0 +1,79 @@
+---
+# Formatting rules derived from the existing source style:
+#   - 2-space indent, attached braces (1TBS), &/* aligned to type
+#   - namespace body indented, access modifiers flush with `class`
+# Targets clang-format 14+.
+
+Language: Cpp
+BasedOnStyle: LLVM
+
+# --- indentation (matches .editorconfig) ---
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 120
+ContinuationIndentWidth: 2
+
+# --- braces: attached ---
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeElse: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# --- pointer / reference aligned to type ---
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# --- class body ---
+AccessModifierOffset: -2
+
+# --- namespace body indented (matches `namespace Effects {}`) ---
+NamespaceIndentation: All
+
+# --- switch / case ---
+# NOTE: codebase is mixed; `true` chosen to match the newer loop_profiler style.
+IndentCaseLabels: true
+
+# --- short constructs ---
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: true
+
+# --- constructor initializer list (one member per line, matches house style) ---
+ConstructorInitializerIndentWidth: 2
+PackConstructorInitializers: Never
+
+# --- includes: preserve order, do NOT sort (Arduino/PlatformIO include order matters) ---
+IncludeBlocks: Preserve
+SortIncludes: Never
+
+# --- alignment ---
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+BinPackArguments: false
+BinPackParameters: false
+ReflowComments: false
+
+# --- spacing ---
+SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyParentheses: false
+SpacesInContainerLiterals: false

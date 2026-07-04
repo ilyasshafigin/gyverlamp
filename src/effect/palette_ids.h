@@ -26,6 +26,8 @@ namespace Palettes {
     Gummy,
   };
 
-  constexpr uint8_t toIndex(Id id) { return static_cast<uint8_t>(id); }
+  constexpr uint8_t toIndex(Id id) {
+    return static_cast<uint8_t>(id);
+  }
 
-}
+} // namespace Palettes

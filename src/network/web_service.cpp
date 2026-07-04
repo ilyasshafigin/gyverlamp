@@ -25,7 +25,9 @@
 namespace {
   constexpr uint32_t SECONDS_PER_DAY = 24UL * 60UL * 60UL;
 
-  uint32_t minutesToSeconds(uint16_t minutes) { return static_cast<uint32_t>(minutes) * 60UL; }
+  uint32_t minutesToSeconds(uint16_t minutes) {
+    return static_cast<uint32_t>(minutes) * 60UL;
+  }
   uint16_t secondsToMinutes(uint32_t seconds) {
     seconds %= SECONDS_PER_DAY;
     return static_cast<uint16_t>(seconds / 60UL);
@@ -49,7 +51,7 @@ namespace {
     return String(secs) + "s";
   }
 
-}
+} // namespace
 
 void WebService::init() {
   const WifiConfig& wifiConfig = _eeprom.readWifiConfig();
@@ -204,7 +206,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
       _stateNotifier.stateChanged();
     }
 
-    if (b.Number("Rotation interval, min", &_rotationIntervalMin, ROTATION_INTERVAL_MIN_MIN, ROTATION_INTERVAL_MIN_MAX)) {
+    if (
+      b.Number("Rotation interval, min", &_rotationIntervalMin, ROTATION_INTERVAL_MIN_MIN, ROTATION_INTERVAL_MIN_MAX)
+    ) {
       _rotation.setIntervalSec(_rotationIntervalMin * 60U);
       _stateNotifier.stateChanged();
     }
@@ -433,7 +437,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
       b.Number("Warning duration, s", &_notificationWarningDurationSec, 0, 3600);
       if (b.Button("Start warning")) {
-        _notifications.startUserNotification(UserNotificationType::Warning, static_cast<uint32_t>(_notificationWarningDurationSec * 1000));
+        _notifications.startUserNotification(
+          UserNotificationType::Warning, static_cast<uint32_t>(_notificationWarningDurationSec * 1000)
+        );
       }
     }
 
@@ -442,7 +448,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
       b.Number("Alarm duration, s", &_notificationAlarmDurationSec, 0, 3600);
       if (b.Button("Start alarm")) {
-        _notifications.startUserNotification(UserNotificationType::Alarm, static_cast<uint32_t>(_notificationAlarmDurationSec * 1000));
+        _notifications.startUserNotification(
+          UserNotificationType::Alarm, static_cast<uint32_t>(_notificationAlarmDurationSec * 1000)
+        );
       }
     }
 

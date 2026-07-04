@@ -20,7 +20,7 @@ namespace {
   }
 
   inline uint8_t modeAmount(uint8_t scale) {
-    return (scale & 0x3F) << 2;  // 0..252 inside selected mode
+    return (scale & 0x3F) << 2; // 0..252 inside selected mode
   }
 
   inline uint8_t smoothVisual(uint8_t current, uint8_t target) {
@@ -32,7 +32,8 @@ namespace {
     return palette ? ColorFromPalette(*palette, index, value) : CHSV(index, 255, value);
   }
 
-  uint8_t columnIndex(uint8_t y, uint8_t height, uint8_t energy, uint8_t bass, uint8_t treble, uint8_t power, uint32_t nowMs) {
+  uint8_t
+  columnIndex(uint8_t y, uint8_t height, uint8_t energy, uint8_t bass, uint8_t treble, uint8_t power, uint32_t nowMs) {
     if (height <= 1) return 0;
 
     // Чем громче, тем сильнее палитра растягивается вверх.
@@ -91,11 +92,7 @@ namespace {
   ) {
     if (palette) {
       // Fire специально НЕ локальная колонка. Это поле жара.
-      const uint8_t flicker = inoise8(
-        x * map(power, 0, 255, 20, 55),
-        y * 38,
-        nowMs / map(power, 0, 255, 45, 14)
-      );
+      const uint8_t flicker = inoise8(x * map(power, 0, 255, 20, 55), y * 38, nowMs / map(power, 0, 255, 45, 14));
 
       const uint8_t lift = scale8(bass, 80);
       const uint8_t sparks = y > HEIGHT / 2 ? scale8(treble, 55) : 0;
@@ -110,7 +107,7 @@ namespace {
       const uint8_t value = qadd8(20, qadd8(scale8(heat, 190), scale8(flicker, 70)));
       return paletteColor(palette, index, value);
     } else {
-      const uint8_t index = scale8(heat, 235);  // не лезем часто в белый верх
+      const uint8_t index = scale8(heat, 235); // не лезем часто в белый верх
       const uint8_t value = qadd8(20, scale8(heat, 210));
       return ColorFromPalette(HeatColors_p, index, value);
     }
@@ -245,7 +242,7 @@ namespace {
       ctx.led.drawPixel(x, y, paletteColor(ctx.palette, index, value));
     }
   }
-}
+} // namespace
 
 void EffectEqualizer::setup(EffectContext& ctx) {
   _level = 0;
@@ -308,70 +305,70 @@ void EffectEqualizer::render(EffectContext& ctx) {
     const uint8_t value = qadd8(70, scale8(energy, 185));
 
     switch (mode) {
-    case EqualizerMode::Classic: {
-      const uint8_t height = min<uint8_t>(map8(energy, 0, HEIGHT), HEIGHT);
-      drawClassicColumn(ctx, x, height, value, energy, _bass, _treble, power);
+      case EqualizerMode::Classic: {
+        const uint8_t height = min<uint8_t>(map8(energy, 0, HEIGHT), HEIGHT);
+        drawClassicColumn(ctx, x, height, value, energy, _bass, _treble, power);
 
-      if (height > _peak[x]) {
-        _peak[x] = height;
-      } else if (_peak[x] > 0 && (ctx.nowMs & 1)) {
-        _peak[x]--;
+        if (height > _peak[x]) {
+          _peak[x] = height;
+        } else if (_peak[x] > 0 && (ctx.nowMs & 1)) {
+          _peak[x]--;
+        }
+
+        if (_peak[x] > HEIGHT) {
+          _peak[x] = HEIGHT;
+        }
+
+        if (_peak[x] > 0 && value > 150) {
+          ctx.led.drawPixel(x, _peak[x] - 1, paletteColor(ctx.palette, 240, scale8(value, 70)));
+        }
+        break;
       }
 
-      if (_peak[x] > HEIGHT) {
-        _peak[x] = HEIGHT;
+      case EqualizerMode::Mirror: {
+        const uint8_t height = min<uint8_t>(map8(energy, 0, HALF_HEIGHT), HALF_HEIGHT);
+        drawMirrorColumn(ctx, x, height, value, energy, _bass, _treble, power);
+        _peak[x] = 0;
+        break;
       }
 
-      if (_peak[x] > 0 && value > 150) {
-        ctx.led.drawPixel(x, _peak[x] - 1, paletteColor(ctx.palette, 240, scale8(value, 70)));
-      }
-      break;
-    }
+      case EqualizerMode::Fire:
+        drawFireColumn(ctx, x, energy, _bass, _treble, power);
+        _peak[x] = 0;
+        break;
 
-    case EqualizerMode::Mirror: {
-      const uint8_t height = min<uint8_t>(map8(energy, 0, HALF_HEIGHT), HALF_HEIGHT);
-      drawMirrorColumn(ctx, x, height, value, energy, _bass, _treble, power);
-      _peak[x] = 0;
-      break;
-    }
-
-    case EqualizerMode::Fire:
-      drawFireColumn(ctx, x, energy, _bass, _treble, power);
-      _peak[x] = 0;
-      break;
-
-    case EqualizerMode::Plasma:
-      drawPlasmaColumn(ctx, x, _level, _bass, _treble, power);
-      _peak[x] = 0;
-      break;
+      case EqualizerMode::Plasma:
+        drawPlasmaColumn(ctx, x, _level, _bass, _treble, power);
+        _peak[x] = 0;
+        break;
     }
   }
 
   if (beat) {
     switch (mode) {
-    case EqualizerMode::Classic:
-    case EqualizerMode::Fire:
-      for (uint8_t x = 0; x < WIDTH; x++) {
-        ctx.led.addPixel(x, 0, beatColor(ctx.palette, 32));
-        if (HEIGHT > 1) {
-          ctx.led.addPixel(x, 1, beatColor(ctx.palette, 16));
+      case EqualizerMode::Classic:
+      case EqualizerMode::Fire:
+        for (uint8_t x = 0; x < WIDTH; x++) {
+          ctx.led.addPixel(x, 0, beatColor(ctx.palette, 32));
+          if (HEIGHT > 1) {
+            ctx.led.addPixel(x, 1, beatColor(ctx.palette, 16));
+          }
         }
-      }
-      break;
+        break;
 
-    case EqualizerMode::Mirror: {
-      for (uint8_t x = 0; x < WIDTH; x++) {
-        ctx.led.addPixel(x, CENTER_Y_MINOR, beatColor(ctx.palette, 32));
-        if (CENTER_Y_MAJOR != CENTER_Y_MINOR) {
-          ctx.led.addPixel(x, CENTER_Y_MAJOR, beatColor(ctx.palette, 32));
+      case EqualizerMode::Mirror: {
+        for (uint8_t x = 0; x < WIDTH; x++) {
+          ctx.led.addPixel(x, CENTER_Y_MINOR, beatColor(ctx.palette, 32));
+          if (CENTER_Y_MAJOR != CENTER_Y_MINOR) {
+            ctx.led.addPixel(x, CENTER_Y_MAJOR, beatColor(ctx.palette, 32));
+          }
         }
+        break;
       }
-      break;
-    }
 
-    case EqualizerMode::Plasma:
-      // Plasma already reacts through full-field brightness.
-      break;
+      case EqualizerMode::Plasma:
+        // Plasma already reacts through full-field brightness.
+        break;
     }
   }
 }

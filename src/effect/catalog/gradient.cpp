@@ -16,11 +16,9 @@ void EffectGradient::render(EffectContext& ctx) {
   const int32_t timeOffset = static_cast<int32_t>(ctx.nowMs >> 3) * speedOffset / 128;
 
   for (uint8_t y = 0; y < HEIGHT; y++) {
-    const uint8_t paletteIndex = static_cast<uint8_t>(
-      static_cast<int32_t>(y) * scaleSpan / HEIGHT + timeOffset
-    );
+    const uint8_t paletteIndex = static_cast<uint8_t>(static_cast<int32_t>(y) * scaleSpan / HEIGHT + timeOffset);
     CRGB thisColor = ColorFromPalette(
-      palette,   // (x*1.9 + 25) / 255 - быстрый мап 0..255 в 0.1..2
+      palette, // (x*1.9 + 25) / 255 - быстрый мап 0..255 в 0.1..2
       paletteIndex,
       255U,
       LINEARBLEND

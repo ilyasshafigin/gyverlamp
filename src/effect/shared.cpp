@@ -14,14 +14,14 @@ uint8_t line[WIDTH];
 uint8_t shiftHue[HEIGHT];
 uint8_t shiftValue[HEIGHT];
 
-float   trackingObjectPosX[trackingObjectMaxCount];
-float   trackingObjectPosY[trackingObjectMaxCount];
-float   trackingObjectSpeedX[trackingObjectMaxCount];
-float   trackingObjectSpeedY[trackingObjectMaxCount];
-float   trackingObjectShift[trackingObjectMaxCount];
+float trackingObjectPosX[trackingObjectMaxCount];
+float trackingObjectPosY[trackingObjectMaxCount];
+float trackingObjectSpeedX[trackingObjectMaxCount];
+float trackingObjectSpeedY[trackingObjectMaxCount];
+float trackingObjectShift[trackingObjectMaxCount];
 uint8_t trackingObjectHue[trackingObjectMaxCount];
 uint8_t trackingObjectState[trackingObjectMaxCount];
-bool    trackingObjectIsShift[trackingObjectMaxCount];
+bool trackingObjectIsShift[trackingObjectMaxCount];
 uint8_t enlargedObjectNum;
 
 CRGBPalette16 rgbPalette(PartyColors_p);

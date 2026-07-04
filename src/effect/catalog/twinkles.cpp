@@ -21,7 +21,7 @@ void EffectTwinkles::setup(EffectContext& ctx) {
       led.g = random8(1, TWINKLES_SPEEDS * 2 + 1); // скорость и направление (нарастает 1-4 или угасает 5-8)
       led.b = random8();                           // яркость
     } else
-      ctx.led.setLedBuff(idx, CRGB::Black);        // всё выкл
+      ctx.led.setLedBuff(idx, CRGB::Black); // всё выкл
   }
   resetEveryMs(step, speedToIntervalMs(ctx.speed, 60U, 20U), ctx.nowMs);
 }
@@ -31,10 +31,10 @@ static void stepTwinkles(Led& led, uint8_t scale) {
     CRGB& pixel = led.getLedBuff(idx);
     if (pixel.b == 0) {
       if (random8(scale % 11U) == 0 && hue > 0) {  // если пиксель ещё не горит, зажигаем каждый ХЗй
-        pixel.r = random8();                                // оттенок пикселя
-        pixel.g = random8(1, TWINKLES_SPEEDS + 1);          // скорость и направление (нарастает 1-4, но не угасает 5-8)
-        pixel.b = pixel.g;                                  // яркость
-        hue--;                                              // уменьшаем количество погасших пикселей
+        pixel.r = random8();                       // оттенок пикселя
+        pixel.g = random8(1, TWINKLES_SPEEDS + 1); // скорость и направление (нарастает 1-4, но не угасает 5-8)
+        pixel.b = pixel.g;                         // яркость
+        hue--;                                     // уменьшаем количество погасших пикселей
       }
     } else if (pixel.g <= TWINKLES_SPEEDS) {                // если нарастание яркости
       if (pixel.b > 255U - pixel.g - TWINKLES_MULTIPLIER) { // если досигнут максимум
@@ -43,10 +43,10 @@ static void stepTwinkles(Led& led, uint8_t scale) {
       } else {
         pixel.b = pixel.b + pixel.g + TWINKLES_MULTIPLIER;
       }
-    } else {                                                // если угасание яркости
-      if (pixel.b <= pixel.g - TWINKLES_SPEEDS + TWINKLES_MULTIPLIER) {// если досигнут минимум
-        pixel.b = 0;                                        // всё выкл
-        hue++;                                              // считаем количество погасших пикселей
+    } else {                                                            // если угасание яркости
+      if (pixel.b <= pixel.g - TWINKLES_SPEEDS + TWINKLES_MULTIPLIER) { // если досигнут минимум
+        pixel.b = 0;                                                    // всё выкл
+        hue++;                                                          // считаем количество погасших пикселей
       } else {
         pixel.b = pixel.b - pixel.g + TWINKLES_SPEEDS - TWINKLES_MULTIPLIER;
       }
@@ -70,8 +70,7 @@ void EffectTwinkles::render(EffectContext& ctx) {
     stepTwinkles(ctx.led, ctx.scale);
   }
 
-  const CRGBPalette16& palette =
-    ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
+  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
 
   drawTwinkles(ctx.led, palette);
 }

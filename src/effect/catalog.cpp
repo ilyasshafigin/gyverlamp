@@ -6,41 +6,48 @@ namespace Effects {
 
   Effect* createEffect(Id id, void* buffer) {
     switch (id) {
-#define EFFECT_CASE(T) case T::ID: return new (buffer) T();
+#define EFFECT_CASE(T) \
+  case T::ID: return new (buffer) T();
       EFFECT_REGISTRY(EFFECT_CASE)
 #undef EFFECT_CASE
-    default:
+      default:
 #define EFFECT_FALLBACK(T) return new (buffer) T();
-      EFFECT_REGISTRY(EFFECT_FALLBACK)
+        EFFECT_REGISTRY(EFFECT_FALLBACK)
 #undef EFFECT_FALLBACK
     }
   }
 
   EffectSettingsSpec getEffectSettingsSpec(Id id) {
-#define EFFECT_SETTINGS_SPEC(T) case T::ID: return T::SETTINGS;
-    switch (id) { EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default: return {180, 30, 40, EFFECT_PARAM_SPEED | EFFECT_PARAM_SCALE}; }
+#define EFFECT_SETTINGS_SPEC(T) \
+  case T::ID: return T::SETTINGS;
+    switch (id) {
+      EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default : return {180, 30, 40, EFFECT_PARAM_SPEED | EFFECT_PARAM_SCALE};
+    }
 #undef EFFECT_SETTINGS_SPEC
   }
 
   const char* getEffectName(Id id) {
-#define EFFECT_NAME(T) case T::ID: return T::NAME;
-    switch (id) { EFFECT_REGISTRY(EFFECT_NAME) default: return ""; }
+#define EFFECT_NAME(T) \
+  case T::ID: return T::NAME;
+    switch (id) { EFFECT_REGISTRY(EFFECT_NAME) default : return ""; }
 #undef EFFECT_NAME
   }
 
   Id getEffectId(const String& effect) {
-#define EFFECT_COMPARE(T) if (effect.equals(T::NAME)) return T::ID;
+#define EFFECT_COMPARE(T) \
+  if (effect.equals(T::NAME)) return T::ID;
     EFFECT_REGISTRY(EFFECT_COMPARE)
 #undef EFFECT_COMPARE
-      return Id::INVALID;
+    return Id::INVALID;
   }
 
   Id getEffectId(const char* effect) {
     if (effect == nullptr) return Id::INVALID;
-#define EFFECT_COMPARE(T) if (strcmp(effect, T::NAME) == 0) return T::ID;
+#define EFFECT_COMPARE(T) \
+  if (strcmp(effect, T::NAME) == 0) return T::ID;
     EFFECT_REGISTRY(EFFECT_COMPARE)
 #undef EFFECT_COMPARE
-      return Id::INVALID;
+    return Id::INVALID;
   }
 
   Id fallback() {
@@ -67,4 +74,4 @@ namespace Effects {
     return isValid(raw) ? toId(raw) : fallback();
   }
 
-}
+} // namespace Effects

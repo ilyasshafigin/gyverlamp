@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Arduino.h>
 #include "../util/fade_animator.h"
+#include <Arduino.h>
 
 class EffectController;
 class EepromStore;
@@ -9,15 +9,10 @@ class StateNotifier;
 
 class PowerController {
 public:
-  explicit PowerController(
-    EepromStore& eeprom,
-    EffectController& effects,
-    StateNotifier& stateNotifier
-  ) :
-    _eeprom(eeprom),
-    _effects(effects),
-    _stateNotifier(stateNotifier) {
-  }
+  explicit PowerController(EepromStore& eeprom, EffectController& effects, StateNotifier& stateNotifier)
+    : _eeprom(eeprom),
+      _effects(effects),
+      _stateNotifier(stateNotifier) {}
 
   void init();
 

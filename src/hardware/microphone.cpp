@@ -34,7 +34,7 @@ namespace {
   }
 #endif
 
-}
+} // namespace
 
 void Microphone::init() {
   _vol.setDt(0);
@@ -147,7 +147,8 @@ void Microphone::tick() {
 
 #else
 
-void Microphone::init() {}
+void Microphone::init() {
+}
 
 void Microphone::tick() {
   _frame.available = false;

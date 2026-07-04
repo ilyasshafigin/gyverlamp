@@ -91,22 +91,14 @@ void NotificationOverlay::drawTopProgress(const CRGB& color, uint32_t startedMs,
 }
 
 void NotificationOverlay::drawTopPulse(
-  const CRGB& color,
-  uint32_t startedMs,
-  uint16_t periodMs,
-  uint8_t minBrightness,
-  uint8_t maxBrightness
+  const CRGB& color, uint32_t startedMs, uint16_t periodMs, uint8_t minBrightness, uint8_t maxBrightness
 ) {
   CRGB pulse = color;
   pulse.nscale8(notificationBreathe(startedMs, periodMs, minBrightness, maxBrightness));
   drawTopSolid(pulse);
 }
 
-void NotificationOverlay::drawTopDoublePulse(
-  const CRGB& color,
-  uint32_t startedMs,
-  uint16_t periodMs
-) {
+void NotificationOverlay::drawTopDoublePulse(const CRGB& color, uint32_t startedMs, uint16_t periodMs) {
   const uint16_t t = (millis() - startedMs) % periodMs;
   uint8_t value = 0;
   if (t < 180) {
@@ -125,22 +117,14 @@ void NotificationOverlay::drawTopDoublePulse(
 }
 
 void NotificationOverlay::drawFullPulse(
-  const CRGB& color,
-  uint32_t startedMs,
-  uint16_t periodMs,
-  uint8_t minBrightness,
-  uint8_t maxBrightness
+  const CRGB& color, uint32_t startedMs, uint16_t periodMs, uint8_t minBrightness, uint8_t maxBrightness
 ) {
   CRGB pixel = color;
   fill(pixel.nscale8(notificationBreathe(startedMs, periodMs, minBrightness, maxBrightness)));
 }
 
 void NotificationOverlay::drawVerticalWave(
-  const CRGB& color,
-  uint32_t startedMs,
-  uint16_t periodMs,
-  uint8_t minBrightness,
-  uint8_t maxBrightness
+  const CRGB& color, uint32_t startedMs, uint16_t periodMs, uint8_t minBrightness, uint8_t maxBrightness
 ) {
   const uint32_t elapsedMs = millis() - startedMs;
   const uint32_t progressMs = elapsedMs > periodMs ? periodMs : elapsedMs;

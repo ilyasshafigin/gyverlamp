@@ -56,8 +56,10 @@ namespace {
           if (value < 0) value = 0;
           if (value > 255) value = 255;
           if (channel == 'r') ir = value;
-          else if (channel == 'g') ig = value;
-          else if (channel == 'b') ib = value;
+          else if (channel == 'g')
+            ig = value;
+          else if (channel == 'b')
+            ib = value;
         }
       } else {
         p++;
@@ -77,15 +79,15 @@ namespace {
     return parseRgbCsv(payload, r, g, b) || parseRgbJson(payload, r, g, b);
   }
 
-}
+} // namespace
 
-HALight::HALight(const char* unique_id, const char* name, HADevice& device) :
-  HALight(unique_id, name) {
+HALight::HALight(const char* unique_id, const char* name, HADevice& device)
+  : HALight(unique_id, name) {
   this->device = &device;
 }
 
-HALight::HALight(const char* unique_id, const char* name) :
-  HAEntity(unique_id, name, "light") {
+HALight::HALight(const char* unique_id, const char* name)
+  : HAEntity(unique_id, name, "light") {
   this->dirty = false;
   this->state = false;
   this->brightness = 255;
@@ -183,19 +185,28 @@ void HALight::onConnect(PubSubClient* client) {
     len--;
   }
 
-  snprintf(payload + len, sizeof(payload) - len,
-    ",\"brightness\":true,\"bri_cmd_t\":\"~/brightness/set\",\"bri_stat_t\":\"~/brightness/state\",\"bri_scl\":255");
+  snprintf(
+    payload + len,
+    sizeof(payload) - len,
+    ",\"brightness\":true,\"bri_cmd_t\":\"~/brightness/set\",\"bri_stat_t\":\"~/brightness/state\",\"bri_scl\":255"
+  );
   len = strlen(payload);
 
   if (effectList.length() > 0) {
-    snprintf(payload + len, sizeof(payload) - len,
+    snprintf(
+      payload + len,
+      sizeof(payload) - len,
       ",\"fx_cmd_t\":\"~/effect/set\",\"fx_stat_t\":\"~/effect/state\",\"fx_list\":[%s]",
-      effectList.c_str());
+      effectList.c_str()
+    );
     len = strlen(payload);
   }
 
-  snprintf(payload + len, sizeof(payload) - len,
-    ",\"supported_color_modes\":[\"rgb\"],\"rgb_cmd_t\":\"~/color/set\",\"rgb_stat_t\":\"~/color/state\"}");
+  snprintf(
+    payload + len,
+    sizeof(payload) - len,
+    ",\"supported_color_modes\":[\"rgb\"],\"rgb_cmd_t\":\"~/color/set\",\"rgb_stat_t\":\"~/color/state\"}"
+  );
 
   client->publish(topic, payload);
 }
@@ -223,16 +234,14 @@ void HALight::sendState(PubSubClient* client) {
 }
 
 void HALight::setState(bool state) {
-  if (state == this->state)
-    return;
+  if (state == this->state) return;
   dirty = true;
   this->state = state;
   this->onStateChange();
 }
 
 void HALight::setBrightness(uint8_t brightness) {
-  if (brightness == this->brightness)
-    return;
+  if (brightness == this->brightness) return;
   dirty = true;
   this->brightness = brightness;
   this->onStateChange();
@@ -334,8 +343,7 @@ void HALight::onReceivedBrightnessTopic(PubSubClient* client, byte* payload, uns
   (void)client;
 
   char buff[8];
-  if (length < 1 || length > 3)
-    return;
+  if (length < 1 || length > 3) return;
 
   strncpy(buff, reinterpret_cast<const char*>(payload), length);
   buff[length] = '\0';

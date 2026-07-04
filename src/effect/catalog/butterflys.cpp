@@ -9,7 +9,7 @@
 //   - MishanyaTS/FieryLedLamp
 //     https://github.com/MishanyaTS/FieryLedLamp/blob/56130dcd9b0059355016c0f476891b68c73f3298/FieryLedLamp/FieryLedLamp/effects.ino#L1874
 
-#define BUTTERFLY_FIX_COUNT           (20U) // количество мотыльков для режима, конда бегунок Масштаб регулирует цвет
+#define BUTTERFLY_FIX_COUNT (20U) // количество мотыльков для режима, конда бегунок Масштаб регулирует цвет
 
 void EffectButterflys::setup(EffectContext& ctx) {
   randomSeed(ctx.nowMs);
@@ -109,7 +109,7 @@ void EffectButterflys::render(EffectContext& ctx) {
     }
 
     if (trackingObjectState[i] == 255U) {
-      if (step == i && random8(2U) == 0U) {//(step == 0U && ((pcnt + i) & 0x01))
+      if (step == i && random8(2U) == 0U) { //(step == 0U && ((pcnt + i) & 0x01))
         trackingObjectState[i] = random8(220U, 244U);
         trackingObjectSpeedX[i] = static_cast<float>(random8(101U)) / 20.0f + 1.0f;
         if (random8(2U) == 0U) trackingObjectSpeedX[i] = -trackingObjectSpeedX[i];
@@ -117,13 +117,18 @@ void EffectButterflys::render(EffectContext& ctx) {
         if (random8(2U) == 0U) trackingObjectSpeedY[i] = -trackingObjectSpeedY[i];
         // проворот траектории
         //trackingObjectShift[i] = static_cast<float>(random8((fabs(trackingObjectSpeedX[i])+fabs(trackingObjectSpeedY[i]))*2.0+2.0)) / 40.0f;
-        trackingObjectShift[i] = static_cast<float>(random8((fabs(trackingObjectSpeedX[i]) + fabs(trackingObjectSpeedY[i])) * 20.0f + 2.0f)) / 200.0f;
+        trackingObjectShift[i] =
+          static_cast<float>(random8((fabs(trackingObjectSpeedX[i]) + fabs(trackingObjectSpeedY[i])) * 20.0f + 2.0f)) /
+          200.0f;
         if (random8(2U) == 0U) trackingObjectShift[i] = -trackingObjectShift[i];
       }
     } else {
       if (step == i) trackingObjectState[i]++;
       uint8_t tmp = 255U - trackingObjectState[i];
-      if (tmp == 0U || (static_cast<uint16_t>(trackingObjectPosX[i] * tmp) % tmp == 0U && static_cast<uint16_t>(trackingObjectPosY[i] * tmp) % tmp == 0U)) {
+      if (
+        tmp == 0U || (static_cast<uint16_t>(trackingObjectPosX[i] * tmp) % tmp == 0U &&
+                      static_cast<uint16_t>(trackingObjectPosY[i] * tmp) % tmp == 0U)
+      ) {
         trackingObjectPosX[i] = round(trackingObjectPosX[i]);
         trackingObjectPosY[i] = round(trackingObjectPosY[i]);
         trackingObjectSpeedX[i] = 0;
@@ -133,9 +138,8 @@ void EffectButterflys::render(EffectContext& ctx) {
       }
     }
 
-    const uint8_t value = isWings
-      ? ((trackingObjectState[i] == 255U) ? 255U : 128U + random8(2U) * 111U)
-      : trackingObjectState[i];
+    const uint8_t value =
+      isWings ? ((trackingObjectState[i] == 255U) ? 255U : 128U + random8(2U) * 111U) : trackingObjectState[i];
 
     ctx.led.drawPixelSafe(trackingObjectPosX[i], trackingObjectPosY[i], CHSV(trackingObjectHue[i], 255U, value));
   }

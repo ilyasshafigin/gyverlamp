@@ -51,7 +51,7 @@ static void rain(
   for (uint8_t x = 0; x < WIDTH; x++) {
     // Step 1.  Move each dot down one cell
     for (uint8_t y = 0; y < HEIGHT; y++) {
-      if (noise3d[0][x][y] >= backgroundDepth) {  // Don't move empty cells
+      if (noise3d[0][x][y] >= backgroundDepth) { // Don't move empty cells
         if (y > 0) noise3d[0][x][wrapY(y - 1)] = noise3d[0][x][y];
         noise3d[0][x][y] = 0;
       }
@@ -64,7 +64,7 @@ static void rain(
 
     // Step 3. Map from tempMatrix cells to LED colors
     for (uint8_t y = 0; y < HEIGHT; y++) {
-      if (noise3d[0][x][y] >= backgroundDepth) {  // Don't write out empty cells
+      if (noise3d[0][x][y] >= backgroundDepth) { // Don't write out empty cells
         led.setLedBuff(led.getPixelNumber(x, y), ColorFromPalette(rainPalette, noise3d[0][x][y]));
       }
     }
@@ -78,7 +78,7 @@ static void rain(
       if (j >= backgroundDepth) {
         led.setLedBuff(led.getPixelNumber(wrapX(x - 2), 0), ColorFromPalette(rainPalette, j / 3));
         led.setLedBuff(led.getPixelNumber(wrapX(x + 2), 0), ColorFromPalette(rainPalette, j / 3));
-        line[x] = 0;   // Reset splash
+        line[x] = 0; // Reset splash
       }
 
       if (v >= backgroundDepth) {
@@ -93,32 +93,34 @@ static void rain(
       static uint8_t lightning[WIDTH * HEIGHT];
       memset(lightning, 0, sizeof(lightning));
 
-      if (random16() < 72) {    // Odds of a lightning bolt
-        lightning[scale8(random8(), WIDTH - 1) + (HEIGHT - 1) * WIDTH] = 255;  // Random starting location
+      if (random16() < 72) {                                                  // Odds of a lightning bolt
+        lightning[scale8(random8(), WIDTH - 1) + (HEIGHT - 1) * WIDTH] = 255; // Random starting location
         for (uint8_t ly = HEIGHT - 1; ly > 1; ly--) {
           for (uint8_t lx = 1; lx < WIDTH - 1; lx++) {
             if (lightning[lx + ly * WIDTH] == 255) {
               lightning[lx + ly * WIDTH] = 0;
               uint8_t dir = random8(4);
               switch (dir) {
-              case 0:
-                led.setLedBuff(led.getPixelNumber(lx + 1, ly - 1), lightningColor);
-                lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // move down and right
-                break;
-              case 1:
-                led.setLedBuff(led.getPixelNumber(lx, ly - 1), CRGB(128, 128, 128)); // я без понятия, почему у верхней молнии один оттенок, а у остальных - другой
-                lightning[lx + (ly - 1) * WIDTH] = 255;    // move down
-                break;
-              case 2:
-                led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
-                lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // move down and left
-                break;
-              case 3:
-                led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
-                lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // fork down and left
-                led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
-                lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // fork down and right
-                break;
+                case 0:
+                  led.setLedBuff(led.getPixelNumber(lx + 1, ly - 1), lightningColor);
+                  lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // move down and right
+                  break;
+                case 1:
+                  led.setLedBuff(
+                    led.getPixelNumber(lx, ly - 1), CRGB(128, 128, 128)
+                  ); // я без понятия, почему у верхней молнии один оттенок, а у остальных - другой
+                  lightning[lx + (ly - 1) * WIDTH] = 255; // move down
+                  break;
+                case 2:
+                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // move down and left
+                  break;
+                case 3:
+                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // fork down and left
+                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // fork down and right
+                  break;
               }
             }
           }
@@ -128,7 +130,8 @@ static void rain(
 
     // Step 6. Add clouds if called for
     if (clouds) {
-      uint16_t noiseScale = 250;  // A value of 1 will be so zoomed in, you'll mostly see solid colors. A value of 4011 will be very zoomed out and shimmery
+      uint16_t noiseScale =
+        250; // A value of 1 will be so zoomed in, you'll mostly see solid colors. A value of 4011 will be very zoomed out and shimmery
       int xoffset = noiseScale * x + hue;
 
       for (uint8_t z = 0; z < CLOUD_HEIGHT; z++) {
@@ -138,7 +141,11 @@ static void rain(
         noiseData = qadd8(noiseData, scale8(noiseData, 39));
         const uint16_t noiseIndex = x * CLOUD_HEIGHT + z;
         cloudNoise[noiseIndex] = scale8(cloudNoise[noiseIndex], dataSmoothing) + scale8(noiseData, 256 - dataSmoothing);
-        nblend(led.getLedBuff(led.getPixelNumber(x, HEIGHT - z - 1)), ColorFromPalette(cloudsPalette, cloudNoise[noiseIndex]), (CLOUD_HEIGHT - z) * (250 / CLOUD_HEIGHT));
+        nblend(
+          led.getLedBuff(led.getPixelNumber(x, HEIGHT - z - 1)),
+          ColorFromPalette(cloudsPalette, cloudNoise[noiseIndex]),
+          (CLOUD_HEIGHT - z) * (250 / CLOUD_HEIGHT)
+        );
       }
       ff_z++;
     }
@@ -159,17 +166,17 @@ void EffectThunderstorm::render(EffectContext& ctx) {
   if (everyMs(step, speedToIntervalMs(ctx.speed, 80U, 20U), ctx.nowMs)) {
     CRGB lightningColor(72, 72, 80);
     CRGBPalette16 rainPalette = ctx.palette
-      ? CRGBPalette16(CRGB::Black, ColorFromPalette(*ctx.palette, ctx.scale, 255U))
-      : CRGBPalette16(CRGB::Black, solidRainColor);
+                                  ? CRGBPalette16(CRGB::Black, ColorFromPalette(*ctx.palette, ctx.scale, 255U))
+                                  : CRGBPalette16(CRGB::Black, solidRainColor);
 
     CRGBPalette16 cloudsPalette = ctx.palette
-      ? CRGBPalette16(
-        CRGB::Black,
-        ColorFromPalette(*ctx.palette, ctx.scale + 32U, 80U),
-        ColorFromPalette(*ctx.palette, ctx.scale + 64U, 45U),
-        CRGB::Black
-      )
-      : CRGBPalette16(CRGB::Black, CRGB(15, 24, 24), CRGB(9, 15, 15), CRGB::Black);
+                                    ? CRGBPalette16(
+                                        CRGB::Black,
+                                        ColorFromPalette(*ctx.palette, ctx.scale + 32U, 80U),
+                                        ColorFromPalette(*ctx.palette, ctx.scale + 64U, 45U),
+                                        CRGB::Black
+                                      )
+                                    : CRGBPalette16(CRGB::Black, CRGB(15, 24, 24), CRGB(9, 15, 15), CRGB::Black);
 
     rain(ctx.led, 60, 160, ctx.scale, 30, true, true, true, lightningColor, rainPalette, cloudsPalette);
   }

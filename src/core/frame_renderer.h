@@ -17,13 +17,12 @@ public:
     NotificationController& notifications,
     PowerController& power,
     StateNotifier& stateNotifier
-  ) :
-    _effects(effects),
-    _led(led),
-    _notifications(notifications),
-    _power(power),
-    _stateNotifier(stateNotifier) {
-  }
+  )
+    : _effects(effects),
+      _led(led),
+      _notifications(notifications),
+      _power(power),
+      _stateNotifier(stateNotifier) {}
 
   void render(bool forceShow = false);
   void renderNow() { render(true); }

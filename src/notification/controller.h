@@ -28,16 +28,15 @@ public:
     RunningText& runningText,
     StateNotifier& stateNotifier,
     TimeService& time
-  ) :
-    _eeprom(eeprom),
-    _power(power),
-    _stateNotifier(stateNotifier),
-    _time(time),
-    _systemRenderer(),
-    _userRenderer(runningText),
-    _buttonRenderer(),
-    _userState() {
-  }
+  )
+    : _eeprom(eeprom),
+      _power(power),
+      _stateNotifier(stateNotifier),
+      _time(time),
+      _systemRenderer(),
+      _userRenderer(runningText),
+      _buttonRenderer(),
+      _userState() {}
 
   void init();
   void tick();

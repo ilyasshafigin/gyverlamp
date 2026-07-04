@@ -16,7 +16,8 @@ private:
 
 inline PeriodicTimer::PeriodicTimer(uint32_t intervalMs)
   : _lastTick(millis()),
-    _intervalMs(intervalMs) {}
+    _intervalMs(intervalMs) {
+}
 
 inline void PeriodicTimer::setInterval(uint32_t intervalMs) {
   _intervalMs = intervalMs;

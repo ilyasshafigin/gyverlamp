@@ -15,7 +15,10 @@ public:
     setDt(dt);
   }
 
-  void setK(uint8_t k) { _k1 = k; _k2 = 32 - k; }
+  void setK(uint8_t k) {
+    _k1 = k;
+    _k2 = 32 - k;
+  }
   void setDt(uint32_t dt) { _dt = dt; }
   void setPass(uint8_t pass) { _pass = pass; }
   void setRaw(int32_t raw) { _raw = raw; }

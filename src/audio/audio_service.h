@@ -8,12 +8,9 @@ class EepromStore;
 
 class AudioService {
 public:
-  explicit AudioService(
-    EepromStore& eeprom
-  ) :
-    _eeprom(eeprom),
-    _microphone() {
-  }
+  explicit AudioService(EepromStore& eeprom)
+    : _eeprom(eeprom),
+      _microphone() {}
 
   void init();
   void tick();

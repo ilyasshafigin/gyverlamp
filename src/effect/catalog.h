@@ -8,27 +8,27 @@
 #include "settings.h"
 
 #define EFFECT_REGISTRY(X) \
-  X(EffectColor) \
-  X(EffectColorChange) \
-  X(EffectGradient) \
-  X(EffectFire) \
-  X(EffectRainbow) \
-  X(EffectNoise) \
-  X(EffectSnowstorm) \
-  X(EffectMatrix) \
-  X(EffectPaintball) \
-  X(EffectSpiral) \
-  X(EffectWarmLight) \
-  X(EffectTwinkles) \
-  X(EffectShadows) \
-  X(EffectButterflys) \
-  X(EffectThunderstorm) \
-  X(EffectNexus) \
-  X(EffectClock) \
-  X(EffectLiquidLamp) \
-  X(EffectNorthernLights) \
-  X(EffectPicasso) \
-  X(EffectEqualizer) \
+  X(EffectColor)           \
+  X(EffectColorChange)     \
+  X(EffectGradient)        \
+  X(EffectFire)            \
+  X(EffectRainbow)         \
+  X(EffectNoise)           \
+  X(EffectSnowstorm)       \
+  X(EffectMatrix)          \
+  X(EffectPaintball)       \
+  X(EffectSpiral)          \
+  X(EffectWarmLight)       \
+  X(EffectTwinkles)        \
+  X(EffectShadows)         \
+  X(EffectButterflys)      \
+  X(EffectThunderstorm)    \
+  X(EffectNexus)           \
+  X(EffectClock)           \
+  X(EffectLiquidLamp)      \
+  X(EffectNorthernLights)  \
+  X(EffectPicasso)         \
+  X(EffectEqualizer)       \
   X(EffectOctopus)
 
 namespace Effects {
@@ -38,24 +38,21 @@ namespace Effects {
       char value;
     };
 
-    template <typename T, typename... Rest>
-    struct MaxEffectSize {
+    template <typename T, typename... Rest> struct MaxEffectSize {
       static constexpr size_t tail = MaxEffectSize<Rest...>::value;
       static constexpr size_t value = sizeof(T) > tail ? sizeof(T) : tail;
     };
 
-    template <typename T>
-    struct MaxEffectSize<T> {
+    template <typename T> struct MaxEffectSize<T> {
       static constexpr size_t value = sizeof(T);
     };
-  }
+  } // namespace detail
 
   constexpr size_t STORAGE_SIZE = detail::MaxEffectSize<
 #define EFFECT_STORAGE_TYPE(T) T,
     EFFECT_REGISTRY(EFFECT_STORAGE_TYPE)
 #undef EFFECT_STORAGE_TYPE
-    detail::EffectStorageMinimum
-  >::value;
+      detail::EffectStorageMinimum>::value;
 
   static_assert(STORAGE_SIZE <= 64, "Effect storage grew; increase budget intentionally");
 
@@ -82,4 +79,4 @@ namespace Effects {
   bool isValid(uint8_t raw);
   Id clamp(Id id);
   Id clamp(uint8_t raw);
-}
+} // namespace Effects

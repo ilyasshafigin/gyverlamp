@@ -22,50 +22,50 @@
 
 namespace {
 
-sim::SimRuntime* g_runtime = nullptr;
-uint8_t* g_framebuffer = nullptr;
-bool g_initialized = false;
-uint32_t g_nowMs = 0;
-constexpr size_t FRAMEBUFFER_SIZE = static_cast<size_t>(WIDTH) * HEIGHT * 3;
-constexpr size_t MAX_NOTIFY_TEXT_LEN = 160;
+  sim::SimRuntime* g_runtime = nullptr;
+  uint8_t* g_framebuffer = nullptr;
+  bool g_initialized = false;
+  uint32_t g_nowMs = 0;
+  constexpr size_t FRAMEBUFFER_SIZE = static_cast<size_t>(WIDTH) * HEIGHT * 3;
+  constexpr size_t MAX_NOTIFY_TEXT_LEN = 160;
 
-void ensureFramebuffer() {
-  if (!g_framebuffer) {
-    g_framebuffer = new uint8_t[FRAMEBUFFER_SIZE]();
+  void ensureFramebuffer() {
+    if (!g_framebuffer) {
+      g_framebuffer = new uint8_t[FRAMEBUFFER_SIZE]();
+    }
   }
-}
 
-void ensureRuntime() {
-  if (!g_runtime) {
-    g_runtime = new sim::SimRuntime();
+  void ensureRuntime() {
+    if (!g_runtime) {
+      g_runtime = new sim::SimRuntime();
+    }
   }
-}
 
-sim::RuntimeOptions defaultOptions() {
-  sim::RuntimeOptions options;
-  options.effect = Effects::DEFAULT_ID;
-  options.fps = 30;
-  options.brightness = 255;
-  options.speed = 128;
-  options.scale = 128;
-  options.palette = Palettes::Id::Auto;
-  options.brightness_overridden = false;
-  options.speed_overridden = false;
-  options.scale_overridden = false;
-  return options;
-}
-
-void lazyInit() {
-  ensureRuntime();
-  ensureFramebuffer();
-  if (!g_initialized) {
-    std::memset(g_framebuffer, 0, FRAMEBUFFER_SIZE);
-    g_runtime->init(defaultOptions());
-    g_initialized = true;
+  sim::RuntimeOptions defaultOptions() {
+    sim::RuntimeOptions options;
+    options.effect = Effects::DEFAULT_ID;
+    options.fps = 30;
+    options.brightness = 255;
+    options.speed = 128;
+    options.scale = 128;
+    options.palette = Palettes::Id::Auto;
+    options.brightness_overridden = false;
+    options.speed_overridden = false;
+    options.scale_overridden = false;
+    return options;
   }
-}
 
-}  // namespace
+  void lazyInit() {
+    ensureRuntime();
+    ensureFramebuffer();
+    if (!g_initialized) {
+      std::memset(g_framebuffer, 0, FRAMEBUFFER_SIZE);
+      g_runtime->init(defaultOptions());
+      g_initialized = true;
+    }
+  }
+
+} // namespace
 
 extern "C" {
 
@@ -120,8 +120,12 @@ WASM_KEEPALIVE const uint8_t* sim_framebuffer() {
   return g_framebuffer;
 }
 
-WASM_KEEPALIVE int sim_width() { return WIDTH; }
-WASM_KEEPALIVE int sim_height() { return HEIGHT; }
+WASM_KEEPALIVE int sim_width() {
+  return WIDTH;
+}
+WASM_KEEPALIVE int sim_height() {
+  return HEIGHT;
+}
 
 WASM_KEEPALIVE int sim_set_effect(int id) {
   if (id < 0 || id > 255) return 0;
@@ -217,9 +221,10 @@ WASM_KEEPALIVE int sim_notify_text(const char* message) {
 WASM_KEEPALIVE int sim_notify_user(int type) {
   lazyInit();
   if (!g_runtime || !g_initialized) return 0;
-  if (type != static_cast<int>(UserNotificationType::Notify) &&
-      type != static_cast<int>(UserNotificationType::Warning) &&
-      type != static_cast<int>(UserNotificationType::Alarm)) {
+  if (
+    type != static_cast<int>(UserNotificationType::Notify) && type != static_cast<int>(UserNotificationType::Warning) &&
+    type != static_cast<int>(UserNotificationType::Alarm)
+  ) {
     return 0;
   }
   g_runtime->pushCommand({sim::CommandType::NotifyUser, type});
@@ -417,4 +422,4 @@ WASM_KEEPALIVE const char* sim_palette_name_at(int index) {
   return sim::SimRuntime::paletteName(id);
 }
 
-}  // extern "C"
+} // extern "C"

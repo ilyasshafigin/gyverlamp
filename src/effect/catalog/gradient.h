@@ -7,9 +7,9 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Gradient;
   static constexpr const char* NAME = "Gradient";
   static constexpr EffectSettingsSpec SETTINGS = {
-    255,  // brightness
-    30,   // speed
-    40,   // scale
+    255, // brightness
+    30,  // speed
+    40,  // scale
   };
 
   void setup(EffectContext& ctx) override;

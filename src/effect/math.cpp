@@ -29,8 +29,11 @@ uint8_t scaleToWave8(uint8_t x) {
   uint8_t x8 = x % 8U;
   uint8_t x4 = x8 % 4U;
   if (x4 == 0U)
-    if (x8 == 0U)       return 0U;
-    else                return 255U;
-  else if (x8 < 4U)     return (1U + x4 * 72U); // всего 7шт по 36U + 3U лишних = 255U (чтобы восхождение по синусоиде не было зеркально спуску)
-  return                       (253U - x4 * 72U); // 253U = 255U - 2U
+    if (x8 == 0U) return 0U;
+    else
+      return 255U;
+  else if (x8 < 4U)
+    // всего 7шт по 36U + 3U лишних = 255U (чтобы восхождение по синусоиде не было зеркально спуску)
+    return 1U + x4 * 72U;
+  return 253U - x4 * 72U; // 253U = 255U - 2U
 }

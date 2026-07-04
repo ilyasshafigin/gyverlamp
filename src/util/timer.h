@@ -4,31 +4,31 @@
 #include <functional>
 
 class Timer {
- public:
+public:
   typedef std::function<void()> CallBackType;
 
   explicit Timer(unsigned long intervalMs)
-      : interval(intervalMs), callback(nullptr), lastRun(0), running(false) {}
+    : interval(intervalMs),
+      callback(nullptr),
+      lastRun(0),
+      running(false) {}
 
   Timer(unsigned long intervalMs, CallBackType cb)
-      : interval(intervalMs), callback(cb), lastRun(0), running(false) {}
+    : interval(intervalMs),
+      callback(cb),
+      lastRun(0),
+      running(false) {}
 
-  void setOnTimer(CallBackType cb) {
-    callback = cb;
-  }
+  void setOnTimer(CallBackType cb) { callback = cb; }
 
-  void setInterval(unsigned long intervalMs) {
-    interval = intervalMs;
-  }
+  void setInterval(unsigned long intervalMs) { interval = intervalMs; }
 
   void start() {
     lastRun = millis();
     running = true;
   }
 
-  void stop() {
-    running = false;
-  }
+  void stop() { running = false; }
 
   void update() {
     if (!running || callback == nullptr) {
@@ -42,7 +42,7 @@ class Timer {
     }
   }
 
- private:
+private:
   unsigned long interval;
   CallBackType callback;
   unsigned long lastRun;

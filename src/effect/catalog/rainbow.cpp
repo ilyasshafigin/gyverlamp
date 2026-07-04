@@ -42,7 +42,7 @@ void EffectRainbow::render(EffectContext& ctx) {
 
     for (uint8_t x = 0U; x < WIDTH; x++) {
       for (uint8_t y = 0U; y < HEIGHT; y++) {
-        float twirlFactor = 9.0F * ((ctx.scale - 85) / 255.0F);    // на сколько оборотов будет закручена матрица, [0..3]
+        float twirlFactor = 9.0F * ((ctx.scale - 85) / 255.0F); // на сколько оборотов будет закручена матрица, [0..3]
         const float palettePosition = hue + (ratio * x + y * twirlFactor) * invDim;
         const uint8_t paletteIndex = static_cast<uint8_t>(static_cast<uint16_t>(palettePosition));
         CRGB thisColor = ColorFromPalette(palette, paletteIndex);

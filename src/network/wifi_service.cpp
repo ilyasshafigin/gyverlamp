@@ -1,9 +1,9 @@
+#include "wifi_service.h"
 #include "../config.h"
 #include "../core/frame_renderer.h"
 #include "../notification/controller.h"
 #include "../storage/eeprom_store.h"
 #include "../storage/settings_repository.h"
-#include "wifi_service.h"
 
 void WifiService::init() {
   resetSavedWifiIfNeeded();
@@ -40,7 +40,8 @@ void WifiService::startAp() {
   _apStartedAt = millis();
 
   Serial.println("[WIFI] Access point mode");
-  Serial.print("[WIFI] AP IP: "); Serial.println(WiFi.softAPIP());
+  Serial.print("[WIFI] AP IP: ");
+  Serial.println(WiFi.softAPIP());
 }
 
 void WifiService::stopAp() {
@@ -94,7 +95,8 @@ bool WifiService::initSta() {
   if (isStaConnected()) {
     _staWasConnected = true;
     _notifications.onWifiConnected();
-    Serial.print("[WIFI] STA IP: "); Serial.println(WiFi.localIP());
+    Serial.print("[WIFI] STA IP: ");
+    Serial.println(WiFi.localIP());
     return true;
   }
 

@@ -5,87 +5,87 @@
 #include <cstddef>
 
 namespace sim {
-namespace {
+  namespace {
 
-constexpr uint8_t kAdcPinA0 = 0;
-constexpr uint16_t kAdcMidpoint = 512;
-constexpr uint16_t kAdcMax = 1023;
-constexpr size_t kCapacity = 128;
+    constexpr uint8_t kAdcPinA0 = 0;
+    constexpr uint16_t kAdcMidpoint = 512;
+    constexpr uint16_t kAdcMax = 1023;
+    constexpr size_t kCapacity = 128;
 
-std::array<uint16_t, kCapacity> buffer{};
-size_t head = 0;
-size_t count = 0;
-bool enabled = false;
-bool hadUnderrun = false;
-uint32_t underrunCount = 0;
-uint32_t overflowCount = 0;
+    std::array<uint16_t, kCapacity> buffer{};
+    size_t head = 0;
+    size_t count = 0;
+    bool enabled = false;
+    bool hadUnderrun = false;
+    uint32_t underrunCount = 0;
+    uint32_t overflowCount = 0;
 
-void recordUnderrun() {
-    hadUnderrun = true;
-    ++underrunCount;
-}
+    void recordUnderrun() {
+      hadUnderrun = true;
+      ++underrunCount;
+    }
 
-} // namespace
+  } // namespace
 
-void audioPushSample(uint16_t sample) {
+  void audioPushSample(uint16_t sample) {
     if (!enabled) return;
 
     const uint16_t clamped = std::min(sample, kAdcMax);
 
     if (count == kCapacity) {
-        head = (head + 1) % kCapacity;
-        --count;
-        ++overflowCount;
+      head = (head + 1) % kCapacity;
+      --count;
+      ++overflowCount;
     }
 
     const size_t tail = (head + count) % kCapacity;
     buffer[tail] = clamped;
     ++count;
-}
+  }
 
-uint16_t audioReadAdc(uint8_t pin) {
+  uint16_t audioReadAdc(uint8_t pin) {
     if (!enabled || pin != kAdcPinA0 || count == 0) {
-        recordUnderrun();
-        return kAdcMidpoint;
+      recordUnderrun();
+      return kAdcMidpoint;
     }
 
     const uint16_t sample = buffer[head];
     head = (head + 1) % kCapacity;
     --count;
     return sample;
-}
+  }
 
-void audioSetEnabled(bool nextEnabled) {
+  void audioSetEnabled(bool nextEnabled) {
     enabled = nextEnabled;
     if (!enabled) {
-        audioFlush();
+      audioFlush();
     }
-}
+  }
 
-bool audioEnabled() {
+  bool audioEnabled() {
     return enabled;
-}
+  }
 
-bool audioHadUnderrun() {
+  bool audioHadUnderrun() {
     return hadUnderrun;
-}
+  }
 
-void audioClearUnderrun() {
+  void audioClearUnderrun() {
     hadUnderrun = false;
-}
+  }
 
-void audioFlush() {
+  void audioFlush() {
     head = 0;
     count = 0;
     hadUnderrun = false;
-}
+  }
 
-uint32_t audioUnderrunCount() {
+  uint32_t audioUnderrunCount() {
     return underrunCount;
-}
+  }
 
-uint32_t audioOverflowCount() {
+  uint32_t audioOverflowCount() {
     return overflowCount;
-}
+  }
 
 } // namespace sim

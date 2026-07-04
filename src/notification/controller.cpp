@@ -65,31 +65,24 @@ void NotificationController::tick() {
 
   _frame.snapshot = _drawableNotification;
   _frame.opacity = _opacity.value();
-  _frame.backdropDim = _frame.snapshot.isActive()
-    ? scale8(_frame.snapshot.targetDim, _frame.opacity)
-    : 0;
+  _frame.backdropDim = _frame.snapshot.isActive() ? scale8(_frame.snapshot.targetDim, _frame.opacity) : 0;
 }
 
 void NotificationController::renderOverlay(NotificationOverlay& overlay, const NotificationFrame& frame) {
   const NotificationSnapshot& snaphot = frame.snapshot;
   switch (snaphot.source) {
-  case NotificationSource::User:
-    _userRenderer.render(overlay, snaphot);
-    break;
-  case NotificationSource::Button:
-    _buttonRenderer.render(overlay, snaphot);
-    break;
-  case NotificationSource::Wifi:
-    _systemRenderer.renderWifi(overlay, snaphot.connectionState, snaphot.startedMs);
-    break;
-  case NotificationSource::Mqtt:
-    _systemRenderer.renderMqtt(overlay, snaphot.connectionState, snaphot.startedMs);
-    break;
-  case NotificationSource::Ota:
-    _systemRenderer.renderOta(overlay, snaphot.otaState, snaphot.otaPercent, snaphot.startedMs);
-    break;
-  case NotificationSource::None:
-    break;
+    case NotificationSource::User: _userRenderer.render(overlay, snaphot); break;
+    case NotificationSource::Button: _buttonRenderer.render(overlay, snaphot); break;
+    case NotificationSource::Wifi:
+      _systemRenderer.renderWifi(overlay, snaphot.connectionState, snaphot.startedMs);
+      break;
+    case NotificationSource::Mqtt:
+      _systemRenderer.renderMqtt(overlay, snaphot.connectionState, snaphot.startedMs);
+      break;
+    case NotificationSource::Ota:
+      _systemRenderer.renderOta(overlay, snaphot.otaState, snaphot.otaPercent, snaphot.startedMs);
+      break;
+    case NotificationSource::None: break;
   }
 }
 
@@ -130,7 +123,7 @@ void NotificationController::startUserNotification(UserNotificationType type, ui
     return;
   }
 
-  if (type == UserNotificationType::Notify/* && durationMs == 0*/) {
+  if (type == UserNotificationType::Notify /* && durationMs == 0*/) {
     durationMs = USER_NOTIFY_DEFAULT_MS;
   }
 
@@ -161,15 +154,31 @@ void NotificationController::stopUserNotification() {
   _stateNotifier.stateChanged();
 }
 
-void NotificationController::onWifiConnecting() { setWifiState(ConnectionState::Connecting); }
-void NotificationController::onWifiConnected() { setWifiState(ConnectionState::Connected); }
-void NotificationController::onWifiError() { setWifiState(ConnectionState::Error); }
-void NotificationController::onWifiDisabled() { setWifiState(ConnectionState::Disabled); }
+void NotificationController::onWifiConnecting() {
+  setWifiState(ConnectionState::Connecting);
+}
+void NotificationController::onWifiConnected() {
+  setWifiState(ConnectionState::Connected);
+}
+void NotificationController::onWifiError() {
+  setWifiState(ConnectionState::Error);
+}
+void NotificationController::onWifiDisabled() {
+  setWifiState(ConnectionState::Disabled);
+}
 
-void NotificationController::onMqttConnecting() { setMqttState(ConnectionState::Connecting); }
-void NotificationController::onMqttConnected() { setMqttState(ConnectionState::Connected); }
-void NotificationController::onMqttError() { setMqttState(ConnectionState::Error); }
-void NotificationController::onMqttDisabled() { setMqttState(ConnectionState::Disabled); }
+void NotificationController::onMqttConnecting() {
+  setMqttState(ConnectionState::Connecting);
+}
+void NotificationController::onMqttConnected() {
+  setMqttState(ConnectionState::Connected);
+}
+void NotificationController::onMqttError() {
+  setMqttState(ConnectionState::Error);
+}
+void NotificationController::onMqttDisabled() {
+  setMqttState(ConnectionState::Disabled);
+}
 
 void NotificationController::setWifiState(ConnectionState state) {
   if (_wifiState == state) return;
@@ -310,9 +319,11 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     return filterMuted(snaphot);
   }
 
-  const bool hasPressEcho = _buttonPressCount > 0 && (_buttonPressing || isRecently(_lastButtonPressMs, BUTTON_PRESS_ECHO_MS));
+  const bool hasPressEcho =
+    _buttonPressCount > 0 && (_buttonPressing || isRecently(_lastButtonPressMs, BUTTON_PRESS_ECHO_MS));
   const uint32_t buttonDurationMs = getButtonNotificationDuration(_buttonType);
-  const bool hasButtonAction = _buttonType != ButtonNotificationType::None && buttonDurationMs > 0 && isRecently(_lastButtonChangeMs, buttonDurationMs);
+  const bool hasButtonAction = _buttonType != ButtonNotificationType::None && buttonDurationMs > 0 &&
+                               isRecently(_lastButtonChangeMs, buttonDurationMs);
 
   if (hasButtonAction || hasPressEcho) {
     snaphot.source = NotificationSource::Button;
@@ -394,37 +405,26 @@ bool NotificationController::isRecently(uint32_t sinceMs, uint32_t durationMs) c
   return millis() - sinceMs < durationMs;
 }
 
-bool NotificationController::sameNotification(
-  const NotificationSnapshot& a,
-  const NotificationSnapshot& b
-) const {
+bool NotificationController::sameNotification(const NotificationSnapshot& a, const NotificationSnapshot& b) const {
   if (a.source != b.source) return false;
 
   if (a.source == NotificationSource::Button) {
-    return
-      a.buttonType == b.buttonType &&
-      a.startedMs == b.startedMs &&
-      a.buttonValue == b.buttonValue &&
-      a.buttonDirection == b.buttonDirection &&
-      a.buttonPressCount == b.buttonPressCount &&
-      a.buttonPressMs == b.buttonPressMs &&
-      a.buttonPressing == b.buttonPressing;
+    return a.buttonType == b.buttonType && a.startedMs == b.startedMs && a.buttonValue == b.buttonValue &&
+           a.buttonDirection == b.buttonDirection && a.buttonPressCount == b.buttonPressCount &&
+           a.buttonPressMs == b.buttonPressMs && a.buttonPressing == b.buttonPressing;
   }
 
-  return
-    a.userType == b.userType &&
-    a.connectionState == b.connectionState &&
-    a.otaState == b.otaState;
+  return a.userType == b.userType && a.connectionState == b.connectionState && a.otaState == b.otaState;
 }
 
 uint8_t NotificationController::getUserNotificationPriority(UserNotificationType type) {
   switch (type) {
-  case UserNotificationType::Alarm: return 4;
-  case UserNotificationType::Warning: return 3;
-  case UserNotificationType::Text: return 2;
-  case UserNotificationType::Notify: return 1;
-  case UserNotificationType::None:
-  default: return 0;
+    case UserNotificationType::Alarm: return 4;
+    case UserNotificationType::Warning: return 3;
+    case UserNotificationType::Text: return 2;
+    case UserNotificationType::Notify: return 1;
+    case UserNotificationType::None:
+    default: return 0;
   }
 }
 
@@ -447,20 +447,18 @@ bool NotificationController::shouldMuteNotification(const NotificationSnapshot& 
 bool NotificationController::canBypassMute(const NotificationSnapshot& snaphot) const {
   if (snaphot.source == NotificationSource::Ota) return true;
   return snaphot.source == NotificationSource::User &&
-    (snaphot.userType == UserNotificationType::Alarm ||
-      snaphot.userType == UserNotificationType::Warning);
+         (snaphot.userType == UserNotificationType::Alarm || snaphot.userType == UserNotificationType::Warning);
 }
 
 uint32_t NotificationController::getButtonNotificationDuration(ButtonNotificationType type) {
   switch (type) {
-  case ButtonNotificationType::PowerOn: return 700;
-  case ButtonNotificationType::Dismiss: return 450;
-  case ButtonNotificationType::NextEffect: return 900;
-  case ButtonNotificationType::PreviousEffect: return 900;
-  case ButtonNotificationType::Brightness: return 1200;
-  case ButtonNotificationType::PowerOff:
-  case ButtonNotificationType::None:
-  default:
-    return 0;
+    case ButtonNotificationType::PowerOn: return 700;
+    case ButtonNotificationType::Dismiss: return 450;
+    case ButtonNotificationType::NextEffect: return 900;
+    case ButtonNotificationType::PreviousEffect: return 900;
+    case ButtonNotificationType::Brightness: return 1200;
+    case ButtonNotificationType::PowerOff:
+    case ButtonNotificationType::None:
+    default: return 0;
   }
 }

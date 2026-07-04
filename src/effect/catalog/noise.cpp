@@ -17,8 +17,7 @@ void EffectNoise::setup(EffectContext& ctx) {
 }
 
 void EffectNoise::render(EffectContext& ctx) {
-  const CRGBPalette16& palette =
-    ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
+  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
 
   uint8_t dataSmoothing = 0;
   if (ctx.speed < 50) {

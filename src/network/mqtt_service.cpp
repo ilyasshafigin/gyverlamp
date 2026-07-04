@@ -30,12 +30,10 @@ namespace {
   const char* USER_NOTIFICATION_ALARM = "Alarm";
   const char* USER_NOTIFICATION_TEXT = "Text";
   const char* USER_NOTIFICATION_OPTIONS[] = {
-    USER_NOTIFICATION_OFF,
-    USER_NOTIFICATION_TEXT,
-    USER_NOTIFICATION_WARNING,
-    USER_NOTIFICATION_ALARM
+    USER_NOTIFICATION_OFF, USER_NOTIFICATION_TEXT, USER_NOTIFICATION_WARNING, USER_NOTIFICATION_ALARM
   };
-  constexpr uint8_t USER_NOTIFICATION_OPTIONS_COUNT = sizeof(USER_NOTIFICATION_OPTIONS) / sizeof(USER_NOTIFICATION_OPTIONS[0]);
+  constexpr uint8_t USER_NOTIFICATION_OPTIONS_COUNT =
+    sizeof(USER_NOTIFICATION_OPTIONS) / sizeof(USER_NOTIFICATION_OPTIONS[0]);
 
   static const char* AUDIO_MODE_OFF = "Off";
   static const char* AUDIO_MODE_BRIGHTNESS = "Brightness";
@@ -63,12 +61,12 @@ namespace {
 
   static const char* audioModeName(AudioMode mode) {
     switch (mode) {
-    case AudioMode::Brightness: return AUDIO_MODE_BRIGHTNESS;
-    case AudioMode::Speed: return AUDIO_MODE_SPEED;
-    case AudioMode::Scale: return AUDIO_MODE_SCALE;
-    case AudioMode::Effect: return AUDIO_MODE_EFFECT;
-    case AudioMode::Off:
-    default: return AUDIO_MODE_OFF;
+      case AudioMode::Brightness: return AUDIO_MODE_BRIGHTNESS;
+      case AudioMode::Speed: return AUDIO_MODE_SPEED;
+      case AudioMode::Scale: return AUDIO_MODE_SCALE;
+      case AudioMode::Effect: return AUDIO_MODE_EFFECT;
+      case AudioMode::Off:
+      default: return AUDIO_MODE_OFF;
     }
   }
 
@@ -82,10 +80,10 @@ namespace {
 
   static const char* audioBandName(AudioBand band) {
     switch (band) {
-    case AudioBand::Bass: return AUDIO_BAND_BASS;
-    case AudioBand::Treble: return AUDIO_BAND_TREBLE;
-    case AudioBand::Level:
-    default: return AUDIO_BAND_LEVEL;
+      case AudioBand::Bass: return AUDIO_BAND_BASS;
+      case AudioBand::Treble: return AUDIO_BAND_TREBLE;
+      case AudioBand::Level:
+      default: return AUDIO_BAND_LEVEL;
     }
   }
 
@@ -94,7 +92,6 @@ namespace {
     if (strcmp(value, AUDIO_BAND_TREBLE) == 0) return AudioBand::Treble;
     return AudioBand::Level;
   }
-
 
   void haCallbackForward(HAEntity* entity, char* topic, byte* payload, unsigned int length) {
     if (gMqttService != nullptr) {
@@ -147,7 +144,7 @@ namespace {
     snprintf(buf, sizeof(buf), "%02u:%02u", minutes / 60, minutes % 60);
     return String(buf);
   }
-}
+} // namespace
 
 MqttService::MqttService(
   AudioService& audio,
@@ -159,69 +156,78 @@ MqttService::MqttService(
   SettingsRepository& settings,
   TouchButton& button,
   WifiService& wifi
-) :
-  _audio(audio),
-  _eeprom(eeprom),
-  _effects(effects),
-  _notifications(notifications),
-  _power(power),
-  _rotation(rotation),
-  _settings(settings),
-  _button(button),
-  _wifi(wifi),
-  _client(_wifiClient),
-  _publishTimer(60000),
-  _clientId("GyverLamp-" + String(ESP.getChipId(), HEX)),
-  _haDevice(_clientId.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
-  _haLight("_light", "Gyver Lamp", _haDevice),
-  _haRotationSwitch("_rotation", "Rotation", _haDevice),
-  _haRotationInterval("_rotation_interval_minutes", "Rotation Interval Minutes", _haDevice, ROTATION_INTERVAL_MIN_MIN, ROTATION_INTERVAL_MIN_MAX, 1),
-  _haButtonSwitch("_button", "Touch Button", _haDevice),
-  _haEffectScale("_effect_scale", "Effect Scale", _haDevice, 1, 255, 1),
-  _haEffectSpeed("_effect_speed", "Effect Speed", _haDevice, 1, 255, 1),
-  _haEffectBrightness("_effect_brightness", "Effect brightness", _haDevice, 0, 255, 1),
-  _haAutoOff("_auto_off_minutes", "Auto Off Minutes", _haDevice, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX, 1),
-  _haAutoOffRemaining("_auto_off_remaining", "Auto Off Remaining", _haDevice, "s", 0),
-  _haPalette("_palette", "Palette", _haDevice, Palettes::COUNT),
-  _haUserNotification("_user_notification", "User Notification", _haDevice, USER_NOTIFICATION_OPTIONS_COUNT, USER_NOTIFICATION_OPTIONS),
-  _haUserNotificationDuration("_user_notification_duration", "User Notification Duration", _haDevice, 0, 3600, 1),
-  _haUserNotificationRemaining("_user_notification_remaining", "User Notification Remaining", _haDevice, "s", 0),
-  _haUserNotify("_user_notify", "User Notify", _haDevice),
-  _haUserNotificationText("_user_notification_text", "User Notification Text", _haDevice, 64),
-  _haNotificationQuietHours("_notification_quiet_hours", "Notification Quiet Hours", _haDevice),
-  _haNotificationQuietStart("_notification_quiet_start", "Notification Quiet Start", _haDevice),
-  _haNotificationQuietEnd("_notification_quiet_end", "Notification Quiet End", _haDevice),
-  _haNotificationMuteState("_notification_mute_state", "Notification Mute State", _haDevice, 16),
-  _haAudioMode("_audio_mode", "Audio Mode", _haDevice, 5, AUDIO_MODE_OPTIONS),
-  _haAudioBand("_audio_band", "Audio Band", _haDevice, 3, AUDIO_BAND_OPTIONS),
-  _haAudioAmount("_audio_amount", "Audio Amount", _haDevice, 0, 255, 1),
-  _haAudioAvailable("_audio_available", "Audio Available", _haDevice, 8),
-  _haUptime("_uptime", "Uptime", _haDevice, "s", 0),
-  _haRssi("_rssi", "RSSI", _haDevice, "dBm", 0),
-  _haRssiPct("_rssi_pct", "RSSI %", _haDevice, "%", 0),
-  _haChannel("_channel", "WiFi Channel", _haDevice, nullptr, 0),
-  _haVcc("_vcc", "VCC", _haDevice, "V", 3),
-  _haBootCount("_boot_count", "Boot Count", _haDevice, nullptr, 0),
-  _haResetReason("_reset_reason", "Reset Reason", _haDevice, 64) {
+)
+  : _audio(audio),
+    _eeprom(eeprom),
+    _effects(effects),
+    _notifications(notifications),
+    _power(power),
+    _rotation(rotation),
+    _settings(settings),
+    _button(button),
+    _wifi(wifi),
+    _client(_wifiClient),
+    _publishTimer(60000),
+    _clientId("GyverLamp-" + String(ESP.getChipId(), HEX)),
+    _haDevice(_clientId.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
+    _haLight("_light", "Gyver Lamp", _haDevice),
+    _haRotationSwitch("_rotation", "Rotation", _haDevice),
+    _haRotationInterval(
+      "_rotation_interval_minutes",
+      "Rotation Interval Minutes",
+      _haDevice,
+      ROTATION_INTERVAL_MIN_MIN,
+      ROTATION_INTERVAL_MIN_MAX,
+      1
+    ),
+    _haButtonSwitch("_button", "Touch Button", _haDevice),
+    _haEffectScale("_effect_scale", "Effect Scale", _haDevice, 1, 255, 1),
+    _haEffectSpeed("_effect_speed", "Effect Speed", _haDevice, 1, 255, 1),
+    _haEffectBrightness("_effect_brightness", "Effect brightness", _haDevice, 0, 255, 1),
+    _haAutoOff("_auto_off_minutes", "Auto Off Minutes", _haDevice, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX, 1),
+    _haAutoOffRemaining("_auto_off_remaining", "Auto Off Remaining", _haDevice, "s", 0),
+    _haPalette("_palette", "Palette", _haDevice, Palettes::COUNT),
+    _haUserNotification(
+      "_user_notification", "User Notification", _haDevice, USER_NOTIFICATION_OPTIONS_COUNT, USER_NOTIFICATION_OPTIONS
+    ),
+    _haUserNotificationDuration("_user_notification_duration", "User Notification Duration", _haDevice, 0, 3600, 1),
+    _haUserNotificationRemaining("_user_notification_remaining", "User Notification Remaining", _haDevice, "s", 0),
+    _haUserNotify("_user_notify", "User Notify", _haDevice),
+    _haUserNotificationText("_user_notification_text", "User Notification Text", _haDevice, 64),
+    _haNotificationQuietHours("_notification_quiet_hours", "Notification Quiet Hours", _haDevice),
+    _haNotificationQuietStart("_notification_quiet_start", "Notification Quiet Start", _haDevice),
+    _haNotificationQuietEnd("_notification_quiet_end", "Notification Quiet End", _haDevice),
+    _haNotificationMuteState("_notification_mute_state", "Notification Mute State", _haDevice, 16),
+    _haAudioMode("_audio_mode", "Audio Mode", _haDevice, 5, AUDIO_MODE_OPTIONS),
+    _haAudioBand("_audio_band", "Audio Band", _haDevice, 3, AUDIO_BAND_OPTIONS),
+    _haAudioAmount("_audio_amount", "Audio Amount", _haDevice, 0, 255, 1),
+    _haAudioAvailable("_audio_available", "Audio Available", _haDevice, 8),
+    _haUptime("_uptime", "Uptime", _haDevice, "s", 0),
+    _haRssi("_rssi", "RSSI", _haDevice, "dBm", 0),
+    _haRssiPct("_rssi_pct", "RSSI %", _haDevice, "%", 0),
+    _haChannel("_channel", "WiFi Channel", _haDevice, nullptr, 0),
+    _haVcc("_vcc", "VCC", _haDevice, "V", 3),
+    _haBootCount("_boot_count", "Boot Count", _haDevice, nullptr, 0),
+    _haResetReason("_reset_reason", "Reset Reason", _haDevice, 64) {
   gMqttService = this;
 
   _haLight.onCommand([](bool on, uint8_t brightness) {
     if (gMqttService != nullptr) {
       gMqttService->onLightCommand(on, brightness);
     }
-    });
+  });
 
   _haLight.onEffectCommand([](const char* effectName) {
     if (gMqttService != nullptr) {
       gMqttService->onEffectCommand(effectName);
     }
-    });
+  });
 
   _haLight.onColorCommand([](uint8_t r, uint8_t g, uint8_t b) {
     if (gMqttService != nullptr) {
       gMqttService->onColorCommand(r, g, b);
     }
-    });
+  });
 
   _haUserNotification.setState(USER_NOTIFICATION_OFF);
   _haUserNotificationDuration.setState(0);
@@ -309,18 +315,14 @@ void MqttService::init() {
 }
 
 void MqttService::tick() {
-  LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() {
-    _publishTimer.update();
-    });
+  LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { _publishTimer.update(); });
 
   if (_enabled && _wifi.isStaConnected() && !HAMQTT.connected()) {
     reconnect();
   }
 
   if (_enabled && _wifi.isStaConnected()) {
-    LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() {
-      HAMQTT.loop();
-      });
+    LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { HAMQTT.loop(); });
   }
 }
 
@@ -379,7 +381,9 @@ void MqttService::reconnect() {
   const MqttConfig& mqttConfig = _eeprom.readMqttConfig();
   _client.setServer(mqttConfig.host, atoi(mqttConfig.port));
 
-  Serial.printf("[MQTT] Attempting MQTT connection to %s on port %s as %s ...", mqttConfig.host, mqttConfig.port, mqttConfig.user);
+  Serial.printf(
+    "[MQTT] Attempting MQTT connection to %s on port %s as %s ...", mqttConfig.host, mqttConfig.port, mqttConfig.user
+  );
 
   if (HAMQTT.connect(_clientId.c_str(), mqttConfig.user, mqttConfig.password)) {
     Serial.println(F("[MQTT] connected!"));
@@ -398,7 +402,9 @@ void MqttService::reconnect() {
       return;
     }
 
-    Serial.print(F("[MQTT] failed, rc=")); Serial.print(_client.state()); Serial.printf(" try again in %d seconds\n", _reconnectTimeout / 1000);
+    Serial.print(F("[MQTT] failed, rc="));
+    Serial.print(_client.state());
+    Serial.printf(" try again in %d seconds\n", _reconnectTimeout / 1000);
   }
 }
 
@@ -515,10 +521,8 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
     _notifications.startUserNotification(UserNotificationType::Notify);
     updateStates();
   } else if (
-    entity == &_haNotificationQuietHours ||
-    entity == &_haNotificationQuietStart ||
-    entity == &_haNotificationQuietEnd
-    ) {
+    entity == &_haNotificationQuietHours || entity == &_haNotificationQuietStart || entity == &_haNotificationQuietEnd
+  ) {
     NotificationQuietHours q = _notifications.getQuietHours();
     q.enabled = _haNotificationQuietHours.getState();
     uint16_t startMinutes = q.startMinutes;
@@ -542,7 +546,8 @@ void MqttService::onLightCommand(bool on, uint8_t brightness) {
 }
 
 void MqttService::onEffectCommand(const char* effectName) {
-  Serial.print(F("[MQTT] Command arrived: effect set to ")); Serial.println(effectName);
+  Serial.print(F("[MQTT] Command arrived: effect set to "));
+  Serial.println(effectName);
 
   Effects::Id effectId = Effects::getEffectId(effectName);
   if (effectId == Effects::Id::INVALID) return;
@@ -553,7 +558,8 @@ void MqttService::onEffectCommand(const char* effectName) {
 }
 
 void MqttService::onPaletteCommand(const char* paletteName) {
-  Serial.print(F("[MQTT] Command arrived: palette set to ")); Serial.println(paletteName);
+  Serial.print(F("[MQTT] Command arrived: palette set to "));
+  Serial.println(paletteName);
 
   Palettes::Id paletteId = Palettes::parsePaletteName(paletteName);
   _effects.setPalette(paletteId);
@@ -561,8 +567,12 @@ void MqttService::onPaletteCommand(const char* paletteName) {
 }
 
 void MqttService::onColorCommand(uint8_t r, uint8_t g, uint8_t b) {
-  Serial.print(F("[MQTT] Command arrived: rgb ")); Serial.print(r);
-  Serial.print(','); Serial.print(g); Serial.print(','); Serial.println(b);
+  Serial.print(F("[MQTT] Command arrived: rgb "));
+  Serial.print(r);
+  Serial.print(',');
+  Serial.print(g);
+  Serial.print(',');
+  Serial.println(b);
 
   _rotation.disable();
   _effects.setColor(r, g, b);
@@ -592,8 +602,11 @@ MqttService::MqttService(
   (void)wifi;
 }
 
-void MqttService::init() {}
-void MqttService::tick() {}
-void MqttService::updateStates() {}
+void MqttService::init() {
+}
+void MqttService::tick() {
+}
+void MqttService::updateStates() {
+}
 
 #endif

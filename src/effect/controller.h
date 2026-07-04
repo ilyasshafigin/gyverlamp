@@ -16,30 +16,26 @@ class TimeService;
 class EffectController {
 public:
   explicit EffectController(
-    AudioService& audio,
-    EepromStore& eeprom,
-    Led& led,
-    SettingsRepository& settings,
-    TimeService& time
-  ) :
-    _audio(audio),
-    _eeprom(eeprom),
-    _led(led),
-    _settings(settings),
-    _time(time) {
-  }
+    AudioService& audio, EepromStore& eeprom, Led& led, SettingsRepository& settings, TimeService& time
+  )
+    : _audio(audio),
+      _eeprom(eeprom),
+      _led(led),
+      _settings(settings),
+      _time(time) {}
 
   void init();
   bool render(bool force = false);
 
   Effects::Id getActiveEffectId() const { return _currentEffectId; }
-  Effects::Id getSelectedEffectId() const { return _pendingEffectId != Effects::Id::INVALID ? _pendingEffectId : _currentEffectId; }
+  Effects::Id getSelectedEffectId() const {
+    return _pendingEffectId != Effects::Id::INVALID ? _pendingEffectId : _currentEffectId;
+  }
   uint8_t getRed() const { return _red; }
   uint8_t getGreen() const { return _green; }
   uint8_t getBlue() const { return _blue; }
   EffectSettingsSpec getActiveSettingsSpec() const { return Effects::getEffectSettingsSpec(_currentEffectId); }
   EffectSettingsSpec getSelectedSettingsSpec() const { return Effects::getEffectSettingsSpec(getSelectedEffectId()); }
-
 
   Palettes::Id getSelectedPalette() const;
   void setPalette(Palettes::Id paletteId);
@@ -55,7 +51,11 @@ public:
   void setEffectSpeed(uint8_t value);
   void setEffectScale(uint8_t value);
   bool resetEffectSettingsToDefaults();
-  void setColor(uint8_t r, uint8_t g, uint8_t b) { _red = r; _green = g; _blue = b; }
+  void setColor(uint8_t r, uint8_t g, uint8_t b) {
+    _red = r;
+    _green = g;
+    _blue = b;
+  }
   void setOutputEnabled(bool enabled) { _outputEnabled = enabled; }
 
   bool updateTransition();
@@ -88,11 +88,7 @@ private:
   static constexpr uint16_t EFFECT_FADE_OUT_MS = 350;
   static constexpr uint16_t EFFECT_FADE_IN_MS = 350;
 
-  enum class TransitionPhase : uint8_t {
-    Idle,
-    FadingOut,
-    FadingIn
-  };
+  enum class TransitionPhase : uint8_t { Idle, FadingOut, FadingIn };
 
   // Буфер для placement new. Размер вычисляется по самому большому effect.
   /*alignas(alignof(std::max_align_t)) */

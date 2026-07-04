@@ -16,9 +16,7 @@ void AudioService::tick() {
 }
 
 void AudioService::setConfig(const AudioConfig& config) {
-  if (_config.mode == config.mode &&
-    _config.band == config.band &&
-    _config.amount == config.amount) {
+  if (_config.mode == config.mode && _config.band == config.band && _config.amount == config.amount) {
     return;
   }
 

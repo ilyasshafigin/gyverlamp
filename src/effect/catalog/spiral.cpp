@@ -39,8 +39,7 @@ void EffectSpiral::setup(EffectContext& ctx) {
 }
 
 void EffectSpiral::render(EffectContext& ctx) {
-  const CRGBPalette16& palette =
-    ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
+  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
 
   ctx.led.scale(250);
 
@@ -77,10 +76,12 @@ void EffectSpiral::render(EffectContext& ctx) {
 
       if (spiroincrement) {
         if (spirocount >= 4) spirocount *= 2;
-        else spirocount += 1;
+        else
+          spirocount += 1;
       } else {
         if (spirocount > 4) spirocount /= 2;
-        else spirocount -= 1;
+        else
+          spirocount -= 1;
       }
 
       spirooffset = 256 / spirocount;

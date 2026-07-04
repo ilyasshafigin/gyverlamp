@@ -166,12 +166,20 @@ public:
   void blurBuff(fract8 amount);
 
   void gradientDownTop(uint8_t bottom, const CHSV& bottomColor, uint8_t top, const CHSV& topColor);
-  void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) { drawLine(_leds, x1, y1, x2, y2, color); }
-  void drawLineBuff(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) { drawLine(_ledsbuff, x1, y1, x2, y2, color); }
+  void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) {
+    drawLine(_leds, x1, y1, x2, y2, color);
+  }
+  void drawLineBuff(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) {
+    drawLine(_ledsbuff, x1, y1, x2, y2, color);
+  }
   void drawLine(float x1, float y1, float x2, float y2, const CRGB& color) { drawLine(_leds, x1, y1, x2, y2, color); }
-  void drawLineBuff(float x1, float y1, float x2, float y2, const CRGB& color) { drawLine(_ledsbuff, x1, y1, x2, y2, color); }
+  void drawLineBuff(float x1, float y1, float x2, float y2, const CRGB& color) {
+    drawLine(_ledsbuff, x1, y1, x2, y2, color);
+  }
   void drawCircle(float x0, float y0, float radius, const CRGB& color) { drawCircle(_leds, x0, y0, radius, color); }
-  void drawCircleBuff(float x0, float y0, float radius, const CRGB& color) { drawCircle(_ledsbuff, x0, y0, radius, color); }
+  void drawCircleBuff(float x0, float y0, float radius, const CRGB& color) {
+    drawCircle(_ledsbuff, x0, y0, radius, color);
+  }
 
   const fl::XYMap& xyMap() const { return _xyMap; }
 
@@ -181,12 +189,11 @@ private:
   CRGB _dummyLed = CRGB::Black;
   fl::XYMap _xyMap;
 
-  static bool isValidXY(int x, int y) {
-    return static_cast<unsigned>(x) < WIDTH && static_cast<unsigned>(y) < HEIGHT;
-  }
+  static bool isValidXY(int x, int y) { return static_cast<unsigned>(x) < WIDTH && static_cast<unsigned>(y) < HEIGHT; }
 
   static uint32_t packColor(const CRGB& pixel) {
-    return (static_cast<uint32_t>(pixel.r) << 16) | (static_cast<uint32_t>(pixel.g) << 8) | static_cast<uint32_t>(pixel.b);
+    return (static_cast<uint32_t>(pixel.r) << 16) | (static_cast<uint32_t>(pixel.g) << 8) |
+           static_cast<uint32_t>(pixel.b);
   }
 
   uint32_t getPixelColor(CRGB* buff, int x, int y) const {

@@ -71,17 +71,17 @@ namespace {
     return true;
   }
 
-}
+} // namespace
 
 const char* const HATime::component PROGMEM = "time";
 
-HATime::HATime(const char* unique_id, const char* name, HADevice& device) :
-  HATime(unique_id, name) {
+HATime::HATime(const char* unique_id, const char* name, HADevice& device)
+  : HATime(unique_id, name) {
   this->device = &device;
 }
 
-HATime::HATime(const char* unique_id, const char* name) :
-  HAEntity(unique_id, name, component) {
+HATime::HATime(const char* unique_id, const char* name)
+  : HAEntity(unique_id, name, component) {
   this->dirty = false;
   this->state[0] = '\0';
   this->commandCallback = nullptr;

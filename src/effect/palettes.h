@@ -18,9 +18,9 @@ DECLARE_GRADIENT_PALETTE(BlueSmoke_gp);
 DECLARE_GRADIENT_PALETTE(Gummy_gp);
 DECLARE_GRADIENT_PALETTE(Leo_gp);
 
-extern const TProgmemRGBPalette16 WoodFireColors_p PROGMEM;     //* рыжий
-extern const TProgmemRGBPalette16 NormalFire_p PROGMEM;         // красный
-extern const TProgmemRGBPalette16 LithiumFireColors_p PROGMEM;  //* пастель
-extern const TProgmemRGBPalette16 SodiumFireColors_p PROGMEM;   //* Yellow
-extern const TProgmemRGBPalette16 CopperFireColors_p PROGMEM;   //* Green
-extern const TProgmemRGBPalette16 AlcoholFireColors_p PROGMEM;  //* Blue
+extern const TProgmemRGBPalette16 WoodFireColors_p PROGMEM;    //* рыжий
+extern const TProgmemRGBPalette16 NormalFire_p PROGMEM;        // красный
+extern const TProgmemRGBPalette16 LithiumFireColors_p PROGMEM; //* пастель
+extern const TProgmemRGBPalette16 SodiumFireColors_p PROGMEM;  //* Yellow
+extern const TProgmemRGBPalette16 CopperFireColors_p PROGMEM;  //* Green
+extern const TProgmemRGBPalette16 AlcoholFireColors_p PROGMEM; //* Blue

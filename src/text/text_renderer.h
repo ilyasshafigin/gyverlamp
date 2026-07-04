@@ -14,7 +14,8 @@ public:
 
   // Отрисовать один символ левым верхним углом в (x, y).
   static void drawChar(Led& led, int16_t x, int16_t y, uint8_t letter, const CRGB& color, bool wrapX = false);
-  static void drawChar(NotificationOverlay& overlay, int16_t x, int16_t y, uint8_t letter, const CRGB& color, bool wrapX = false);
+  static void
+  drawChar(NotificationOverlay& overlay, int16_t x, int16_t y, uint8_t letter, const CRGB& color, bool wrapX = false);
 
   // Ширина строки в пикселях (символы + пробелы).
   static int16_t stringWidth(const String& text);

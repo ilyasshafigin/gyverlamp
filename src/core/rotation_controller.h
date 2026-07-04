@@ -10,16 +10,11 @@ class StateNotifier;
 
 class RotationController {
 public:
-  explicit RotationController(
-    EepromStore& eepromStore,
-    EffectController& effects,
-    StateNotifier& stateNotifier
-  ) :
-    _eepromStore(eepromStore),
-    _effects(effects),
-    _stateNotifier(stateNotifier),
-    _timer(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {
-  }
+  explicit RotationController(EepromStore& eepromStore, EffectController& effects, StateNotifier& stateNotifier)
+    : _eepromStore(eepromStore),
+      _effects(effects),
+      _stateNotifier(stateNotifier),
+      _timer(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {}
 
   void init();
   void tick();

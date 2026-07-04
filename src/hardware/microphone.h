@@ -12,11 +12,11 @@ class Microphone {
 public:
   explicit Microphone()
 #ifdef USE_ADC
-    :
-  _vol(A0) {
+    : _vol(A0) {
   }
 #else
-  {}
+  {
+  }
 #endif
 
   void init();
@@ -30,5 +30,4 @@ private:
   uint32_t _lastTickMs;
 #endif
   AudioFrame _frame;
-
 };

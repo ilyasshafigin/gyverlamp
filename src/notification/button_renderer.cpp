@@ -7,34 +7,25 @@ static constexpr uint8_t TOP_Y = HEIGHT - 1;
 
 void ButtonNotificationRenderer::render(NotificationOverlay& overlay, const NotificationSnapshot& notification) {
   switch (notification.buttonType) {
-  case ButtonNotificationType::PowerOn:
-    renderPowerOn(overlay, notification.startedMs);
-    break;
-  case ButtonNotificationType::Dismiss:
-    renderDismiss(overlay, notification.startedMs);
-    break;
-  case ButtonNotificationType::NextEffect:
-    renderSwitchSweep(overlay, notification.startedMs, true, CRGB(180, 255, 0));
-    break;
-  case ButtonNotificationType::PreviousEffect:
-    renderSwitchSweep(overlay, notification.startedMs, false, CRGB(180, 255, 0));
-    break;
-  case ButtonNotificationType::Brightness:
-    renderBrightness(overlay, notification.buttonValue, notification.buttonDirection, notification.startedMs);
-    break;
-  case ButtonNotificationType::PowerOff:
-  case ButtonNotificationType::None:
-  default:
-    break;
+    case ButtonNotificationType::PowerOn: renderPowerOn(overlay, notification.startedMs); break;
+    case ButtonNotificationType::Dismiss: renderDismiss(overlay, notification.startedMs); break;
+    case ButtonNotificationType::NextEffect:
+      renderSwitchSweep(overlay, notification.startedMs, true, CRGB(180, 255, 0));
+      break;
+    case ButtonNotificationType::PreviousEffect:
+      renderSwitchSweep(overlay, notification.startedMs, false, CRGB(180, 255, 0));
+      break;
+    case ButtonNotificationType::Brightness:
+      renderBrightness(overlay, notification.buttonValue, notification.buttonDirection, notification.startedMs);
+      break;
+    case ButtonNotificationType::PowerOff:
+    case ButtonNotificationType::None:
+    default: break;
   }
 
   if (notification.buttonPressCount > 0) {
     renderPressEcho(
-      overlay,
-      notification.buttonPressCount,
-      notification.buttonPressMs,
-      notification.buttonPressing,
-      CRGB::White
+      overlay, notification.buttonPressCount, notification.buttonPressMs, notification.buttonPressing, CRGB::White
     );
   }
 }
@@ -65,10 +56,7 @@ void ButtonNotificationRenderer::renderDismiss(NotificationOverlay& overlay, uin
 }
 
 void ButtonNotificationRenderer::renderBrightness(
-  NotificationOverlay& overlay,
-  uint8_t brightness,
-  bool increasing,
-  uint32_t startedMs
+  NotificationOverlay& overlay, uint8_t brightness, bool increasing, uint32_t startedMs
 ) {
   (void)startedMs;
 
@@ -96,10 +84,7 @@ void ButtonNotificationRenderer::renderBrightness(
 }
 
 void ButtonNotificationRenderer::renderSwitchSweep(
-  NotificationOverlay& overlay,
-  uint32_t startedMs,
-  bool clockwise,
-  const CRGB& color
+  NotificationOverlay& overlay, uint32_t startedMs, bool clockwise, const CRGB& color
 ) {
   overlay.clearTop();
 
@@ -136,11 +121,7 @@ void ButtonNotificationRenderer::renderSwitchSweep(
 }
 
 void ButtonNotificationRenderer::renderPressEcho(
-  NotificationOverlay& overlay,
-  uint8_t count,
-  uint32_t pressMs,
-  bool pressing,
-  const CRGB& color
+  NotificationOverlay& overlay, uint8_t count, uint32_t pressMs, bool pressing, const CRGB& color
 ) {
   if (count == 0) return;
   count = min<uint8_t>(count, 6);

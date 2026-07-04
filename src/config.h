@@ -12,11 +12,11 @@
 
 // Часовой пояс (москва 3)
 #ifndef GMT
-#define GMT 3   // задается в platformio.local.ini
+#define GMT 3 // задается в platformio.local.ini
 #endif
 // Сервер времени
-#define NTP_ADDRESS  "ru.pool.ntp.org"
-#define NTP_INTERVAL 600 * 1000           // обновление (10 минут)
+#define NTP_ADDRESS "ru.pool.ntp.org"
+#define NTP_INTERVAL 600 * 1000 // обновление (10 минут)
 
 // ---------- МАТРИЦА ---------
 
@@ -52,9 +52,9 @@
 #endif
 
 // Частота кадров переписовки матрицы
-#define FRAME_RATE  50U
+#define FRAME_RATE 50U
 // Время кадра в мс (1000 / FPS)
-#define FRAME_MS    static_cast<uint16_t>(1000U / FRAME_RATE)
+#define FRAME_MS static_cast<uint16_t>(1000U / FRAME_RATE)
 
 // при неправильной настройке матрицы вы получите предупреждение "Wrong matrix parameters! Set to default"
 // шпаргалка по настройке матрицы здесь! https://alexgyver.ru/matrix_guide/
@@ -82,7 +82,7 @@
 #define AP_PASS "12345678" // задается в platformio.local.ini
 #endif
 // IP точки доступа лампы. Должен быть в отдельной подсети от домашнего WiFi
-#define AP_IP { 192, 168, 4, 1 }
+#define AP_IP {192, 168, 4, 1}
 
 // ----- MQTT -----
 // Будет ли поддержка MQTT для управления лампой из Home Assistant

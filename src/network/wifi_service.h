@@ -15,13 +15,12 @@ public:
     FrameRenderer& frameRenderer,
     NotificationController& notifications,
     SettingsRepository& settings
-  ) :
-    _eeprom(eeprom),
-    _frameRenderer(frameRenderer),
-    _notifications(notifications),
-    _settings(settings),
-    _deviceId(DEVICE_NAME) {
-  }
+  )
+    : _eeprom(eeprom),
+      _frameRenderer(frameRenderer),
+      _notifications(notifications),
+      _settings(settings),
+      _deviceId(DEVICE_NAME) {}
 
   void init();
   void tick();

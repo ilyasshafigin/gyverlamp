@@ -27,13 +27,13 @@ public:
   )
 #ifdef USE_BUTTON
     : _eeprom(eeprom),
-    _effects(effects),
-    _notifications(notifications),
-    _power(power),
-    _rotation(rotation),
-    _settings(settings),
-    _stateNotifier(stateNotifier),
-    _pin(pin) {
+      _effects(effects),
+      _notifications(notifications),
+      _power(power),
+      _rotation(rotation),
+      _settings(settings),
+      _stateNotifier(stateNotifier),
+      _pin(pin) {
   }
 #else
   {

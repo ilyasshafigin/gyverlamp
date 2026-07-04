@@ -8,11 +8,10 @@ class NotificationOverlay;
 
 class RunningText {
 public:
-  RunningText(Led& led, int width) :
-    _led(led),
-    _width(width),
-    _offset(width) {
-  }
+  RunningText(Led& led, int width)
+    : _led(led),
+      _width(width),
+      _offset(width) {}
 
   bool isActive() const { return _active; }
   void reset();

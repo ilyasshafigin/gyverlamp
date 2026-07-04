@@ -84,11 +84,15 @@ String TimeService::getTimeStampString() const {
   }
 
   char timestamp[40];
-  snprintf(timestamp, sizeof(timestamp), "Date: %02u-%02u-%04u. Time: %02u:%02u",
+  snprintf(
+    timestamp,
+    sizeof(timestamp),
+    "Date: %02u-%02u-%04u. Time: %02u:%02u",
     static_cast<unsigned>(ti.tm_mday),
     static_cast<unsigned>(ti.tm_mon + 1),
     static_cast<unsigned>(ti.tm_year + 1900),
     static_cast<unsigned>(ti.tm_hour),
-    static_cast<unsigned>(ti.tm_min));
+    static_cast<unsigned>(ti.tm_min)
+  );
   return String(timestamp);
 }

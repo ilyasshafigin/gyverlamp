@@ -7,9 +7,9 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Twinkles;
   static constexpr const char* NAME = "Twinkles";
   static constexpr EffectSettingsSpec SETTINGS = {
-    255,  // brightness
-    200,  // speed
-    100,  // scale
+    255, // brightness
+    200, // speed
+    100, // scale
   };
 
   void setup(EffectContext& ctx) override;

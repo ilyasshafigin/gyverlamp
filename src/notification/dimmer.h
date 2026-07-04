@@ -5,7 +5,8 @@
 
 class NotificationDimmer {
 public:
-  explicit NotificationDimmer(Led& led) : _led(led) {}
+  explicit NotificationDimmer(Led& led)
+    : _led(led) {}
 
   void prepareFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t durationMs = 0);
   void prepareEndingFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t endingStartedMs);

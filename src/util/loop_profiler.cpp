@@ -9,21 +9,21 @@ uint32_t LoopProfiler::_resetTimer = 0;
 
 const char* LoopProfiler::sectionName(Section section) {
   switch (section) {
-    case ROTATION:       return "rotation";
-    case AUDIO:          return "audio";
-    case RENDER:         return "render";
-    case EFFECT_RENDER:  return "effect_render";
-    case LEDS_SHOW:      return "leds_show";
-    case SETTINGS:       return "settings";
-    case TIME:           return "time";
-    case BUTTON:         return "button";
-    case WIFI:           return "wifi";
-    case WEB:            return "web";
-    case MQTT:           return "mqtt";
-    case MQTT_TIMER:     return "mqtt_timer";
-    case MQTT_LOOP:      return "mqtt_loop";
-    case UDP:            return "udp";
-    default:             return "unknown";
+    case ROTATION: return "rotation";
+    case AUDIO: return "audio";
+    case RENDER: return "render";
+    case EFFECT_RENDER: return "effect_render";
+    case LEDS_SHOW: return "leds_show";
+    case SETTINGS: return "settings";
+    case TIME: return "time";
+    case BUTTON: return "button";
+    case WIFI: return "wifi";
+    case WEB: return "web";
+    case MQTT: return "mqtt";
+    case MQTT_TIMER: return "mqtt_timer";
+    case MQTT_LOOP: return "mqtt_loop";
+    case UDP: return "udp";
+    default: return "unknown";
   }
 }
 

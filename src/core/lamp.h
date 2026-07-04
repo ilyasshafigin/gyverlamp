@@ -44,27 +44,40 @@ public:
   MqttService mqtt;
   WebService web;
 
-  explicit Lamp() :
-    eeprom(),
-    led(),
-    time(),
-    stateNotifier(),
-    webSettings(),
-    settings(eeprom),
-    runningText(led, WIDTH),
-    audio(eeprom),
-    effects(audio, eeprom, led, settings, time),
-    power(eeprom, effects, stateNotifier),
-    notifications(eeprom, power, runningText, stateNotifier, time),
-    frameRenderer(effects, led, notifications, power, stateNotifier),
-    rotation(eeprom, effects, stateNotifier),
-    wifi(eeprom, frameRenderer, notifications, settings),
-    button(eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN),
-    upd(effects, power, settings, stateNotifier, time, button, UDP_PORT),
-    ota(frameRenderer, notifications),
-    mqtt(audio, eeprom, effects, notifications, power, rotation, settings, button, wifi),
-    web(audio, eeprom, effects, mqtt, notifications, power, rotation, webSettings, settings, stateNotifier, time, button, wifi) {
-  }
+  explicit Lamp()
+    : eeprom(),
+      led(),
+      time(),
+      stateNotifier(),
+      webSettings(),
+      settings(eeprom),
+      runningText(led, WIDTH),
+      audio(eeprom),
+      effects(audio, eeprom, led, settings, time),
+      power(eeprom, effects, stateNotifier),
+      notifications(eeprom, power, runningText, stateNotifier, time),
+      frameRenderer(effects, led, notifications, power, stateNotifier),
+      rotation(eeprom, effects, stateNotifier),
+      wifi(eeprom, frameRenderer, notifications, settings),
+      button(eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN),
+      upd(effects, power, settings, stateNotifier, time, button, UDP_PORT),
+      ota(frameRenderer, notifications),
+      mqtt(audio, eeprom, effects, notifications, power, rotation, settings, button, wifi),
+      web(
+        audio,
+        eeprom,
+        effects,
+        mqtt,
+        notifications,
+        power,
+        rotation,
+        webSettings,
+        settings,
+        stateNotifier,
+        time,
+        button,
+        wifi
+      ) {}
 
   void setup();
   void loop();
