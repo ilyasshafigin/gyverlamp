@@ -2,12 +2,13 @@
 
 ## Build and verify
 
-- PlatformIO project; default envs come from ignored `platformio.local.ini`: `lamp1_ota` and `lamp2_ota`.
+- PlatformIO project; `default_envs` comes from ignored `platformio.local.ini`. The committed example `platformio.local.example.ini` ships `lamp1_ota`; any additional per-lamp envs are local-only.
 - **For verification always build exactly ONE focused env. Default command: `pio run -e lamp1_ota`.** Do NOT run plain `pio run` and do NOT build multiple envs unless the user explicitly asks for it.
-- Lamp 1 uses board `d1_mini`, OTA target `192.168.1.128`, `AP_SSID="GyverLamp1"`, `CURRENT_LIMIT=3000`; lamp 2 uses OTA target `192.168.1.129`, `AP_SSID="GyverLamp2"`, `CURRENT_LIMIT=2000`.
-- Available focused builds: `pio run -e lamp1_usb`, `pio run -e lamp1_ota`, `pio run -e lamp2_usb`, `pio run -e lamp2_ota`.
-- No repo test/lint/format config exists; use the relevant PlatformIO build as verification.
-- Never run `pio run -t upload` unless the user explicitly asks to flash hardware; `lamp*_ota` envs use `espota` to real devices at `192.168.1.128` / `192.168.1.129`.
+- Lamp 1 (`env:lamp1_base` in the example) uses board `d1_mini`, `DEVICE_NAME="GyverLamp1"` (which becomes `AP_SSID` via the default in `src/config.h`), and `CURRENT_LIMIT=3000`.
+- Available focused builds from the example: `pio run -e lamp1_usb`, `pio run -e lamp1_ota`. Additional `lampN_*` envs may be defined locally in `platformio.local.ini`; do not assume their names or counts.
+- No repo test/lint config exists; use the relevant PlatformIO build as verification.
+- Formatting: `.clang-format` (clang-format 14+) encodes the house style — 2-space indent, attached braces, type-aligned `&`/`*`, case indented under `switch`, includes **not** sorted. Run `clang-format -i <file>` to apply, or `clang-format --dry-run -Werror <file>` to check. Do not reformat files unrelated to your change.
+- Never run `pio run -t upload` unless the user explicitly asks to flash hardware; `lamp*_ota` envs use `espota` with `upload_port` (device IP) set in `platformio.local.ini`.
 
 ## LSP / `compile_commands.json`
 
@@ -22,7 +23,7 @@
 - `src/main.cpp` only starts Serial and delegates to global `lamp` (`src/core/lamp.cpp` / `.h`); start there for execution flow.
 - `Lamp::setup()` order matters: LED, button, notifications, EEPROM, settings, effects, power, WiFi, OTA, MQTT, time, web, rotation timer.
 - `Lamp::loop()` services rotation timer, power/frame rendering, delayed settings persistence, time, button, WiFi, OTA, web, MQTT, state-notifier MQTT publish, profiler, then `yield()`.
-- Hardware/network constants live in `src/config.h`; per-lamp `AP_SSID` and `CURRENT_LIMIT` are injected by `platformio.local.ini` build flags.
+- Hardware/network constants live in `src/config.h`; per-lamp `DEVICE_NAME` (which feeds `AP_SSID`) and `CURRENT_LIMIT` are injected by `platformio.local.ini` build flags.
 
 ## Effects and persistence gotchas
 
@@ -36,13 +37,14 @@
 
 ## Network/UI behavior
 
-- UDP control from upstream is removed; active interfaces are web (`src/network/web_service.cpp`) and MQTT/Home Assistant (`src/network/mqtt_service.cpp`).
-- Web routes are registered inside `WebService::registerRoutes()`; large HTML responses use `sendHtmlChunk()`, which ticks effects and yields while streaming.
-- WiFi and MQTT credentials are stored in fixed-size buffers from `src/network/wifi_config.h` and `src/network/mqtt_config.h`; use `strlcpy` and keep EEPROM size impact in mind.
-- WiFiManager config portal also captures MQTT settings; after 5 rapid boots `WifiService` resets saved WiFi settings.
+- Active control interfaces: web UI (`src/network/web_service.cpp`), MQTT/Home Assistant (`src/network/mqtt_service.cpp`, built on the `HaMqttEntities` library), and optional UDP (`src/network/upd_service.cpp`, compiled in only when `USE_UDP` is defined — disabled by default, not present in `platformio.local.example.ini`).
+- The web UI is built with the `SettingsAsync` library (GyverLibs/Settings): `WebService::settingsBuilder()` renders forms via `sets::Builder`, and `settingsUpdate()` consumes submits via `sets::Updater`. There are no hand-rolled route registrations or HTML chunk streaming helpers.
+- WiFi and MQTT credentials are captured through the web UI (not a captive portal) and stored in fixed-size buffers from `src/network/wifi_config.h` and `src/network/mqtt_config.h`; use `strlcpy` and keep EEPROM size impact in mind.
+- `WifiService` (`src/network/wifi_service.cpp`) drives STA/AP directly with the ESP8266 WiFi API (no WiFiManager). It opens a setup AP at `AP_IP` / `AP_SSID` when no STA config is saved or STA connection fails, and auto-stops the AP after `AP_TIMEOUT_MS` with no stations connected.
+- After 5 rapid boots `WifiService::resetSavedWifiIfNeeded()` wipes saved WiFi settings so the lamp re-opens the setup AP.
 
 ## Project conventions
 
-- Refactor is incomplete; code is split by domain under `src/core`, `hardware`, `network`, `web`, `storage`, `time`, `effect`.
+- Code is split by domain under `src/core`, `hardware`, `network`, `notification`, `storage`, `time`, `effect`, `audio`, `text`, `util`. The web UI lives under `src/network/` (there is no separate `src/web/`).
 - Local timer helpers `src/util/timer.h` and `src/util/periodic_timer.h` are part of build; do not assume every dependency comes from `lib_deps`.
 - `.pio`, `.omo`, `.slim/deepwork/`, generated VS Code files, and `compile_commands.json` are ignored; keep build artifacts out of commits.
