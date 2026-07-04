@@ -98,6 +98,59 @@
       50% { opacity: 0.35; }
     }
 
+    /* Version badges: static metadata, intentionally more subdued than
+       .status-badge (smaller font, less padding, no live dot). */
+    .app-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .version-badges {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .version-badge {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      line-height: 1.4;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Prefix label is one step more muted than the version number,
+       creating a small hierarchy inside each badge. */
+    .version-badge .label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.6;
+    }
+
+    .version-badge .value {
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 480px) {
+      .app-header { padding: 10px 12px; }
+      .app-header-left { gap: 8px; }
+      .version-badges { gap: 4px; }
+      .version-badge { padding: 1px 6px; font-size: 0.65rem; }
+      .version-badge .label { font-size: 0.58rem; }
+    }
+
     .simulator {
       flex: 1;
       display: grid;
@@ -409,7 +462,13 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>GyverLamp Simulator</h1>
+    <div class="app-header-left">
+      <h1>GyverLamp Simulator</h1>
+      <div class="version-badges" aria-label="Versions">
+        <span class="version-badge" id="firmwareVersion"><span class="label">firmware</span> <span class="value">…</span></span>
+        <span class="version-badge" id="simVersion"><span class="label">sim</span> <span class="value">…</span></span>
+      </div>
+    </div>
     <div id="connectionStatus" class="status-badge connecting"><span class="text">Connecting…</span></div>
   </header>
 

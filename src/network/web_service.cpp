@@ -108,20 +108,14 @@ uint8_t WebService::paletteDisplayIndex(Palettes::Id id) const {
 
 void WebService::settingsBuilder(sets::Builder& b) {
   {
-    sets::Group g(b, "Settings");
+    sets::Group g(b, "Lamp");
 
     if (b.build.isBuild()) {
       _powerOn = _power.isOn();
-      _rotationModeIndex = static_cast<uint8_t>(_rotation.getMode());
-      _rotationIntervalMin = (_rotation.getIntervalSec() + 59) / 60;
-      _buttonEnabled = _button.isEnabled();
       _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
       _selectedPaletteIndex = paletteDisplayIndex(_effects.getSelectedPalette());
-      const EffectSettings& settings = _settings.getEffectSettings(_effects.getSelectedEffectId());
-      _brightness = settings.brightness;
-      _speed = settings.speed;
-      _scale = settings.scale;
-      _color = ((uint32_t)_effects.getRed() << 16) | ((uint32_t)_effects.getGreen() << 8) | _effects.getBlue();
+      _buttonEnabled = _button.isEnabled();
+      _globalBrightness = _settings.getGlobalBrightness();
     }
 
     if (b.Switch("Power", &_powerOn)) {
@@ -129,8 +123,8 @@ void WebService::settingsBuilder(sets::Builder& b) {
       _stateNotifier.stateChanged();
     }
 
-    if (b.Switch("Touch button", &_buttonEnabled)) {
-      _button.setEnabled(_buttonEnabled);
+    if (b.Slider("Brightness", 0, 255, 1, "", &_globalBrightness)) {
+      _settings.setGlobalBrightness(_globalBrightness);
       _stateNotifier.stateChanged();
     }
 
@@ -154,6 +148,22 @@ void WebService::settingsBuilder(sets::Builder& b) {
       b.reload();
     }
 
+    if (b.Switch("Touch button", &_buttonEnabled)) {
+      _button.setEnabled(_buttonEnabled);
+      _stateNotifier.stateChanged();
+    }
+  }
+  {
+    sets::Group g(b, "Effect");
+
+    if (b.build.isBuild()) {
+      const EffectSettings& settings = _settings.getEffectSettings(_effects.getSelectedEffectId());
+      _brightness = settings.brightness;
+      _speed = settings.speed;
+      _scale = settings.scale;
+      _color = ((uint32_t)_effects.getRed() << 16) | ((uint32_t)_effects.getGreen() << 8) | _effects.getBlue();
+    }
+
     if (b.Slider("Brightness", 0, 255, 1, "", &_brightness)) {
       _effects.setEffectBrightness(_brightness);
       _stateNotifier.stateChanged();
@@ -174,8 +184,6 @@ void WebService::settingsBuilder(sets::Builder& b) {
       _effects.setColor((_color >> 16) & 0xFF, (_color >> 8) & 0xFF, _color & 0xFF);
       _stateNotifier.stateChanged();
     }
-
-    b.Label("Notification remaining", formatRemainingTime(_notifications.getUserNotificationRemainingSeconds()));
 
     if (b.Button("Reset effect settings")) {
       _effects.resetEffectSettingsToDefaults();
@@ -231,6 +239,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
       saveNotificationQuietHoursFromUi();
     }
     b.Label("Muted now", _notifications.isMutedNow() ? "yes" : "no");
+    b.Label("Notification remaining", formatRemainingTime(_notifications.getUserNotificationRemainingSeconds()));
   }
   {
     sets::Group g(b, "Audio");
@@ -285,6 +294,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
   {
     sets::Menu g(b, "Information");
 
+    uint16_t vcc = ESP.getVcc();
+    bool vccAvailable = (vcc != 0 && vcc >= 2500 && vcc <= 3700);
+
     b.Label("Lamp ID", String(ESP.getChipId(), HEX));
     b.Label("Device ID", _wifi.getDeviceId());
     b.Label("Wi-Fi", WiFi.SSID());
@@ -293,6 +305,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("IP Gateway", WiFi.gatewayIP().toString());
     b.Label("MAC", WiFi.macAddress());
     b.Label("Wi-Fi channel", String(WiFi.channel()));
+    b.Label("Wi-Fi RSSI", String(WiFi.RSSI()));
+    b.Label("Wi-Fi RSSI %", String(2 * (WiFi.RSSI() + 100)));
+    if (vccAvailable) b.Label("VCC", String(static_cast<float>(ESP.getVcc()) / 1000.0f));
     b.Label("Reset reason", ESP.getResetReason());
     b.Label("Core version", ESP.getCoreVersion());
     b.Label("CPU freq", String(ESP.getCpuFreqMHz()) + " MHz");

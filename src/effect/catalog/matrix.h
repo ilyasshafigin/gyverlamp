@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Matrix;
   static constexpr const char* NAME = "Matrix";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     16,   // speed
     80,   // scale
   };

@@ -22,7 +22,7 @@ static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t Effe
 //            payload host(33) + port(10) + user(33) + password(33).
 //
 //  235..244  Блок системного состояния, 10 байт:
-//            bootCount(1) + powerState(1) + buttonEnabled(1).
+//            bootCount(1) + powerState(1) + buttonEnabled(1) + globalBrightness(1).
 //  245..254  Блок состояния эффектов, 10 байт:
 //            currentEffect(1) + globalPaletteId(1) + effectSettingsCount(1).
 //  255..264  Блок ротации эффектов, 10 байт:
@@ -42,7 +42,7 @@ static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t Effe
 
 constexpr int EEPROM_SIZE = 512;
 constexpr uint32_t EEPROM_LAYOUT_MAGIC = 0x474C4D50; // "GLMP"
-constexpr uint8_t EEPROM_LAYOUT_VERSION_CURRENT = 3;
+constexpr uint8_t EEPROM_LAYOUT_VERSION_CURRENT = 4;
 
 constexpr int EEPROM_LAYOUT_META_ADDR = 0;
 constexpr int EEPROM_LAYOUT_META_SIZE = 5;
@@ -65,6 +65,7 @@ constexpr int EEPROM_SYSTEM_STATE_BLOCK_SIZE = 10;
 constexpr int EEPROM_BOOT_COUNT_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR;
 constexpr int EEPROM_POWER_STATE_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 1;
 constexpr int EEPROM_BUTTON_ENABLED_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 2;
+constexpr int EEPROM_GLOBAL_BRIGHTNESS_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 3;
 
 constexpr int EEPROM_EFFECT_STATE_BLOCK_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + EEPROM_SYSTEM_STATE_BLOCK_SIZE; // 245
 constexpr int EEPROM_EFFECT_STATE_BLOCK_SIZE = 10;

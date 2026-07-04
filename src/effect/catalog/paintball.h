@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Paintball;
   static constexpr const char* NAME = "Paintball";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     30,   // speed
     40,   // scale
   };

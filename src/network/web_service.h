@@ -85,6 +85,7 @@ private:
   uint16_t _rotationIntervalMin = ROTATION_INTERVAL_MIN_DEFAULT;
   bool _buttonEnabled = true;
   uint8_t _selectedEffectIndex = 0;
+  uint8_t _globalBrightness = 0;
   uint8_t _brightness = 0;
   uint8_t _speed = 0;
   uint8_t _scale = 0;

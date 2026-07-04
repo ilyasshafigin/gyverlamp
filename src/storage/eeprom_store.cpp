@@ -95,8 +95,37 @@ void EepromStore::ensureLayoutVersion() {
 
   if (version == EEPROM_LAYOUT_VERSION_CURRENT) return;
 
-  Serial.println(F("[EEPROM] Unsupported layout version, resetting EEPROM layout"));
+  // Version bump: snapshot user-tunable settings, wipe layout, then restore the
+  // snapshot so the device keeps WiFi/MQTT credentials and other config across
+  // version bumps. Effect settings are intentionally NOT restored — initializeLayout
+  // clears them so fresh effect defaults (brightness=255) apply on next
+  // ensureEffectSettings. globalBrightness is left at its new default (255).
+  Serial.println(F("[EEPROM] Layout version changed, migrating user settings"));
+
+  const WifiConfig preservedWifi = readWifiConfig();
+  const MqttConfig preservedMqtt = readMqttConfig();
+  const uint16_t preservedAutoOff = readAutoOffMinutes();
+  const RotationMode preservedRotationMode = readRotationMode();
+  const uint16_t preservedRotationInterval = readRotationIntervalSec();
+  const bool preservedButton = readButtonEnabled();
+  const Palettes::Id preservedPalette = readGlobalPaletteId();
+  const NotificationQuietHours preservedQuiet = readNotificationQuietHours();
+  const AudioConfig preservedAudio = readAudioConfig();
+  const uint8_t preservedCurrentMode = EEPROM.read(EEPROM_CURRENT_MODE_ADDR);
+
   initializeLayout();
+
+  writeWifiConfig(preservedWifi.ssid, preservedWifi.password);
+  writeMqttConfig(preservedMqtt.host, preservedMqtt.port, preservedMqtt.user, preservedMqtt.password);
+  writeAutoOffMinutes(preservedAutoOff);
+  writeRotationMode(preservedRotationMode);
+  writeRotationIntervalSec(preservedRotationInterval);
+  writeButtonEnabled(preservedButton);
+  writeGlobalPaletteId(preservedPalette);
+  writeNotificationQuietHours(preservedQuiet);
+  writeAudioConfig(preservedAudio);
+  EEPROM.write(EEPROM_CURRENT_MODE_ADDR, preservedCurrentMode);
+  EEPROM.commit();
 }
 
 bool EepromStore::writeLayoutVersion() {
@@ -116,6 +145,7 @@ bool EepromStore::initializeLayout() {
   EEPROM.put(EEPROM_AUTO_OFF_MINUTES_ADDR, AUTO_OFF_MINUTES_DEFAULT);
   EEPROM.write(EEPROM_CURRENT_MODE_ADDR, 0);
   EEPROM.write(EEPROM_EFFECT_SETTINGS_COUNT_ADDR, 0);
+  EEPROM.write(EEPROM_GLOBAL_BRIGHTNESS_ADDR, 255);
   EEPROM.write(EEPROM_ROTATION_MODE_ADDR, static_cast<uint8_t>(RotationMode::Off));
   EEPROM.put(EEPROM_ROTATION_INTERVAL_SEC_ADDR, ROTATION_INTERVAL_SEC_DEFAULT);
   return writeLayoutVersion();
@@ -255,6 +285,18 @@ bool EepromStore::writeGlobalPaletteId(Palettes::Id paletteId) {
   const uint8_t raw = static_cast<uint8_t>(paletteId);
   if (EEPROM.read(EEPROM_GLOBAL_PALETTE_ID_ADDR) != raw) {
     EEPROM.write(EEPROM_GLOBAL_PALETTE_ID_ADDR, raw);
+    return EEPROM.commit();
+  }
+  return true;
+}
+
+uint8_t EepromStore::readGlobalBrightness() {
+  return EEPROM.read(EEPROM_GLOBAL_BRIGHTNESS_ADDR);
+}
+
+bool EepromStore::writeGlobalBrightness(uint8_t value) {
+  if (EEPROM.read(EEPROM_GLOBAL_BRIGHTNESS_ADDR) != value) {
+    EEPROM.write(EEPROM_GLOBAL_BRIGHTNESS_ADDR, value);
     return EEPROM.commit();
   }
   return true;

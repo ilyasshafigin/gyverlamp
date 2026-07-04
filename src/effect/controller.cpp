@@ -223,10 +223,11 @@ uint8_t EffectController::getEffectBrightness() const {
 }
 
 uint8_t EffectController::getOutputBrightness() const {
+  const uint8_t globalBrightness = _settings.getGlobalBrightness();
   if (_runtimeBrightnessValid) {
-    return _runtimeBrightness;
+    return scale8(_runtimeBrightness, globalBrightness);
   }
-  return _settings.getEffectSettings(_currentEffectId).brightness;
+  return scale8(_settings.getEffectSettings(_currentEffectId).brightness, globalBrightness);
 }
 
 void EffectController::setEffectBrightness(uint8_t value) {

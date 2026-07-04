@@ -176,9 +176,10 @@ MqttService::MqttService(
   _haLight("_light", "Gyver Lamp", _haDevice),
   _haRotationSwitch("_rotation", "Rotation", _haDevice),
   _haRotationInterval("_rotation_interval_minutes", "Rotation Interval Minutes", _haDevice, ROTATION_INTERVAL_MIN_MIN, ROTATION_INTERVAL_MIN_MAX, 1),
-  _haButtonSwitch("_button", "Button", _haDevice),
+  _haButtonSwitch("_button", "Touch Button", _haDevice),
   _haEffectScale("_effect_scale", "Effect Scale", _haDevice, 1, 255, 1),
   _haEffectSpeed("_effect_speed", "Effect Speed", _haDevice, 1, 255, 1),
+  _haEffectBrightness("_effect_brightness", "Effect brightness", _haDevice, 0, 255, 1),
   _haAutoOff("_auto_off_minutes", "Auto Off Minutes", _haDevice, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX, 1),
   _haAutoOffRemaining("_auto_off_remaining", "Auto Off Remaining", _haDevice, "s", 0),
   _haPalette("_palette", "Palette", _haDevice, Palettes::COUNT),
@@ -265,13 +266,15 @@ void MqttService::init() {
     }
     _haLight.setEffectList(_haEffectList.c_str());
 
-    HAMQTT.begin(_client, 29);
+    // Capacity must match the number of addEntity() calls below (currently 30).
+    HAMQTT.begin(_client, 30);
     HAMQTT.addEntity(_haLight);
     HAMQTT.addEntity(_haRotationSwitch);
     HAMQTT.addEntity(_haRotationInterval);
     HAMQTT.addEntity(_haButtonSwitch);
     HAMQTT.addEntity(_haEffectScale);
     HAMQTT.addEntity(_haEffectSpeed);
+    HAMQTT.addEntity(_haEffectBrightness);
     HAMQTT.addEntity(_haAutoOff);
     HAMQTT.addEntity(_haAutoOffRemaining);
     HAMQTT.addEntity(_haPalette);
@@ -328,7 +331,7 @@ void MqttService::updateStates() {
   const NotificationQuietHours& notificationsQuietHours = _notifications.getQuietHours();
 
   _haLight.setState(_power.isOn());
-  _haLight.setBrightness(effectSettings.brightness);
+  _haLight.setBrightness(_settings.getGlobalBrightness());
   _haLight.setEffect(Effects::getEffectName(effectId));
   _haLight.setColor(_effects.getRed(), _effects.getGreen(), _effects.getBlue());
   _haPalette.setState(Palettes::getPaletteName(_effects.getSelectedPalette()));
@@ -337,6 +340,7 @@ void MqttService::updateStates() {
   _haButtonSwitch.setState(_button.isEnabled());
   _haEffectScale.setState(effectSettings.scale);
   _haEffectSpeed.setState(effectSettings.speed);
+  _haEffectBrightness.setState(effectSettings.brightness);
   _haAutoOff.setState(_power.getAutoOffMinutes());
   _haAutoOffRemaining.setState(_power.getAutoOffRemainingSeconds());
   _haUserNotificationRemaining.setState(_notifications.getUserNotificationRemainingSeconds());
@@ -425,9 +429,12 @@ void MqttService::publishTimerCallback() {
   _haRssi.setState(WiFi.RSSI());
   _haRssiPct.setState(2 * (WiFi.RSSI() + 100));
   _haChannel.setState(WiFi.channel());
-  _haVcc.setState(static_cast<float>(ESP.getVcc()) / 1000.0f);
   _haBootCount.setState(_settings.getBootCount());
   _haNotificationMuteState.setState(_notifications.isMutedNow() ? "muted" : "active");
+
+  uint16_t vcc = ESP.getVcc();
+  bool vccAvailable = (vcc != 0 && vcc >= 2500 && vcc <= 3700);
+  _haVcc.setState(vccAvailable ? static_cast<float>(ESP.getVcc()) / 1000.0f : 0);
 
   char resetReason[64];
   ESP.getResetReason().toCharArray(resetReason, sizeof(resetReason));
@@ -457,6 +464,9 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
     updateStates();
   } else if (entity == &_haEffectSpeed) {
     _effects.setEffectSpeed(_haEffectSpeed.getState());
+    updateStates();
+  } else if (entity == &_haEffectBrightness) {
+    _effects.setEffectBrightness(_haEffectBrightness.getState());
     updateStates();
   } else if (entity == &_haPalette) {
     onPaletteCommand(_haPalette.getState());
@@ -527,7 +537,7 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
 
 void MqttService::onLightCommand(bool on, uint8_t brightness) {
   _power.setOn(on);
-  _effects.setEffectBrightness(brightness);
+  _settings.setGlobalBrightness(brightness);
   updateStates();
 }
 

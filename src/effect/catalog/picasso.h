@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Picasso;
   static constexpr const char* NAME = "Picasso";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     120,  // speed
     100,  // scale
   };

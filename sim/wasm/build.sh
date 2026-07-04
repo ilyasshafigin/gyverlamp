@@ -35,6 +35,23 @@ rm -f "${OUT_DIR}"/*
 emcmake cmake -S "${SIM_DIR}" -B "${BUILD_DIR}"
 emmake cmake --build "${BUILD_DIR}" --target gyverlamp_sim_wasm -j4
 
+# Write version files for the web UI. These live outside ${OUT_DIR} so they
+# survive the `rm -f "${OUT_DIR}"/*` above. Firmware version comes from the
+# pio-native platformio.ini; sim version from sim/VERSION. Extraction failures
+# must not abort the wasm build (cosmetic only) -> fall back to "unknown".
+FW_VERSION="$(grep -E '^[[:space:]]+-D FIRMWARE_VERSION=' "${ROOT_DIR}/platformio.ini" \
+    | sed -E 's/.*FIRMWARE_VERSION=\\"([^"]*)\\".*/\1/' \
+    || true)"
+if [ -z "${FW_VERSION}" ]; then
+    echo "Warning: could not extract FIRMWARE_VERSION from ${ROOT_DIR}/platformio.ini" >&2
+    FW_VERSION="unknown"
+fi
+printf '%s\n' "${FW_VERSION}" > "${SIM_DIR}/web/public/firmware-version.txt"
+cp "${SIM_DIR}/VERSION" "${SIM_DIR}/web/public/sim-version.txt"
+
+echo "firmware version: $(cat "${SIM_DIR}/web/public/firmware-version.txt")"
+echo "sim version: $(cat "${SIM_DIR}/web/public/sim-version.txt")"
+
 echo ""
 echo "WASM build succeeded."
 echo "Output: ${OUT_DIR}"

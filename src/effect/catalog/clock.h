@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Clock;
   static constexpr const char* NAME = "Clock";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,   // brightness
+    255,   // brightness
     170,   // speed (scroll speed)
     40,    // scale (hue), 1 - white
   };

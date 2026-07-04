@@ -27,6 +27,9 @@ public:
   Palettes::Id getSelectedPalette() const { return _selectedPalette; }
   void setPalette(Palettes::Id paletteId);
 
+  uint8_t getGlobalBrightness() const { return _globalBrightness; }
+  void setGlobalBrightness(uint8_t value);
+
 private:
   EepromStore& _eeprom;
   EffectSettings _effects[Effects::COUNT];
@@ -35,7 +38,10 @@ private:
   uint32_t _persistTimer = 0;
   Palettes::Id _selectedPalette = Palettes::Id::Auto;
   bool _paletteChanged = false;
+  uint8_t _globalBrightness = 255;
+  bool _globalBrightnessChanged = false;
 
   bool shouldPersistEffectSettings(uint32_t now);
   bool shouldPersistPalette(uint32_t now);
+  bool shouldPersistGlobalBrightness(uint32_t now);
 };

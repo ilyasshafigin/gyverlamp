@@ -60,6 +60,7 @@ private:
   HASwitch _haButtonSwitch;
   HANumber _haEffectScale;
   HANumber _haEffectSpeed;
+  HANumber _haEffectBrightness;
   HANumber _haAutoOff;
   HASensorNumeric _haAutoOffRemaining;
   HASelect _haPalette;

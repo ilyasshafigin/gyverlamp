@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Color;
   static constexpr const char* NAME = "Color";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     30,   // speed
     40,   // scale
   };

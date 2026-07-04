@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::NorthernLights;
   static constexpr const char* NAME = "Northern Lights";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     120,  // speed
     100,  // scale: 255 - плавное изменение цвета, остальное - настройка цвета
   };

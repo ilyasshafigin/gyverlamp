@@ -33,6 +33,8 @@ const blurRow = document.getElementById('blurRow');
 const bloomRow = document.getElementById('bloomRow');
 const blurInput = document.getElementById('diffuserBlur');
 const bloomInput = document.getElementById('diffuserBloom');
+const firmwareVersionBadge = document.getElementById('firmwareVersion');
+const simVersionBadge = document.getElementById('simVersion');
 
 let width = 16;
 let height = 16;
@@ -1903,3 +1905,36 @@ setInterval(() => {
 
 connect();
 refreshAudioUi();
+initVersionBadges();
+
+function setVersionBadge(badge, text) {
+  if (!badge) return;
+  const valueEl = badge.querySelector('.value');
+  if (valueEl) valueEl.textContent = text;
+}
+
+async function readVersionResponse(result) {
+  if (result.status !== 'fulfilled' || !result.value || !result.value.ok) return '?';
+  try {
+    const text = (await result.value.text()).trim();
+    return text || '?';
+  } catch {
+    return '?';
+  }
+}
+
+async function initVersionBadges() {
+  try {
+    const results = await Promise.allSettled([
+      fetch('firmware-version.txt'),
+      fetch('sim-version.txt'),
+    ]);
+    const fwText = await readVersionResponse(results[0]);
+    const simText = await readVersionResponse(results[1]);
+    setVersionBadge(firmwareVersionBadge, fwText);
+    setVersionBadge(simVersionBadge, simText);
+  } catch {
+    setVersionBadge(firmwareVersionBadge, '?');
+    setVersionBadge(simVersionBadge, '?');
+  }
+}

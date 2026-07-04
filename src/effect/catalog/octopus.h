@@ -7,7 +7,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Octopus;
   static constexpr const char* NAME = "Octopus";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     200,  // speed
     30,   // scale
   };

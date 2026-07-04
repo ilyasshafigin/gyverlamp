@@ -12,6 +12,7 @@ void SettingsRepository::init() {
   delay(50);
 
   _selectedPalette = _eeprom.readGlobalPaletteId();
+  _globalBrightness = _eeprom.readGlobalBrightness();
 
   for (uint8_t i = 0; i < Effects::COUNT; i++) {
     _effects[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
@@ -34,6 +35,10 @@ void SettingsRepository::tick(const Effects::Id currentEffectId) {
   }
   if (shouldPersistPalette(now)) {
     _eeprom.writeGlobalPaletteId(_selectedPalette);
+    saved = true;
+  }
+  if (shouldPersistGlobalBrightness(now)) {
+    _eeprom.writeGlobalBrightness(_globalBrightness);
     saved = true;
   }
   if (saved) {
@@ -76,6 +81,14 @@ void SettingsRepository::setPalette(Palettes::Id paletteId) {
   _persistTimer = millis();
 }
 
+void SettingsRepository::setGlobalBrightness(uint8_t value) {
+  if (value == _globalBrightness) return;
+
+  _globalBrightness = value;
+  _globalBrightnessChanged = true;
+  _persistTimer = millis();
+}
+
 bool SettingsRepository::resetEffectSettingsToDefaults(const EffectSettings* defaults) {
   for (uint8_t i = 0; i < Effects::COUNT; i++) {
     _effects[i] = defaults[i];
@@ -100,6 +113,14 @@ bool SettingsRepository::shouldPersistEffectSettings(uint32_t now) {
 bool SettingsRepository::shouldPersistPalette(uint32_t now) {
   if (_paletteChanged && now - _persistTimer > 30000) {
     _paletteChanged = false;
+    return true;
+  }
+  return false;
+}
+
+bool SettingsRepository::shouldPersistGlobalBrightness(uint32_t now) {
+  if (_globalBrightnessChanged && now - _persistTimer > 30000) {
+    _globalBrightnessChanged = false;
     return true;
   }
   return false;

@@ -42,6 +42,9 @@ public:
   Palettes::Id readGlobalPaletteId();
   bool writeGlobalPaletteId(Palettes::Id paletteId);
 
+  uint8_t readGlobalBrightness();
+  bool writeGlobalBrightness(uint8_t value);
+
   NotificationQuietHours readNotificationQuietHours();
   bool writeNotificationQuietHours(const NotificationQuietHours& settings);
 

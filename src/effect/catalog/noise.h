@@ -8,7 +8,7 @@ public:
   static constexpr Effects::Id ID = Effects::Id::Noise;
   static constexpr const char* NAME = "Noise";
   static constexpr EffectSettingsSpec SETTINGS = {
-    180,  // brightness
+    255,  // brightness
     15,   // speed
     40,   // scale
   };
