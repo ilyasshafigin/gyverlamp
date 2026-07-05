@@ -6,6 +6,7 @@
 #include "../core/auto_off_config.h"
 #include "../core/power_controller.h"
 #include "../core/rotation_controller.h"
+#include "../core/rotation_presets.h"
 #include "../core/state_notifier.h"
 #include "../effect/catalog.h"
 #include "../effect/controller.h"
@@ -87,6 +88,11 @@ void WebService::init() {
   }
 
   _rotationModeOptions = "Off;Sequential;Random";
+  _rotationIntervalOptions = String(ROTATION_PRESET_LABELS[0]);
+  for (uint8_t i = 1; i < ROTATION_PRESET_COUNT; i++) {
+    _rotationIntervalOptions += ';';
+    _rotationIntervalOptions += ROTATION_PRESET_LABELS[i];
+  }
 }
 
 void WebService::tick() {
@@ -198,7 +204,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
     if (b.build.isBuild()) {
       _rotationModeIndex = static_cast<uint8_t>(_rotation.getMode());
-      _rotationIntervalMin = (_rotation.getIntervalSec() + 59) / 60;
+      _rotationIntervalPresetIndex = rotationPresetIndexForSeconds(_rotation.getIntervalSec());
     }
 
     if (b.Select("Rotation", _rotationModeOptions, &_rotationModeIndex)) {
@@ -206,10 +212,8 @@ void WebService::settingsBuilder(sets::Builder& b) {
       _stateNotifier.stateChanged();
     }
 
-    if (
-      b.Number("Rotation interval, min", &_rotationIntervalMin, ROTATION_INTERVAL_MIN_MIN, ROTATION_INTERVAL_MIN_MAX)
-    ) {
-      _rotation.setIntervalSec(_rotationIntervalMin * 60U);
+    if (b.Select("Rotation interval", _rotationIntervalOptions, &_rotationIntervalPresetIndex)) {
+      _rotation.setIntervalSec(rotationPresetSecondsForIndex(_rotationIntervalPresetIndex));
       _stateNotifier.stateChanged();
     }
   }

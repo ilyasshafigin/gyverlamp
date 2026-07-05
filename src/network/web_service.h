@@ -5,6 +5,7 @@
 
 #include "../config.h"
 #include "../core/rotation_mode.h"
+#include "../core/rotation_presets.h"
 #include "../network/mqtt_config.h"
 #include "../network/wifi_config.h"
 #include "../effect/ids.h"
@@ -81,7 +82,7 @@ private:
 
   bool _powerOn = false;
   uint8_t _rotationModeIndex = 0;
-  uint16_t _rotationIntervalMin = ROTATION_INTERVAL_MIN_DEFAULT;
+  uint8_t _rotationIntervalPresetIndex = ROTATION_PRESET_DEFAULT_INDEX;
   bool _buttonEnabled = true;
   uint8_t _selectedEffectIndex = 0;
   uint8_t _globalBrightness = 0;
@@ -97,6 +98,7 @@ private:
   String _effectOptions;
   String _paletteOptions;
   String _rotationModeOptions;
+  String _rotationIntervalOptions;
   uint8_t _audioModeIndex = 0;
   uint8_t _audioBandIndex = 0;
   uint8_t _audioAmount = 128;

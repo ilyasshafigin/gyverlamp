@@ -2,15 +2,16 @@
 
 #ifdef USE_MQTT
 #include <EEPROM.h>
-#include <uptime_formatter.h>
-#include <cstdlib>
-#include <cctype>
 #include <HaMqttEntities.h>
+#include <cctype>
+#include <cstdlib>
+#include <uptime_formatter.h>
 
 #include "../audio/audio_service.h"
 #include "../core/auto_off_config.h"
 #include "../core/power_controller.h"
 #include "../core/rotation_controller.h"
+#include "../core/rotation_presets.h"
 #include "../effect/catalog.h"
 #include "../effect/controller.h"
 #include "../effect/palette_catalog.h"
@@ -172,14 +173,7 @@ MqttService::MqttService(
     _haDevice(_clientId.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
     _haLight("_light", "Gyver Lamp", _haDevice),
     _haRotationSwitch("_rotation", "Rotation", _haDevice),
-    _haRotationInterval(
-      "_rotation_interval_minutes",
-      "Rotation Interval Minutes",
-      _haDevice,
-      ROTATION_INTERVAL_MIN_MIN,
-      ROTATION_INTERVAL_MIN_MAX,
-      1
-    ),
+    _haRotationInterval("_rotation_interval", "Rotation Interval", _haDevice, ROTATION_PRESET_COUNT),
     _haButtonSwitch("_button", "Touch Button", _haDevice),
     _haEffectScale("_effect_scale", "Effect Scale", _haDevice, 1, 255, 1),
     _haEffectSpeed("_effect_speed", "Effect Speed", _haDevice, 1, 255, 1),
@@ -236,6 +230,11 @@ MqttService::MqttService(
   for (uint8_t i = 0; i < Palettes::SELECTABLE_COUNT; i++) {
     _haPalette.addOption(Palettes::getPaletteName(Palettes::SELECTABLE_ORDER[i]));
   }
+
+  for (uint8_t i = 0; i < ROTATION_PRESET_COUNT; i++) {
+    _haRotationInterval.addOption(ROTATION_PRESET_LABELS[i]);
+  }
+  _haRotationInterval.setState(rotationPresetLabelForSeconds(_rotation.getIntervalSec()));
 
   const AudioConfig& audioConfig = _audio.config();
   _haAudioMode.setState(audioModeName(audioConfig.mode));
@@ -338,7 +337,7 @@ void MqttService::updateStates() {
   _haLight.setColor(_effects.getRed(), _effects.getGreen(), _effects.getBlue());
   _haPalette.setState(Palettes::getPaletteName(_effects.getSelectedPalette()));
   _haRotationSwitch.setState(_rotation.isActive());
-  _haRotationInterval.setState((_rotation.getIntervalSec() + 59) / 60);
+  _haRotationInterval.setState(rotationPresetLabelForSeconds(_rotation.getIntervalSec()));
   _haButtonSwitch.setState(_button.isEnabled());
   _haEffectScale.setState(effectSettings.scale);
   _haEffectSpeed.setState(effectSettings.speed);
@@ -460,7 +459,9 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
     _rotation.setEnabled(_haRotationSwitch.getState());
     updateStates();
   } else if (entity == &_haRotationInterval) {
-    _rotation.setIntervalSec(_haRotationInterval.getState() * 60U);
+    _rotation.setIntervalSec(
+      rotationPresetSecondsForIndex(rotationPresetIndexForLabel(_haRotationInterval.getState()))
+    );
     updateStates();
   } else if (entity == &_haButtonSwitch) {
     _button.setEnabled(_haButtonSwitch.getState());

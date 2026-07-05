@@ -48,3 +48,10 @@
 - Code is split by domain under `src/core`, `hardware`, `network`, `notification`, `storage`, `time`, `effect`, `audio`, `text`, `util`. The web UI lives under `src/network/` (there is no separate `src/web/`).
 - Local timer helpers `src/util/timer.h` and `src/util/periodic_timer.h` are part of build; do not assume every dependency comes from `lib_deps`.
 - `.pio`, `.omo`, `.slim/deepwork/`, generated VS Code files, and `compile_commands.json` are ignored; keep build artifacts out of commits.
+
+## Library dependency sources
+
+- PlatformIO downloads dependency source trees into `.pio/libdeps/<env>/` (e.g. `.pio/libdeps/lamp1_ota/FastLED/`, `.../Settings/`, `.../HaMqttEntities/`).
+- `.pio` is gitignored, so the directory is not in git but exists locally after the first `pio run -e <env>`. For `lamp1_ota` look under `.pio/libdeps/lamp1_ota/`.
+- Before fetching library docs externally, check whether the source is already readable locally under `.pio/libdeps/` and read it there — this matches the exact versions pinned by `platformio.ini` / `lib_deps`.
+- The `clonedeps` skill remains the tool for cloning an upstream repo into a separate workspace when `.pio/libdeps/` is insufficient (forks, older snapshots, cross-referencing).

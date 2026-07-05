@@ -56,7 +56,7 @@ private:
   HADevice _haDevice;
   HALight _haLight;
   HASwitch _haRotationSwitch;
-  HANumber _haRotationInterval;
+  HASelect _haRotationInterval;
   HASwitch _haButtonSwitch;
   HANumber _haEffectScale;
   HANumber _haEffectSpeed;

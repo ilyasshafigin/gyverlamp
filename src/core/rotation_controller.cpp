@@ -2,11 +2,20 @@
 #include "../effect/controller.h"
 #include "../storage/eeprom_store.h"
 #include "rotation_controller.h"
+#include "rotation_presets.h"
 #include "state_notifier.h"
 
 void RotationController::init() {
   _mode = _eepromStore.readRotationMode();
   _intervalSec = _eepromStore.readRotationIntervalSec();
+  // One-shot: migrate legacy non-preset value to the nearest preset.
+  // Fires once on first boot after the upgrade; subsequent boots hit the
+  // equality guard below because EEPROM now stores a snapped preset.
+  const uint16_t snapped = rotationPresetSnapSeconds(_intervalSec);
+  if (snapped != _intervalSec) {
+    _intervalSec = snapped;
+    _eepromStore.writeRotationIntervalSec(_intervalSec);
+  }
   _timer.setOnTimer([this]() { this->timerCallback(); });
   restartTimer();
 }
@@ -33,8 +42,9 @@ void RotationController::setMode(RotationMode mode) {
 }
 
 void RotationController::setIntervalSec(uint16_t seconds) {
-  if (seconds < ROTATION_INTERVAL_SEC_MIN) seconds = ROTATION_INTERVAL_SEC_MIN;
-  if (seconds > ROTATION_INTERVAL_SEC_MAX) seconds = ROTATION_INTERVAL_SEC_MAX;
+  // Snap first; presets are guaranteed within [MIN, MAX] via static_assert in
+  // rotation_presets.h, so the previous explicit clamps were dead code.
+  seconds = rotationPresetSnapSeconds(seconds);
   if (seconds == _intervalSec) return;
 
   _intervalSec = seconds;
