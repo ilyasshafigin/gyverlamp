@@ -11,9 +11,11 @@ namespace AudioModulation {
     }
   }
 
-  uint8_t applyAudioBoost(uint8_t base, uint8_t signal, uint8_t amount) {
-    const uint16_t boost = (static_cast<uint16_t>(255U - base) * signal * amount) / 255U / 255U;
-    return base + boost;
+  uint8_t applyAudioCrossfade(uint8_t base, uint8_t signal, uint8_t amount) {
+    const uint16_t b = base;
+    const uint16_t s = signal;
+    const uint16_t a = amount;
+    return static_cast<uint8_t>((b * (255U - a) + s * a) / 255U);
   }
 
   RuntimeEffectSettings applyModulation(EffectSettings settings, const AudioFrame& audio, const AudioConfig& config) {
@@ -27,12 +29,12 @@ namespace AudioModulation {
 
     switch (config.mode) {
       case AudioMode::Brightness:
-        runtime.brightness = applyAudioBoost(settings.brightness, signal, config.amount);
+        runtime.brightness = applyAudioCrossfade(settings.brightness, signal, config.amount);
         break;
 
-      case AudioMode::Speed: runtime.speed = applyAudioBoost(settings.speed, signal, config.amount); break;
+      case AudioMode::Speed: runtime.speed = applyAudioCrossfade(settings.speed, signal, config.amount); break;
 
-      case AudioMode::Scale: runtime.scale = applyAudioBoost(settings.scale, signal, config.amount); break;
+      case AudioMode::Scale: runtime.scale = applyAudioCrossfade(settings.scale, signal, config.amount); break;
 
       default: break;
     }
