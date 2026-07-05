@@ -176,7 +176,9 @@ function clampByte(value) {
 }
 
 function applyBrightness(value) {
-  return Math.round(clampByte(value) * currentBrightness / 255);
+  const linear = clampByte(value) * currentBrightness / 255;
+  if (linear <= 0) return 0;
+  return Math.round(Math.pow(linear / 255, 1 / 2.2) * 255);
 }
 
 function diffuserBackgroundColor() {
@@ -1807,7 +1809,7 @@ function bindCylinderPointer() {
     const x = pointerX(e);
     const dx = x - cylinder.lastX;
     cylinder.lastX = x;
-    cylinder.yaw -= dx * 0.01;
+    cylinder.yaw += dx * 0.01;
     if (cylinder.shadeMesh) cylinder.shadeMesh.rotation.y = cylinder.yaw;
     renderCylinderScene();
     if (e.cancelable) e.preventDefault();
