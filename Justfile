@@ -13,7 +13,9 @@ sim:
     @cd sim/web && npm run sim
 
 build *envs:
-    @if [ -z "{{envs}}" ]; then \
+    @if [ "{{envs}}" = "sim" ]; then \
+        cd sim/web && npm run build:wasm; \
+    elif [ -z "{{envs}}" ]; then \
         pio run; \
     else \
         for env in {{envs}}; do pio run -e "$env"; done; \
