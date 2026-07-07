@@ -15,8 +15,8 @@
 #include "../network/mqtt_service.h"
 #include "../network/wifi_service.h"
 #include "../notification/controller.h"
-#include "../notification/types.h"
 #include "../notification/quiet_hours.h"
+#include "../notification/types.h"
 #include "../storage/eeprom_store.h"
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
@@ -142,8 +142,40 @@ void WebService::settingsBuilder(sets::Builder& b) {
       if (!_effects.setEffect(effectId)) {
         _effects.setEffect(Effects::fallback());
       }
+      _notifications.onEffectNext();
       _stateNotifier.stateChanged();
       b.reload();
+    }
+
+    {
+      sets::Buttons g(b);
+
+      if (b.Button("Prev")) {
+        _effects.setPreviousEffect();
+        _notifications.onEffectPrevious();
+        _rotation.onManualRotation();
+        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
+        _stateNotifier.stateChanged();
+        b.reload();
+      }
+
+      if (b.Button("Next")) {
+        _effects.setNextEffect();
+        _notifications.onEffectNext();
+        _rotation.onManualRotation();
+        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
+        _stateNotifier.stateChanged();
+        b.reload();
+      }
+
+      if (b.Button("Random")) {
+        _effects.setRandomEffect();
+        _notifications.onEffectNext();
+        _rotation.onManualRotation();
+        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
+        _stateNotifier.stateChanged();
+        b.reload();
+      }
     }
 
     if (b.Select("Palette", _paletteOptions, &_selectedPaletteIndex)) {
@@ -208,7 +240,13 @@ void WebService::settingsBuilder(sets::Builder& b) {
     }
 
     if (b.Select("Rotation", _rotationModeOptions, &_rotationModeIndex)) {
+      const bool wasActive = _rotation.isActive();
       _rotation.setMode(static_cast<RotationMode>(_rotationModeIndex));
+      if (_rotation.isActive() && !wasActive) {
+        _notifications.onRotationEnabled();
+      } else if (!_rotation.isActive() && wasActive) {
+        _notifications.onRotationDisabled();
+      }
       _stateNotifier.stateChanged();
     }
 
@@ -419,10 +457,10 @@ void WebService::settingsBuilder(sets::Builder& b) {
       {
         sets::Row g(b);
         if (b.Button("Next Effect")) {
-          _notifications.onButtonNextEffect();
+          _notifications.onEffectNext();
         }
         if (b.Button("Prev Effect")) {
-          _notifications.onButtonPreviousEffect();
+          _notifications.onEffectPrevious();
         }
       }
       {
@@ -432,6 +470,15 @@ void WebService::settingsBuilder(sets::Builder& b) {
         }
         if (b.Button("Brightness decreasing")) {
           _notifications.onButtonBrightness(180, false);
+        }
+      }
+      {
+        sets::Row g(b);
+        if (b.Button("Rotation enabled")) {
+          _notifications.onRotationEnabled();
+        }
+        if (b.Button("Rotation disabled")) {
+          _notifications.onRotationDisabled();
         }
       }
     }

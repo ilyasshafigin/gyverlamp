@@ -26,7 +26,7 @@ enum class UserNotificationType : uint8_t {
   Alarm,
 };
 
-enum class ButtonNotificationType : uint8_t {
+enum class IndicatorType : uint8_t {
   None,
   PowerOn,
   PowerOff,
@@ -34,6 +34,8 @@ enum class ButtonNotificationType : uint8_t {
   NextEffect,
   PreviousEffect,
   Brightness,
+  RotationOn,
+  RotationOff,
 };
 
 enum class NotificationSource : uint8_t {
@@ -60,7 +62,7 @@ struct NotificationSnapshot {
   const String* text = nullptr;
   CRGB color = CRGB::White;
 
-  ButtonNotificationType buttonType = ButtonNotificationType::None;
+  IndicatorType indicatorType = IndicatorType::None;
   uint8_t buttonValue = 0;     // brightness 0..255
   bool buttonDirection = true; // true = clockwise/up, false = counter/down
   uint8_t buttonPressCount = 0;

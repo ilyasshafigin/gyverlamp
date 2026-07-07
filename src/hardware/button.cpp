@@ -58,9 +58,11 @@ void TouchButton::tick() {
     if (_notifications.isUserNotificationActive()) {
       _notifications.stopUserNotification();
       _notifications.onButtonDismiss();
+    } else if (_rotation.isActive()) {
+      _rotation.disable();
+      _notifications.onRotationDisabled();
     } else {
       const bool wasOn = _power.isOn();
-      _rotation.disable();
       _power.toggle();
 
       if (!wasOn && _power.isOn()) {
@@ -74,17 +76,17 @@ void TouchButton::tick() {
   if (_power.isOn()) {
     if (_button.hasClicks(2)) {
       Serial.println("[BUTTON] Double tap detected");
-      _rotation.disable();
+      _rotation.onManualRotation();
       _effects.setNextEffect();
-      _notifications.onButtonNextEffect();
+      _notifications.onEffectNext();
       _stateNotifier.stateChanged();
     }
 
     if (_button.hasClicks(3)) {
       Serial.println("[BUTTON] Triple tap detected");
-      _rotation.disable();
+      _rotation.onManualRotation();
       _effects.setPreviousEffect();
-      _notifications.onButtonPreviousEffect();
+      _notifications.onEffectPrevious();
       _stateNotifier.stateChanged();
     }
 

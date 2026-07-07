@@ -68,6 +68,9 @@ private:
   HANumber _haUserNotificationDuration;
   HASensorNumeric _haUserNotificationRemaining;
   HAButton _haUserNotify;
+  HAButton _haNextEffect;
+  HAButton _haPrevEffect;
+  HAButton _haRandomEffect;
   HAText _haUserNotificationText;
   HASwitch _haNotificationQuietHours;
   HATime _haNotificationQuietStart;

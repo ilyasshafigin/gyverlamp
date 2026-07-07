@@ -49,7 +49,7 @@ set(SIM_COMMON_SOURCES
     ${ROOT_DIR}/src/notification/overlay.cpp
     ${ROOT_DIR}/src/notification/user_renderer.cpp
     ${ROOT_DIR}/src/notification/system_renderer.cpp
-    ${ROOT_DIR}/src/notification/button_renderer.cpp
+    ${ROOT_DIR}/src/notification/indicator_renderer.cpp
     ${ROOT_DIR}/src/notification/user_state.cpp
     ${ROOT_DIR}/src/text/running_text.cpp
     ${ROOT_DIR}/src/text/text_renderer.cpp

@@ -72,7 +72,7 @@ void NotificationController::renderOverlay(NotificationOverlay& overlay, const N
   const NotificationSnapshot& snaphot = frame.snapshot;
   switch (snaphot.source) {
     case NotificationSource::User: _userRenderer.render(overlay, snaphot); break;
-    case NotificationSource::Button: _buttonRenderer.render(overlay, snaphot); break;
+    case NotificationSource::Button: _indicatorRenderer.render(overlay, snaphot); break;
     case NotificationSource::Wifi:
       _systemRenderer.renderWifi(overlay, snaphot.connectionState, snaphot.startedMs);
       break;
@@ -199,9 +199,9 @@ void NotificationController::onButtonPress(uint8_t count) {
 
   // Если нет action notification, создаём короткий Button frame,
   // чтобы press echo мог отрисоваться сам по себе.
-  if (_buttonType == ButtonNotificationType::None) {
-    _buttonType = ButtonNotificationType::None;
-    _lastButtonChangeMs = _lastButtonPressMs;
+  if (_indicatorType == IndicatorType::None) {
+    _indicatorType = IndicatorType::None;
+    _lastIndicatorChangeMs = _lastButtonPressMs;
   }
 }
 
@@ -211,7 +211,7 @@ void NotificationController::onButtonRelease() {
 }
 
 void NotificationController::onButtonPowerOn() {
-  startButtonNotification(ButtonNotificationType::PowerOn);
+  startIndicator(IndicatorType::PowerOn);
 }
 
 void NotificationController::onButtonPowerOff() {
@@ -219,31 +219,39 @@ void NotificationController::onButtonPowerOff() {
 }
 
 void NotificationController::onButtonDismiss() {
-  startButtonNotification(ButtonNotificationType::Dismiss);
+  startIndicator(IndicatorType::Dismiss);
 }
 
-void NotificationController::onButtonNextEffect() {
-  startButtonNotification(ButtonNotificationType::NextEffect);
+void NotificationController::onEffectNext() {
+  startIndicator(IndicatorType::NextEffect);
 }
 
-void NotificationController::onButtonPreviousEffect() {
-  startButtonNotification(ButtonNotificationType::PreviousEffect);
+void NotificationController::onEffectPrevious() {
+  startIndicator(IndicatorType::PreviousEffect);
+}
+
+void NotificationController::onRotationEnabled() {
+  startIndicator(IndicatorType::RotationOn);
+}
+
+void NotificationController::onRotationDisabled() {
+  startIndicator(IndicatorType::RotationOff);
 }
 
 void NotificationController::onButtonBrightness(uint8_t brightness, bool increasing) {
-  startButtonNotification(ButtonNotificationType::Brightness, brightness, increasing);
+  startIndicator(IndicatorType::Brightness, brightness, increasing);
 }
 
-void NotificationController::startButtonNotification(ButtonNotificationType type, uint8_t value, bool direction) {
-  if (type == ButtonNotificationType::None || type == ButtonNotificationType::PowerOff) {
-    _buttonType = ButtonNotificationType::None;
+void NotificationController::startIndicator(IndicatorType type, uint8_t value, bool direction) {
+  if (type == IndicatorType::None || type == IndicatorType::PowerOff) {
+    _indicatorType = IndicatorType::None;
     return;
   }
 
-  _buttonType = type;
+  _indicatorType = type;
   _buttonValue = value;
   _buttonDirection = direction;
-  _lastButtonChangeMs = millis();
+  _lastIndicatorChangeMs = millis();
 }
 
 void NotificationController::onOtaStart() {
@@ -321,21 +329,21 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
 
   const bool hasPressEcho =
     _buttonPressCount > 0 && (_buttonPressing || isRecently(_lastButtonPressMs, BUTTON_PRESS_ECHO_MS));
-  const uint32_t buttonDurationMs = getButtonNotificationDuration(_buttonType);
-  const bool hasButtonAction = _buttonType != ButtonNotificationType::None && buttonDurationMs > 0 &&
-                               isRecently(_lastButtonChangeMs, buttonDurationMs);
+  const uint32_t buttonDurationMs = getIndicatorDuration(_indicatorType);
+  const bool hasButtonAction = _indicatorType != IndicatorType::None && buttonDurationMs > 0 &&
+                               isRecently(_lastIndicatorChangeMs, buttonDurationMs);
 
   if (hasButtonAction || hasPressEcho) {
     snaphot.source = NotificationSource::Button;
 
     if (hasButtonAction) {
-      snaphot.buttonType = _buttonType;
+      snaphot.indicatorType = _indicatorType;
       snaphot.buttonValue = _buttonValue;
       snaphot.buttonDirection = _buttonDirection;
-      snaphot.startedMs = _lastButtonChangeMs;
+      snaphot.startedMs = _lastIndicatorChangeMs;
       snaphot.durationMs = buttonDurationMs;
     } else {
-      snaphot.buttonType = ButtonNotificationType::None;
+      snaphot.indicatorType = IndicatorType::None;
       snaphot.startedMs = _lastButtonPressMs;
       snaphot.durationMs = BUTTON_PRESS_ECHO_MS;
     }
@@ -409,7 +417,7 @@ bool NotificationController::sameNotification(const NotificationSnapshot& a, con
   if (a.source != b.source) return false;
 
   if (a.source == NotificationSource::Button) {
-    return a.buttonType == b.buttonType && a.startedMs == b.startedMs && a.buttonValue == b.buttonValue &&
+    return a.indicatorType == b.indicatorType && a.startedMs == b.startedMs && a.buttonValue == b.buttonValue &&
            a.buttonDirection == b.buttonDirection && a.buttonPressCount == b.buttonPressCount &&
            a.buttonPressMs == b.buttonPressMs && a.buttonPressing == b.buttonPressing;
   }
@@ -450,15 +458,17 @@ bool NotificationController::canBypassMute(const NotificationSnapshot& snaphot) 
          (snaphot.userType == UserNotificationType::Alarm || snaphot.userType == UserNotificationType::Warning);
 }
 
-uint32_t NotificationController::getButtonNotificationDuration(ButtonNotificationType type) {
+uint32_t NotificationController::getIndicatorDuration(IndicatorType type) {
   switch (type) {
-    case ButtonNotificationType::PowerOn: return 700;
-    case ButtonNotificationType::Dismiss: return 450;
-    case ButtonNotificationType::NextEffect: return 900;
-    case ButtonNotificationType::PreviousEffect: return 900;
-    case ButtonNotificationType::Brightness: return 1200;
-    case ButtonNotificationType::PowerOff:
-    case ButtonNotificationType::None:
+    case IndicatorType::PowerOn: return 700;
+    case IndicatorType::Dismiss: return 450;
+    case IndicatorType::NextEffect: return 900;
+    case IndicatorType::PreviousEffect: return 900;
+    case IndicatorType::Brightness: return 1200;
+    case IndicatorType::RotationOn: return 900;
+    case IndicatorType::RotationOff: return 900;
+    case IndicatorType::PowerOff:
+    case IndicatorType::None:
     default: return 0;
   }
 }

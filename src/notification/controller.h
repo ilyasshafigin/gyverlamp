@@ -5,7 +5,7 @@
 
 #include "../config.h"
 #include "../util/fade_animator.h"
-#include "button_renderer.h"
+#include "indicator_renderer.h"
 #include "quiet_hours.h"
 #include "system_renderer.h"
 #include "types.h"
@@ -35,7 +35,7 @@ public:
       _time(time),
       _systemRenderer(),
       _userRenderer(runningText),
-      _buttonRenderer(),
+      _indicatorRenderer(),
       _userState() {}
 
   void init();
@@ -78,9 +78,11 @@ public:
   void onButtonPowerOn();
   void onButtonPowerOff();
   void onButtonDismiss();
-  void onButtonNextEffect();
-  void onButtonPreviousEffect();
+  void onEffectNext();
+  void onEffectPrevious();
   void onButtonBrightness(uint8_t brightness, bool increasing);
+  void onRotationEnabled();
+  void onRotationDisabled();
 
 private:
   static constexpr uint16_t SYSTEM_SUCCESS_VISIBLE_MS = 1500;
@@ -101,7 +103,7 @@ private:
 
   SystemNotificationRenderer _systemRenderer;
   UserNotificationRenderer _userRenderer;
-  ButtonNotificationRenderer _buttonRenderer;
+  IndicatorRenderer _indicatorRenderer;
   UserNotificationState _userState;
   NotificationQuietHours _quietHours;
   bool _userNotificationStopped = false;
@@ -119,8 +121,8 @@ private:
   uint32_t _lastMqttChangeMs = 0;
   uint32_t _lastOtaChangeMs = 0;
 
-  ButtonNotificationType _buttonType = ButtonNotificationType::None;
-  uint32_t _lastButtonChangeMs = 0;
+  IndicatorType _indicatorType = IndicatorType::None;
+  uint32_t _lastIndicatorChangeMs = 0;
   uint8_t _buttonValue = 0;
   bool _buttonDirection = true;
   uint8_t _buttonPressCount = 0;
@@ -141,6 +143,6 @@ private:
   bool shouldMuteNotification(const NotificationSnapshot& n) const;
   bool canBypassMute(const NotificationSnapshot& n) const;
 
-  void startButtonNotification(ButtonNotificationType type, uint8_t value = 0, bool direction = true);
-  static uint32_t getButtonNotificationDuration(ButtonNotificationType type);
+  void startIndicator(IndicatorType type, uint8_t value = 0, bool direction = true);
+  static uint32_t getIndicatorDuration(IndicatorType type);
 };

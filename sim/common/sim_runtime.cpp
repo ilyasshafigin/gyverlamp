@@ -215,14 +215,14 @@ namespace sim {
     if (count == 5) return;
     if (!_power->isOn()) return;
     if (count == 2) {
-      _rotation->disable();
+      _rotation->onManualRotation();
       _effects->setNextEffect();
-      _notifications->onButtonNextEffect();
+      _notifications->onEffectNext();
       _stateNotifier->stateChanged();
     } else if (count == 3) {
-      _rotation->disable();
+      _rotation->onManualRotation();
       _effects->setPreviousEffect();
-      _notifications->onButtonPreviousEffect();
+      _notifications->onEffectPrevious();
       _stateNotifier->stateChanged();
     }
   }

@@ -78,6 +78,11 @@ void RotationController::rotateNow() {
   }
 }
 
+void RotationController::onManualRotation() {
+  if (_mode == RotationMode::Off) return;
+  restartTimer();
+}
+
 void RotationController::timerCallback() {
   if (_mode == RotationMode::Off) return;
 

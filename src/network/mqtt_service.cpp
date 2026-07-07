@@ -187,6 +187,9 @@ MqttService::MqttService(
     _haUserNotificationDuration("_user_notification_duration", "User Notification Duration", _haDevice, 0, 3600, 1),
     _haUserNotificationRemaining("_user_notification_remaining", "User Notification Remaining", _haDevice, "s", 0),
     _haUserNotify("_user_notify", "User Notify", _haDevice),
+    _haNextEffect("_next_effect", "Next Effect", _haDevice),
+    _haPrevEffect("_prev_effect", "Previous Effect", _haDevice),
+    _haRandomEffect("_random_effect", "Random Effect", _haDevice),
     _haUserNotificationText("_user_notification_text", "User Notification Text", _haDevice, 64),
     _haNotificationQuietHours("_notification_quiet_hours", "Notification Quiet Hours", _haDevice),
     _haNotificationQuietStart("_notification_quiet_start", "Notification Quiet Start", _haDevice),
@@ -271,8 +274,8 @@ void MqttService::init() {
     }
     _haLight.setEffectList(_haEffectList.c_str());
 
-    // Capacity must match the number of addEntity() calls below (currently 30).
-    HAMQTT.begin(_client, 30);
+    // Capacity must match the number of addEntity() calls below (currently 33).
+    HAMQTT.begin(_client, 33);
     HAMQTT.addEntity(_haLight);
     HAMQTT.addEntity(_haRotationSwitch);
     HAMQTT.addEntity(_haRotationInterval);
@@ -287,6 +290,9 @@ void MqttService::init() {
     HAMQTT.addEntity(_haUserNotificationDuration);
     HAMQTT.addEntity(_haUserNotificationRemaining);
     HAMQTT.addEntity(_haUserNotify);
+    HAMQTT.addEntity(_haNextEffect);
+    HAMQTT.addEntity(_haPrevEffect);
+    HAMQTT.addEntity(_haRandomEffect);
     HAMQTT.addEntity(_haUserNotificationText);
     HAMQTT.addEntity(_haNotificationQuietHours);
     HAMQTT.addEntity(_haNotificationQuietStart);
@@ -456,7 +462,13 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
   }
 
   if (entity == &_haRotationSwitch) {
+    const bool wasActive = _rotation.isActive();
     _rotation.setEnabled(_haRotationSwitch.getState());
+    if (_rotation.isActive() && !wasActive) {
+      _notifications.onRotationEnabled();
+    } else if (!_rotation.isActive() && wasActive) {
+      _notifications.onRotationDisabled();
+    }
     updateStates();
   } else if (entity == &_haRotationInterval) {
     _rotation.setIntervalSec(
@@ -521,6 +533,21 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
   } else if (entity == &_haUserNotify) {
     _notifications.startUserNotification(UserNotificationType::Notify);
     updateStates();
+  } else if (entity == &_haNextEffect) {
+    _effects.setNextEffect();
+    _notifications.onEffectNext();
+    _rotation.onManualRotation();
+    updateStates();
+  } else if (entity == &_haPrevEffect) {
+    _effects.setPreviousEffect();
+    _notifications.onEffectPrevious();
+    _rotation.onManualRotation();
+    updateStates();
+  } else if (entity == &_haRandomEffect) {
+    _effects.setRandomEffect();
+    _notifications.onEffectNext();
+    _rotation.onManualRotation();
+    updateStates();
   } else if (
     entity == &_haNotificationQuietHours || entity == &_haNotificationQuietStart || entity == &_haNotificationQuietEnd
   ) {
@@ -555,6 +582,7 @@ void MqttService::onEffectCommand(const char* effectName) {
 
   _rotation.disable();
   _effects.setEffect(effectId);
+  _notifications.onEffectNext();
   updateStates();
 }
 

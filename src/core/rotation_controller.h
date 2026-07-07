@@ -26,6 +26,7 @@ public:
   void setMode(RotationMode mode);
   void setIntervalSec(uint16_t seconds);
   void disable();
+  void onManualRotation();
   void setEnabled(bool value) { value ? setMode(RotationMode::Random) : disable(); }
 
 private:
