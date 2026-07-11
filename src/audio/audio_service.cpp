@@ -8,9 +8,13 @@ void AudioService::init() {
   _config = _eeprom.readAudioConfig();
 }
 
-void AudioService::tick() {
-  _microphone.tick();
-  _frame = _microphone.frame();
+void AudioService::tick(bool readEnabled) {
+  if (readEnabled) {
+    _microphone.tick();
+    _frame = _microphone.frame();
+  } else {
+    clearFrame();
+  }
 
   persistConfigIfNeeded(millis());
 }

@@ -38,9 +38,6 @@ bool TouchButton::setEnabled(bool enabled) {
 void TouchButton::tick() {
   if (!_connected) return;
 
-  // Необходимое время для калибровки сенсорной кнопки при плотном прилегании к стеклу
-  //if (millis() < 10000) return;
-
   _button.tick();
 
   if (!_enabled) return;
@@ -58,17 +55,19 @@ void TouchButton::tick() {
     if (_notifications.isUserNotificationActive()) {
       _notifications.stopUserNotification();
       _notifications.onButtonDismiss();
-    } else if (_rotation.isActive()) {
-      _rotation.disable();
-      _notifications.onRotationDisabled();
     } else {
-      const bool wasOn = _power.isOn();
-      _power.toggle();
-
-      if (!wasOn && _power.isOn()) {
-        _notifications.onButtonPowerOn();
+      if (_power.isOn() && _rotation.isActive()) {
+        _rotation.disable();
+        _notifications.onRotationDisabled();
       } else {
-        _notifications.onButtonPowerOff();
+        const bool wasOn = _power.isOn();
+        _power.toggle();
+
+        if (!wasOn && _power.isOn()) {
+          _notifications.onButtonPowerOn();
+        } else {
+          _notifications.onButtonPowerOff();
+        }
       }
     }
   }

@@ -17,7 +17,7 @@ public:
       _timer(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {}
 
   void init();
-  void tick();
+  void tick(bool powerOn);
 
   RotationMode getMode() const { return _mode; }
   bool isActive() const { return _mode != RotationMode::Off; }
@@ -36,6 +36,7 @@ private:
   Timer _timer;
   RotationMode _mode = RotationMode::Off;
   uint16_t _intervalSec = ROTATION_INTERVAL_SEC_DEFAULT;
+  bool _powerWasOn = false;
 
   void timerCallback();
   void restartTimer();

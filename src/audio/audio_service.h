@@ -13,7 +13,7 @@ public:
       _microphone() {}
 
   void init();
-  void tick();
+  void tick(bool readEnabled = true);
 
   const AudioFrame& frame() const { return _frame; }
   const AudioConfig& config() const { return _config; }

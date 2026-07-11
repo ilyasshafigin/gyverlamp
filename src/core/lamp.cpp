@@ -25,11 +25,12 @@ void Lamp::setup() {
 }
 
 void Lamp::loop() {
-  LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(); });
-
   power.tick();
 
-  LoopProfiler::measure(LoopProfiler::AUDIO, [this]() { audio.tick(); });
+  LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(power.isOn()); });
+
+  const bool audioReadEnabled = power.isOn() && audio.config().mode != AudioMode::Off;
+  LoopProfiler::measure(LoopProfiler::AUDIO, [this, audioReadEnabled]() { audio.tick(audioReadEnabled); });
   LoopProfiler::measure(LoopProfiler::RENDER, [this]() { frameRenderer.render(); });
   LoopProfiler::measure(LoopProfiler::SETTINGS, [this]() { settings.tick(effects.getActiveEffectId()); });
   LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });

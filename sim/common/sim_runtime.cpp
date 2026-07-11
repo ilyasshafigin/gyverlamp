@@ -272,7 +272,7 @@ namespace sim {
     }
 
     // 2. Optional rotation.
-    _rotation->tick();
+    _rotation->tick(_power->isOn());
 
     // 3. Power fade state.
     _power->tick();

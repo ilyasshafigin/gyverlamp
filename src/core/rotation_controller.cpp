@@ -20,7 +20,17 @@ void RotationController::init() {
   restartTimer();
 }
 
-void RotationController::tick() {
+void RotationController::tick(bool powerOn) {
+  if (!powerOn) {
+    _powerWasOn = false;
+    return;
+  }
+
+  if (!_powerWasOn) {
+    _powerWasOn = true;
+    if (_mode != RotationMode::Off) restartTimer();
+  }
+
   _timer.update();
 }
 
