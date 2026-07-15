@@ -14,7 +14,6 @@
   X(EffectFire)            \
   X(EffectRainbow)         \
   X(EffectNoise)           \
-  X(EffectSnowstorm)       \
   X(EffectMatrix)          \
   X(EffectPaintball)       \
   X(EffectSpiral)          \

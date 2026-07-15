@@ -8,7 +8,7 @@ public:
   static constexpr const char* NAME = "Paintball";
   static constexpr EffectSettingsSpec SETTINGS = {
     255, // brightness
-    30,  // speed
+    100,  // speed
     40,  // scale
   };
 

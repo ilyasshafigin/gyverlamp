@@ -17,7 +17,6 @@
 #include "catalog/picasso.h"
 #include "catalog/shadows.h"
 #include "catalog/rainbow.h"
-#include "catalog/snowstorm.h"
 #include "catalog/spiral.h"
 #include "catalog/thunderstorm.h"
 #include "catalog/twinkles.h"

@@ -16,10 +16,19 @@
 const uint8_t paintWidth = WIDTH - BORDERTHICKNESS * 2;
 const uint8_t paintHeight = HEIGHT - BORDERTHICKNESS * 2;
 
+// blur() runs FastLED blur2d — a full 2-pass matrix convolution over all
+// pixels — and is by far the most expensive op in this effect. On ESP8266
+// running it every frame blows the 20ms (50 FPS) budget, the call to show()
+// gets skipped, and the strip never updates. Throttle to one blur per
+// interval; the 4 moving balls are still drawn every frame, so motion stays
+// smooth. Trails get slightly longer, which is the accepted trade-off.
+#define BLUR_INTERVAL_MS (30U)
+
 void EffectPaintball::setup(EffectContext& ctx) {
   if (ctx.palette == nullptr) {
     rgbPalette = CRGBPalette16(RainbowColors_p);
   }
+  resetEveryMs(step, BLUR_INTERVAL_MS, ctx.nowMs);
 }
 
 void EffectPaintball::render(EffectContext& ctx) {
@@ -27,13 +36,20 @@ void EffectPaintball::render(EffectContext& ctx) {
   // Note that we never actually clear the matrix, we just constantly
   // blur it repeatedly.  Since the blurring is 'lossy', there's
   // an automatic trend toward black -- by design.
-  ctx.led.blur(dim8_raw(beatsin8(3, 64, 100)));
+  if (everyMs(step, BLUR_INTERVAL_MS, ctx.nowMs)) {
+    ctx.led.blur(dim8_raw(beatsin8(3, 64, 100)));
+  }
 
-  // Use two out-of-sync sine waves
-  uint16_t i = beatsin16(79, 0, 255); //91
-  uint16_t j = beatsin16(67, 0, 255); //109
-  uint16_t k = beatsin16(53, 0, 255); //73
-  uint16_t m = beatsin16(97, 0, 255); //123
+  // Ball position = sin16 of a FastLED beat. The first beatsin16() arg is the
+  // beat rate (~oscillations/min): bigger = faster ball. ctx.speed scales that
+  // rate, so at the default speed=30 the balls drift slowly; raise the speed
+  // slider to liven them up. Each ball keeps its own base+offset so the four
+  // never sync. Range: speed=0 -> very slow drift, speed=255 -> original pace.
+  const uint8_t spd = map(ctx.speed, 0, 255, 0, 80);
+  uint16_t i = beatsin16(20 + spd, 0, 255);
+  uint16_t j = beatsin16(17 + spd, 0, 255);
+  uint16_t k = beatsin16(13 + spd, 0, 255);
+  uint16_t m = beatsin16(25 + spd, 0, 255);
 
   const CRGBPalette16& palette = ctx.palette ? *ctx.palette : rgbPalette;
 

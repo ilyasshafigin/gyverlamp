@@ -20,7 +20,6 @@ namespace Effects {
     Butterflys,
     Thunderstorm,
     Nexus,
-    Snowstorm,
     Clock,
     LiquidLamp,
     NorthernLights,
