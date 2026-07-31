@@ -4,22 +4,13 @@
 #include <ESP8266WiFi.h>
 
 class EepromStore;
-class FrameRenderer;
 class NotificationController;
-class SettingsRepository;
 
 class WifiService {
 public:
-  explicit WifiService(
-    EepromStore& eeprom,
-    FrameRenderer& frameRenderer,
-    NotificationController& notifications,
-    SettingsRepository& settings
-  )
+  explicit WifiService(EepromStore& eeprom, NotificationController& notifications)
     : _eeprom(eeprom),
-      _frameRenderer(frameRenderer),
       _notifications(notifications),
-      _settings(settings),
       _deviceId(DEVICE_NAME) {}
 
   void init();
@@ -29,23 +20,41 @@ public:
   const String& getDeviceId() const { return _deviceId; }
 
 private:
+  enum class StaState : uint8_t {
+    Provisioning,
+    Connecting,
+    Connected,
+    RetryWait,
+  };
+
+  enum class ApState : uint8_t {
+    Inactive,
+    Active,
+    RetryWait,
+  };
+
   EepromStore& _eeprom;
-  FrameRenderer& _frameRenderer;
   NotificationController& _notifications;
-  SettingsRepository& _settings;
   String _deviceId;
 
-  bool _staWasConnected = false;
-  bool _apActive = false;
+  StaState _staState = StaState::Provisioning;
+  ApState _apState = ApState::Inactive;
   uint32_t _apStartedAt = 0;
-  uint32_t _reconnectTimer = 0;
+  uint32_t _apRetryStartedAt = 0;
+  uint32_t _connectStartedAt = 0;
+  uint32_t _retryStartedAt = 0;
   static constexpr uint32_t RECONNECT_INTERVAL_MS = 5000;
+  static constexpr uint32_t AP_RETRY_INTERVAL_MS = 5000;
   static constexpr uint32_t AP_TIMEOUT_MS = 5UL * 60UL * 1000UL;
+  static constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 10000;
 
-  void startAp();
+  bool startAp();
+  void requestAp();
   void stopAp();
-  bool initSta();
-  void checkStaReconnect();
+  void startStaConnection();
+  void checkStaConnecting();
+  void checkStaRetryWait();
+  void onStaConnected();
+  void checkApRetry();
   void checkApTimeout();
-  void resetSavedWifiIfNeeded();
 };

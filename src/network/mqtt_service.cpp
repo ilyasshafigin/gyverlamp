@@ -204,7 +204,6 @@ MqttService::MqttService(
     _haRssiPct("_rssi_pct", "RSSI %", _haDevice, "%", 0),
     _haChannel("_channel", "WiFi Channel", _haDevice, nullptr, 0),
     _haVcc("_vcc", "VCC", _haDevice, "V", 3),
-    _haBootCount("_boot_count", "Boot Count", _haDevice, nullptr, 0),
     _haResetReason("_reset_reason", "Reset Reason", _haDevice, 64) {
   gMqttService = this;
 
@@ -274,8 +273,8 @@ void MqttService::init() {
     }
     _haLight.setEffectList(_haEffectList.c_str());
 
-    // Capacity must match the number of addEntity() calls below (currently 33).
-    HAMQTT.begin(_client, 33);
+    // Capacity must match the number of addEntity() calls below
+    HAMQTT.begin(_client, 32);
     HAMQTT.addEntity(_haLight);
     HAMQTT.addEntity(_haRotationSwitch);
     HAMQTT.addEntity(_haRotationInterval);
@@ -307,7 +306,6 @@ void MqttService::init() {
     HAMQTT.addEntity(_haRssiPct);
     HAMQTT.addEntity(_haChannel);
     HAMQTT.addEntity(_haVcc);
-    HAMQTT.addEntity(_haBootCount);
     HAMQTT.addEntity(_haResetReason);
     HAMQTT.setCallback(haCallbackForward);
 
@@ -440,7 +438,6 @@ void MqttService::publishTimerCallback() {
   _haRssi.setState(WiFi.RSSI());
   _haRssiPct.setState(2 * (WiFi.RSSI() + 100));
   _haChannel.setState(WiFi.channel());
-  _haBootCount.setState(_settings.getBootCount());
   _haNotificationMuteState.setState(_notifications.isMutedNow() ? "muted" : "active");
 
   uint16_t vcc = ESP.getVcc();
@@ -450,10 +447,6 @@ void MqttService::publishTimerCallback() {
   char resetReason[64];
   ESP.getResetReason().toCharArray(resetReason, sizeof(resetReason));
   _haResetReason.setState(resetReason);
-
-  if (_settings.getBootCount() > 1) {
-    _settings.resetBootCount();
-  }
 }
 
 void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsigned int length) {

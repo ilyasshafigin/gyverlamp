@@ -22,7 +22,7 @@ static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t Effe
 //            payload host(33) + port(10) + user(33) + password(33).
 //
 //  235..244  Блок системного состояния, 10 байт:
-//            bootCount(1) + powerState(1) + buttonEnabled(1) + globalBrightness(1).
+//            reserve(1) + powerState(1) + buttonEnabled(1) + globalBrightness(1).
 //  245..254  Блок состояния эффектов, 10 байт:
 //            currentEffect(1) + globalPaletteId(1) + effectSettingsCount(1).
 //  255..264  Блок ротации эффектов, 10 байт:
@@ -62,7 +62,6 @@ constexpr int EEPROM_MQTT_CONFIG_ADDR = EEPROM_MQTT_BLOCK_ADDR;
 
 constexpr int EEPROM_SYSTEM_STATE_BLOCK_ADDR = EEPROM_MQTT_BLOCK_ADDR + EEPROM_MQTT_BLOCK_SIZE; // 235
 constexpr int EEPROM_SYSTEM_STATE_BLOCK_SIZE = 10;
-constexpr int EEPROM_BOOT_COUNT_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR;
 constexpr int EEPROM_POWER_STATE_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 1;
 constexpr int EEPROM_BUTTON_ENABLED_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 2;
 constexpr int EEPROM_GLOBAL_BRIGHTNESS_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 3;

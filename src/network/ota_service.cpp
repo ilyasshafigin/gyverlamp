@@ -7,6 +7,7 @@
 #include "../core/frame_renderer.h"
 #include "../core/power_controller.h"
 #include "../notification/controller.h"
+#include "wifi_service.h"
 
 void OtaService::init() {
   ArduinoOTA.onStart([this]() {
@@ -48,11 +49,17 @@ void OtaService::init() {
     _notifications.onOtaError();
     _frameRenderer.renderNow();
   });
-
-  ArduinoOTA.begin();
 }
 
 void OtaService::tick() {
+  static bool begun = false;
+  if (!begun) {
+    if (!_wifi.isStaConnected()) {
+      return;
+    }
+    ArduinoOTA.begin();
+    begun = true;
+  }
   ArduinoOTA.handle();
 }
 

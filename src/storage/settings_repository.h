@@ -19,9 +19,6 @@ public:
   const EffectSettings& getEffectSettings(Effects::Id effectId) const;
   const EffectSettings& getEffectSettingsByIndex(uint8_t index) const;
 
-  uint8_t getBootCount() const { return _bootCount; }
-  void resetBootCount();
-
   void markEffectSettingsChanged();
   bool resetEffectSettingsToDefaults(const EffectSettings* defaults);
 
@@ -34,7 +31,6 @@ public:
 private:
   EepromStore& _eeprom;
   EffectSettings _effects[Effects::COUNT];
-  uint8_t _bootCount = 0;
   bool _effectSettingsChanged = false;
   uint32_t _persistTimer = 0;
   Palettes::Id _selectedPalette = Palettes::Id::Auto;

@@ -4,13 +4,6 @@
 #include "eeprom_store.h"
 
 void SettingsRepository::init() {
-  _bootCount = _eeprom.readBootCount();
-  _bootCount++;
-  _eeprom.writeBootCount(_bootCount);
-
-  // Чуть ждем после увеличения bootCount на случай следующей перезагрузки
-  delay(50);
-
   _selectedPalette = _eeprom.readGlobalPaletteId();
   _globalBrightness = _eeprom.readGlobalBrightness();
 
@@ -60,11 +53,6 @@ const EffectSettings& SettingsRepository::getEffectSettings(Effects::Id effectId
 
 const EffectSettings& SettingsRepository::getEffectSettingsByIndex(uint8_t index) const {
   return _effects[Effects::toIndex(Effects::clamp(Effects::toId(index)))];
-}
-
-void SettingsRepository::resetBootCount() {
-  _bootCount = 0;
-  _eeprom.writeBootCount(0);
 }
 
 void SettingsRepository::markEffectSettingsChanged() {

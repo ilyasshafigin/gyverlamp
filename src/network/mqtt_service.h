@@ -85,7 +85,6 @@ private:
   HASensorNumeric _haRssiPct;
   HASensorNumeric _haChannel;
   HASensorNumeric _haVcc;
-  HASensorNumeric _haBootCount;
   HASensorText _haResetReason;
 
   void setMqttHost(const char* host) { strlcpy(_mqttHost, host, MQTT_HOST_LEN); }

@@ -139,7 +139,6 @@ bool EepromStore::initializeLayout() {
     EEPROM.write(address, 0);
   }
 
-  EEPROM.write(EEPROM_BOOT_COUNT_ADDR, 0);
   EEPROM.write(EEPROM_POWER_STATE_ADDR, 0);
   EEPROM.write(EEPROM_BUTTON_ENABLED_ADDR, 1);
   EEPROM.put(EEPROM_AUTO_OFF_MINUTES_ADDR, AUTO_OFF_MINUTES_DEFAULT);
@@ -201,15 +200,6 @@ bool EepromStore::writeMqttConfig(const char* host, const char* port, const char
     _mqttConfigCache = mqttConfig;
   }
   return committed;
-}
-
-uint8_t EepromStore::readBootCount() {
-  return EEPROM.read(EEPROM_BOOT_COUNT_ADDR);
-}
-
-void EepromStore::writeBootCount(uint8_t bootCount) {
-  EEPROM.write(EEPROM_BOOT_COUNT_ADDR, bootCount);
-  EEPROM.commit();
 }
 
 bool EepromStore::readPowerState() {

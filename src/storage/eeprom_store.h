@@ -21,9 +21,6 @@ public:
   const MqttConfig& readMqttConfig();
   bool writeMqttConfig(const char* host, const char* port, const char* user, const char* password);
 
-  uint8_t readBootCount();
-  void writeBootCount(uint8_t bootCount);
-
   bool readPowerState();
   void writePowerState(bool powerOn);
 

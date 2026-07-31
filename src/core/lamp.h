@@ -58,10 +58,10 @@ public:
       notifications(eeprom, power, runningText, stateNotifier, time),
       frameRenderer(effects, led, notifications, power, stateNotifier),
       rotation(eeprom, effects, stateNotifier),
-      wifi(eeprom, frameRenderer, notifications, settings),
+      wifi(eeprom, notifications),
       button(eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN),
       upd(effects, power, settings, stateNotifier, time, button, UDP_PORT),
-      ota(frameRenderer, notifications),
+      ota(frameRenderer, notifications, wifi),
       mqtt(audio, eeprom, effects, notifications, power, rotation, settings, button, wifi),
       web(
         audio,
