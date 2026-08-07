@@ -16,24 +16,24 @@ public:
   // Возвращает true, если состояние изменилось из-за timeout.
   bool tick(uint32_t now);
 
-  bool isActive() const { return _type != UserNotificationType::None; }
-  bool isNotifyActive() const { return _type == UserNotificationType::Notify; }
-  bool isWarningActive() const { return _type == UserNotificationType::Warning; }
-  bool isAlarmActive() const { return _type == UserNotificationType::Alarm; }
-  bool isTextActive() const { return _type == UserNotificationType::Text; }
+  bool isActive() const { return type_ != UserNotificationType::None; }
+  bool isNotifyActive() const { return type_ == UserNotificationType::Notify; }
+  bool isWarningActive() const { return type_ == UserNotificationType::Warning; }
+  bool isAlarmActive() const { return type_ == UserNotificationType::Alarm; }
+  bool isTextActive() const { return type_ == UserNotificationType::Text; }
   bool isAlertActive() const { return isWarningActive() || isAlarmActive(); }
 
-  UserNotificationType getType() const { return _type; }
-  uint32_t getStartedMs() const { return _startedMs; }
-  uint32_t getDurationMs() const { return _durationMs; }
-  const String& getText() const { return _text; }
-  const CRGB& getColor() const { return _color; }
-  bool isTimed() const { return _durationMs > 0; }
+  UserNotificationType getType() const { return type_; }
+  uint32_t getStartedMs() const { return startedMs_; }
+  uint32_t getDurationMs() const { return durationMs_; }
+  const String& getText() const { return text_; }
+  const CRGB& getColor() const { return color_; }
+  bool isTimed() const { return durationMs_ > 0; }
 
 private:
-  UserNotificationType _type = UserNotificationType::None;
-  uint32_t _startedMs = 0;
-  uint32_t _durationMs = 0;
-  String _text;
-  CRGB _color = CRGB::White;
+  UserNotificationType type_ = UserNotificationType::None;
+  uint32_t startedMs_ = 0;
+  uint32_t durationMs_ = 0;
+  String text_;
+  CRGB color_ = CRGB::White;
 };

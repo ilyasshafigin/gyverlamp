@@ -5,39 +5,39 @@
 static constexpr uint8_t TOP_Y = HEIGHT - 1;
 
 void NotificationOverlay::drawPixel(uint8_t x, uint8_t y, CRGB color) {
-  color.nscale8(_opacity);
+  color.nscale8(opacity_);
 
-  CRGB& bg = _led.getPixel(x, y);
-  bg.fadeToBlackBy(_holeDim);
+  CRGB& bg = led_.getPixel(x, y);
+  bg.fadeToBlackBy(holeDim_);
   bg += color;
 }
 
 void NotificationOverlay::drawPixelSafe(int x, int y, CRGB color) {
-  color.nscale8(_opacity);
+  color.nscale8(opacity_);
 
-  CRGB& bg = _led.getPixelSafe(x, y);
-  bg.fadeToBlackBy(_holeDim);
+  CRGB& bg = led_.getPixelSafe(x, y);
+  bg.fadeToBlackBy(holeDim_);
   bg += color;
 }
 
 void NotificationOverlay::addPixel(uint8_t x, uint8_t y, CRGB color) {
-  color.nscale8(_opacity);
+  color.nscale8(opacity_);
 
-  _led.addPixel(x, y, color);
+  led_.addPixel(x, y, color);
 }
 
 void NotificationOverlay::fill(CRGB color) {
-  color.nscale8(_opacity);
+  color.nscale8(opacity_);
 
-  _led.fadeToBlack(_holeDim);
-  _led.add(color);
+  led_.fadeToBlack(holeDim_);
+  led_.add(color);
 }
 
 void NotificationOverlay::clearTop() {
   for (uint8_t x = 0; x < WIDTH; x++) {
-    _led.drawPixel(x, TOP_Y, CRGB::Black);
+    led_.drawPixel(x, TOP_Y, CRGB::Black);
     // захватим еще одну строку
-    _led.drawPixel(x, TOP_Y - 1, CRGB::Black);
+    led_.drawPixel(x, TOP_Y - 1, CRGB::Black);
   }
 }
 

@@ -6,44 +6,44 @@
 #define TEXT_HEIGHT 2 // высота, на которой бежит текст (от низа матрицы)
 
 void RunningText::reset() {
-  _offset = _width - 1;
-  _frameTimer = 0;
-  _scrollTimer = 0;
+  offset_ = width_ - 1;
+  frameTimer_ = 0;
+  scrollTimer_ = 0;
 }
 
 void RunningText::start(const String& text, const CRGB& color, bool loop) {
-  _text = text;
-  _color = color;
-  _loop = loop;
-  _active = true;
+  text_ = text;
+  color_ = color;
+  loop_ = loop;
+  active_ = true;
   reset();
 }
 
 bool RunningText::render() {
-  if (!_active) return false;
-  advance(_text);
-  TextRenderer::drawString(_led, _offset, TEXT_HEIGHT, _text, _color);
+  if (!active_) return false;
+  advance(text_);
+  TextRenderer::drawString(led_, offset_, TEXT_HEIGHT, text_, color_);
   return true;
 }
 
 bool RunningText::render(NotificationOverlay& overlay) {
-  if (!_active) return false;
-  advance(_text);
-  TextRenderer::drawString(overlay, _offset, TEXT_HEIGHT, _text, _color);
+  if (!active_) return false;
+  advance(text_);
+  TextRenderer::drawString(overlay, offset_, TEXT_HEIGHT, text_, color_);
   return true;
 }
 
 bool RunningText::advance(const String& text) {
   const uint32_t now = millis();
 
-  if (now - _scrollTimer >= SCROLL_INTERVAL_MS) {
-    _scrollTimer = now;
+  if (now - scrollTimer_ >= SCROLL_INTERVAL_MS) {
+    scrollTimer_ = now;
 
     const int16_t textWidth = TextRenderer::stringWidth(text);
-    _offset--;
-    if (_offset < -textWidth) {
-      _offset = _width - 1;
-      if (!_loop) _active = false;
+    offset_--;
+    if (offset_ < -textWidth) {
+      offset_ = width_ - 1;
+      if (!loop_) active_ = false;
     }
   }
 

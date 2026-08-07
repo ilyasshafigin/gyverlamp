@@ -6,7 +6,7 @@
 class NotificationDimmer {
 public:
   explicit NotificationDimmer(Led& led)
-    : _led(led) {}
+    : led_(led) {}
 
   void prepareFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t durationMs = 0);
   void prepareEndingFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t endingStartedMs);
@@ -16,10 +16,10 @@ public:
   static constexpr uint16_t FADE_OUT_MS = 600;
 
 private:
-  Led& _led;
-  bool _wasActive = false;
-  uint32_t _startedMs = 0;
-  uint8_t _appliedDim = 0;
+  Led& led_;
+  bool wasActive_ = false;
+  uint32_t startedMs_ = 0;
+  uint8_t appliedDim_ = 0;
 
   uint8_t currentAmount(uint8_t targetDim, uint32_t durationMs) const;
   void apply(uint8_t amount, bool backgroundUpdated);

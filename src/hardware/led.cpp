@@ -13,18 +13,18 @@ static uint16_t ledXYFunction(uint16_t x, uint16_t y, uint16_t width, uint16_t h
 }
 
 Led::Led()
-  : _xyMap(fl::XYMap::constructWithUserFunction(WIDTH, HEIGHT, ledXYFunction)) {
+  : xyMap_(fl::XYMap::constructWithUserFunction(WIDTH, HEIGHT, ledXYFunction)) {
 }
 
 void Led::init() {
-  fill_solid(_leds, NUM_LEDS, CRGB::Black);
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(_leds, NUM_LEDS);
+  fill_solid(leds_, NUM_LEDS, CRGB::Black);
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds_, NUM_LEDS);
   FastLED.setBrightness(255);
   if (CURRENT_LIMIT > 0) FastLED.setMaxPowerInVoltsAndMilliamps(5, CURRENT_LIMIT);
   FastLED.show(0);
 }
 
-//void Led::clearLeds() { fill_solid(_leds, NUM_LEDS, CRGB::Black); } - не работает
+//void Led::clearLeds() { fill_solid(leds_, NUM_LEDS, CRGB::Black); } - не работает
 void Led::clearLeds() {
   FastLED.clear();
 }
@@ -36,11 +36,11 @@ void Led::blackout() {
 }
 
 void Led::clearLedsBuff() {
-  fill_solid(_ledsbuff, NUM_LEDS, CRGB::Black);
+  fill_solid(ledsbuff_, NUM_LEDS, CRGB::Black);
 }
 
 void Led::copyLedsBuffToLeds() {
-  fl::memcpy(_leds, _ledsbuff, sizeof(_leds));
+  fl::memcpy(leds_, ledsbuff_, sizeof(leds_));
 }
 
 // по мотивам
@@ -65,16 +65,16 @@ void Led::drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color) {
 }
 
 void Led::fadeToBlack(uint8_t step) {
-  fadeToBlackBy(_leds, NUM_LEDS, step);
+  fadeToBlackBy(leds_, NUM_LEDS, step);
 }
 
 void Led::fadeBuffToBlack(uint8_t step) {
-  fadeToBlackBy(_ledsbuff, NUM_LEDS, step);
+  fadeToBlackBy(ledsbuff_, NUM_LEDS, step);
 }
 
 void Led::fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = _leds[getPixelNumber(x, y)];
+  CRGB& pixel = leds_[getPixelNumber(x, y)];
   if (pixel == CRGB::Black) return;
   if (pixel.r >= 30 || pixel.g >= 30 || pixel.b >= 30) {
     pixel.fadeToBlackBy(step);
@@ -85,7 +85,7 @@ void Led::fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
 
 void Led::fadeBuffPixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = _ledsbuff[getPixelNumber(x, y)];
+  CRGB& pixel = ledsbuff_[getPixelNumber(x, y)];
   if (pixel == CRGB::Black) return;
   if (pixel.r >= 30 || pixel.g >= 30 || pixel.b >= 30) {
     pixel.fadeToBlackBy(step);
@@ -95,45 +95,45 @@ void Led::fadeBuffPixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
 }
 
 void Led::scale(uint8_t value) {
-  nscale8(_leds, NUM_LEDS, value);
+  nscale8(leds_, NUM_LEDS, value);
 }
 
 void Led::scaleBuff(uint8_t value) {
-  nscale8(_ledsbuff, NUM_LEDS, value);
+  nscale8(ledsbuff_, NUM_LEDS, value);
 }
 
 void Led::fill(const CRGB& color) {
-  fill_solid(_leds, NUM_LEDS, color);
+  fill_solid(leds_, NUM_LEDS, color);
 }
 
 void Led::fillBuff(const CRGB& color) {
-  fill_solid(_ledsbuff, NUM_LEDS, color);
+  fill_solid(ledsbuff_, NUM_LEDS, color);
 }
 
 void Led::add(const CRGB& color) {
   for (uint16_t i = 0U; i < NUM_LEDS; i++) {
-    _leds[i] += color;
+    leds_[i] += color;
   }
 }
 
 void Led::addBuff(const CRGB& color) {
   for (uint16_t i = 0U; i < NUM_LEDS; i++) {
-    _ledsbuff[i] += color;
+    ledsbuff_[i] += color;
   }
 }
 
 void Led::addPixel(uint8_t x, uint8_t y, const CRGB& color) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = _leds[getPixelNumber(x, y)];
+  CRGB& pixel = leds_[getPixelNumber(x, y)];
   pixel += color;
 }
 
 void Led::blur(fract8 amount) {
-  blur2d(_leds, WIDTH, HEIGHT, amount, _xyMap);
+  blur2d(leds_, WIDTH, HEIGHT, amount, xyMap_);
 }
 
 void Led::blurBuff(fract8 amount) {
-  blur2d(_ledsbuff, WIDTH, HEIGHT, amount, _xyMap);
+  blur2d(ledsbuff_, WIDTH, HEIGHT, amount, xyMap_);
 }
 
 void Led::gradientDownTop(uint8_t bottom, const CHSV& bottomColor, uint8_t top, const CHSV& topColor) {
@@ -143,10 +143,10 @@ void Led::gradientDownTop(uint8_t bottom, const CHSV& bottomColor, uint8_t top, 
   //  LONGEST_HUES: hue goes whichever way is longest
   if (ORIENTATION < 3 || ORIENTATION == 7) {
     // STRIP_DIRECTION to UP ========
-    fill_gradient(_leds, top * WIDTH, topColor, bottom * WIDTH, bottomColor, SHORTEST_HUES);
+    fill_gradient(leds_, top * WIDTH, topColor, bottom * WIDTH, bottomColor, SHORTEST_HUES);
   } else {
     // STRIP_DIRECTION to DOWN ======
-    fill_gradient(_leds, NUM_LEDS - bottom * WIDTH - 1, bottomColor, NUM_LEDS - top * WIDTH, topColor, SHORTEST_HUES);
+    fill_gradient(leds_, NUM_LEDS - bottom * WIDTH - 1, bottomColor, NUM_LEDS - top * WIDTH, topColor, SHORTEST_HUES);
   }
 }
 

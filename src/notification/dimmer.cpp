@@ -1,10 +1,10 @@
 #include "dimmer.h"
 
 void NotificationDimmer::prepareFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t durationMs) {
-  if (!_wasActive) {
-    _wasActive = true;
-    _startedMs = millis();
-    _appliedDim = 0;
+  if (!wasActive_) {
+    wasActive_ = true;
+    startedMs_ = millis();
+    appliedDim_ = 0;
   }
 
   const uint8_t dim = currentAmount(targetDim, durationMs);
@@ -24,7 +24,7 @@ void NotificationDimmer::prepareEndingFrame(bool backgroundUpdated, uint8_t targ
 }
 
 uint8_t NotificationDimmer::currentAmount(uint8_t targetDim, uint32_t durationMs) const {
-  const uint32_t elapsed = millis() - _startedMs;
+  const uint32_t elapsed = millis() - startedMs_;
 
   uint8_t fadeIn = 255;
   if (elapsed < FADE_IN_MS) {
@@ -41,20 +41,20 @@ uint8_t NotificationDimmer::currentAmount(uint8_t targetDim, uint32_t durationMs
 }
 
 void NotificationDimmer::reset() {
-  _wasActive = false;
-  _appliedDim = 0;
+  wasActive_ = false;
+  appliedDim_ = 0;
 }
 
 void NotificationDimmer::apply(uint8_t amount, bool backgroundUpdated) {
   if (backgroundUpdated) {
-    _led.fadeToBlack(amount);
-    _appliedDim = amount;
+    led_.fadeToBlack(amount);
+    appliedDim_ = amount;
     return;
   }
 
-  if (amount <= _appliedDim) return;
+  if (amount <= appliedDim_) return;
 
-  const uint8_t delta = amount - _appliedDim;
-  _led.fadeToBlack(delta);
-  _appliedDim = amount;
+  const uint8_t delta = amount - appliedDim_;
+  led_.fadeToBlack(delta);
+  appliedDim_ = amount;
 }

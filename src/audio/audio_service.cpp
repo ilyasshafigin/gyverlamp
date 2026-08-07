@@ -4,14 +4,14 @@
 #include "audio_service.h"
 
 void AudioService::init() {
-  _microphone.init();
-  _config = _eeprom.readAudioConfig();
+  microphone_.init();
+  config_ = eeprom_.readAudioConfig();
 }
 
 void AudioService::tick(bool readEnabled) {
   if (readEnabled) {
-    _microphone.tick();
-    _frame = _microphone.frame();
+    microphone_.tick();
+    frame_ = microphone_.frame();
   } else {
     clearFrame();
   }
@@ -20,42 +20,42 @@ void AudioService::tick(bool readEnabled) {
 }
 
 void AudioService::setConfig(const AudioConfig& config) {
-  if (_config.mode == config.mode && _config.band == config.band && _config.amount == config.amount) {
+  if (config_.mode == config.mode && config_.band == config.band && config_.amount == config.amount) {
     return;
   }
 
-  _config = config;
+  config_ = config;
   markConfigChanged();
 }
 
 void AudioService::setMode(AudioMode mode) {
-  if (_config.mode == mode) return;
-  _config.mode = mode;
+  if (config_.mode == mode) return;
+  config_.mode = mode;
   markConfigChanged();
 }
 
 void AudioService::setBand(AudioBand band) {
-  if (_config.band == band) return;
-  _config.band = band;
+  if (config_.band == band) return;
+  config_.band = band;
   markConfigChanged();
 }
 
 void AudioService::setAmount(uint8_t amount) {
-  if (_config.amount == amount) return;
-  _config.amount = amount;
+  if (config_.amount == amount) return;
+  config_.amount = amount;
   markConfigChanged();
 }
 
 void AudioService::markConfigChanged() {
-  _configChanged = true;
-  _configPersistTimer = millis();
+  configChanged_ = true;
+  configPersistTimer_ = millis();
 }
 
 void AudioService::persistConfigIfNeeded(uint32_t now) {
-  if (!_configChanged) return;
-  if (now - _configPersistTimer < 1500) return;
+  if (!configChanged_) return;
+  if (now - configPersistTimer_ < 1500) return;
 
-  if (_eeprom.writeAudioConfig(_config)) {
-    _configChanged = false;
+  if (eeprom_.writeAudioConfig(config_)) {
+    configChanged_ = false;
   }
 }

@@ -245,13 +245,13 @@ namespace {
 } // namespace
 
 void EffectEqualizer::setup(EffectContext& ctx) {
-  _level = 0;
-  _bass = 0;
-  _treble = 0;
-  _sparkX = 0;
+  level_ = 0;
+  bass_ = 0;
+  treble_ = 0;
+  sparkX_ = 0;
 
   for (uint8_t x = 0; x < WIDTH; x++) {
-    _peak[x] = 0;
+    peak_[x] = 0;
   }
 }
 
@@ -281,9 +281,9 @@ void EffectEqualizer::render(EffectContext& ctx) {
     beat = targetBass > 205;
   }
 
-  _level = smoothVisual(_level, targetLevel);
-  _bass = smoothVisual(_bass, targetBass);
-  _treble = smoothVisual(_treble, targetTreble);
+  level_ = smoothVisual(level_, targetLevel);
+  bass_ = smoothVisual(bass_, targetBass);
+  treble_ = smoothVisual(treble_, targetTreble);
 
   const uint16_t noiseTime = ctx.nowMs / map(ctx.speed, 0, 255, 35, 8);
   const uint8_t noiseScale = map(power, 0, 255, 12, 55);
@@ -291,15 +291,15 @@ void EffectEqualizer::render(EffectContext& ctx) {
   for (uint8_t x = 0; x < WIDTH; x++) {
     const uint8_t wave = inoise8(x * noiseScale, noiseTime);
 
-    uint8_t energy = scale8(_level, 170);
+    uint8_t energy = scale8(level_, 170);
     energy = qadd8(energy, scale8(wave, 70));
 
     if (x < WIDTH / 3) {
-      energy = qadd8(energy, scale8(_bass, 90));
+      energy = qadd8(energy, scale8(bass_, 90));
     } else if (x >= (WIDTH * 2) / 3) {
-      energy = qadd8(energy, scale8(_treble, 90));
+      energy = qadd8(energy, scale8(treble_, 90));
     } else {
-      energy = qadd8(energy, scale8(_level, 60));
+      energy = qadd8(energy, scale8(level_, 60));
     }
 
     const uint8_t value = qadd8(70, scale8(energy, 185));
@@ -307,39 +307,39 @@ void EffectEqualizer::render(EffectContext& ctx) {
     switch (mode) {
       case EqualizerMode::Classic: {
         const uint8_t height = min<uint8_t>(map8(energy, 0, HEIGHT), HEIGHT);
-        drawClassicColumn(ctx, x, height, value, energy, _bass, _treble, power);
+        drawClassicColumn(ctx, x, height, value, energy, bass_, treble_, power);
 
-        if (height > _peak[x]) {
-          _peak[x] = height;
-        } else if (_peak[x] > 0 && (ctx.nowMs & 1)) {
-          _peak[x]--;
+        if (height > peak_[x]) {
+          peak_[x] = height;
+        } else if (peak_[x] > 0 && (ctx.nowMs & 1)) {
+          peak_[x]--;
         }
 
-        if (_peak[x] > HEIGHT) {
-          _peak[x] = HEIGHT;
+        if (peak_[x] > HEIGHT) {
+          peak_[x] = HEIGHT;
         }
 
-        if (_peak[x] > 0 && value > 150) {
-          ctx.led.drawPixel(x, _peak[x] - 1, paletteColor(ctx.palette, 240, scale8(value, 70)));
+        if (peak_[x] > 0 && value > 150) {
+          ctx.led.drawPixel(x, peak_[x] - 1, paletteColor(ctx.palette, 240, scale8(value, 70)));
         }
         break;
       }
 
       case EqualizerMode::Mirror: {
         const uint8_t height = min<uint8_t>(map8(energy, 0, HALF_HEIGHT), HALF_HEIGHT);
-        drawMirrorColumn(ctx, x, height, value, energy, _bass, _treble, power);
-        _peak[x] = 0;
+        drawMirrorColumn(ctx, x, height, value, energy, bass_, treble_, power);
+        peak_[x] = 0;
         break;
       }
 
       case EqualizerMode::Fire:
-        drawFireColumn(ctx, x, energy, _bass, _treble, power);
-        _peak[x] = 0;
+        drawFireColumn(ctx, x, energy, bass_, treble_, power);
+        peak_[x] = 0;
         break;
 
       case EqualizerMode::Plasma:
-        drawPlasmaColumn(ctx, x, _level, _bass, _treble, power);
-        _peak[x] = 0;
+        drawPlasmaColumn(ctx, x, level_, bass_, treble_, power);
+        peak_[x] = 0;
         break;
     }
   }

@@ -6,96 +6,96 @@
 #include "state_notifier.h"
 
 void RotationController::init() {
-  _mode = _eepromStore.readRotationMode();
-  _intervalSec = _eepromStore.readRotationIntervalSec();
+  mode_ = eepromStore_.readRotationMode();
+  intervalSec_ = eepromStore_.readRotationIntervalSec();
   // One-shot: migrate legacy non-preset value to the nearest preset.
   // Fires once on first boot after the upgrade; subsequent boots hit the
   // equality guard below because EEPROM now stores a snapped preset.
-  const uint16_t snapped = rotationPresetSnapSeconds(_intervalSec);
-  if (snapped != _intervalSec) {
-    _intervalSec = snapped;
-    _eepromStore.writeRotationIntervalSec(_intervalSec);
+  const uint16_t snapped = rotationPresetSnapSeconds(intervalSec_);
+  if (snapped != intervalSec_) {
+    intervalSec_ = snapped;
+    eepromStore_.writeRotationIntervalSec(intervalSec_);
   }
-  _timer.setOnTimer([this]() { this->timerCallback(); });
+  timer_.setOnTimer([this]() { this->timerCallback(); });
   restartTimer();
 }
 
 void RotationController::tick(bool powerOn) {
   if (!powerOn) {
-    _powerWasOn = false;
+    powerWasOn_ = false;
     return;
   }
 
-  if (!_powerWasOn) {
-    _powerWasOn = true;
-    if (_mode != RotationMode::Off) restartTimer();
+  if (!powerWasOn_) {
+    powerWasOn_ = true;
+    if (mode_ != RotationMode::Off) restartTimer();
   }
 
-  _timer.update();
+  timer_.update();
 }
 
 void RotationController::setMode(RotationMode mode) {
-  if (mode == _mode) return;
+  if (mode == mode_) return;
 
-  _mode = mode;
-  _eepromStore.writeRotationMode(_mode);
+  mode_ = mode;
+  eepromStore_.writeRotationMode(mode_);
 
-  if (_mode == RotationMode::Off) {
-    _timer.stop();
-    _stateNotifier.stateChanged();
+  if (mode_ == RotationMode::Off) {
+    timer_.stop();
+    stateNotifier_.stateChanged();
     return;
   }
 
   restartTimer();
   rotateNow();
-  _stateNotifier.stateChanged();
+  stateNotifier_.stateChanged();
 }
 
 void RotationController::setIntervalSec(uint16_t seconds) {
   // Snap first; presets are guaranteed within [MIN, MAX] via static_assert in
   // rotation_presets.h, so the previous explicit clamps were dead code.
   seconds = rotationPresetSnapSeconds(seconds);
-  if (seconds == _intervalSec) return;
+  if (seconds == intervalSec_) return;
 
-  _intervalSec = seconds;
-  _eepromStore.writeRotationIntervalSec(_intervalSec);
+  intervalSec_ = seconds;
+  eepromStore_.writeRotationIntervalSec(intervalSec_);
 
-  if (_mode != RotationMode::Off) {
+  if (mode_ != RotationMode::Off) {
     restartTimer();
   }
-  _stateNotifier.stateChanged();
+  stateNotifier_.stateChanged();
 }
 
 void RotationController::disable() {
-  if (_mode == RotationMode::Off) return;
+  if (mode_ == RotationMode::Off) return;
 
-  _mode = RotationMode::Off;
-  _eepromStore.writeRotationMode(_mode);
-  _timer.stop();
-  _stateNotifier.stateChanged();
+  mode_ = RotationMode::Off;
+  eepromStore_.writeRotationMode(mode_);
+  timer_.stop();
+  stateNotifier_.stateChanged();
 }
 
 void RotationController::restartTimer() {
-  _timer.setInterval(static_cast<unsigned long>(_intervalSec) * 1000UL);
-  _timer.start();
+  timer_.setInterval(static_cast<unsigned long>(intervalSec_) * 1000UL);
+  timer_.start();
 }
 
 void RotationController::rotateNow() {
-  if (_mode == RotationMode::Random) {
-    _effects.setRandomEffect();
-  } else if (_mode == RotationMode::Sequential) {
-    _effects.setNextEffect();
+  if (mode_ == RotationMode::Random) {
+    effects_.setRandomEffect();
+  } else if (mode_ == RotationMode::Sequential) {
+    effects_.setNextEffect();
   }
 }
 
 void RotationController::onManualRotation() {
-  if (_mode == RotationMode::Off) return;
+  if (mode_ == RotationMode::Off) return;
   restartTimer();
 }
 
 void RotationController::timerCallback() {
-  if (_mode == RotationMode::Off) return;
+  if (mode_ == RotationMode::Off) return;
 
   rotateNow();
-  _stateNotifier.stateChanged();
+  stateNotifier_.stateChanged();
 }

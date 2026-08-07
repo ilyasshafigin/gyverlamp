@@ -43,13 +43,13 @@ public:
     end(section);
   }
 
-  static const Sample& get(Section section) { return _samples[section]; }
+  static const Sample& get(Section section) { return samples_[section]; }
 
 private:
-  static Sample _samples[Section::SECTION_COUNT];
-  static uint32_t _startUs;
-  static Section _current;
-  static uint32_t _resetTimer;
+  static Sample samples_[Section::SECTION_COUNT];
+  static uint32_t startUs_;
+  static Section current_;
+  static uint32_t resetTimer_;
   static constexpr uint32_t RESET_INTERVAL_MS = 10000;
 
 #else

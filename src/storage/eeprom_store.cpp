@@ -152,9 +152,9 @@ bool EepromStore::initializeLayout() {
 
 const WifiConfig& EepromStore::readWifiConfig() {
   int eeAddress = EEPROM_WIFI_CONFIG_ADDR;
-  readFieldAt(eeAddress, _wifiConfigCache.ssid, WIFI_SSID_LEN);
-  readFieldAt(eeAddress, _wifiConfigCache.password, WIFI_PASS_LEN);
-  return _wifiConfigCache;
+  readFieldAt(eeAddress, wifiConfigCache_.ssid, WIFI_SSID_LEN);
+  readFieldAt(eeAddress, wifiConfigCache_.password, WIFI_PASS_LEN);
+  return wifiConfigCache_;
 }
 
 bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
@@ -168,18 +168,18 @@ bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
 
   const bool committed = EEPROM.commit();
   if (committed) {
-    _wifiConfigCache = wifiConfig;
+    wifiConfigCache_ = wifiConfig;
   }
   return committed;
 }
 
 const MqttConfig& EepromStore::readMqttConfig() {
   int eeAddress = EEPROM_MQTT_CONFIG_ADDR;
-  readFieldAt(eeAddress, _mqttConfigCache.host, MQTT_HOST_LEN);
-  readFieldAt(eeAddress, _mqttConfigCache.port, MQTT_PORT_LEN);
-  readFieldAt(eeAddress, _mqttConfigCache.user, MQTT_USER_LEN);
-  readFieldAt(eeAddress, _mqttConfigCache.password, MQTT_PASS_LEN);
-  return _mqttConfigCache;
+  readFieldAt(eeAddress, mqttConfigCache_.host, MQTT_HOST_LEN);
+  readFieldAt(eeAddress, mqttConfigCache_.port, MQTT_PORT_LEN);
+  readFieldAt(eeAddress, mqttConfigCache_.user, MQTT_USER_LEN);
+  readFieldAt(eeAddress, mqttConfigCache_.password, MQTT_PASS_LEN);
+  return mqttConfigCache_;
 }
 
 bool EepromStore::writeMqttConfig(const char* host, const char* port, const char* user, const char* password) {
@@ -197,7 +197,7 @@ bool EepromStore::writeMqttConfig(const char* host, const char* port, const char
 
   const bool committed = EEPROM.commit();
   if (committed) {
-    _mqttConfigCache = mqttConfig;
+    mqttConfigCache_ = mqttConfig;
   }
   return committed;
 }

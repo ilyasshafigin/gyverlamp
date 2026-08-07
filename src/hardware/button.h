@@ -26,14 +26,14 @@ public:
     int8_t pin
   )
 #ifdef USE_BUTTON
-    : _eeprom(eeprom),
-      _effects(effects),
-      _notifications(notifications),
-      _power(power),
-      _rotation(rotation),
-      _settings(settings),
-      _stateNotifier(stateNotifier),
-      _pin(pin) {
+    : eeprom_(eeprom),
+      effects_(effects),
+      notifications_(notifications),
+      power_(power),
+      rotation_(rotation),
+      settings_(settings),
+      stateNotifier_(stateNotifier),
+      pin_(pin) {
   }
 #else
   {
@@ -53,8 +53,8 @@ public:
   void tick();
 
 #ifdef USE_BUTTON
-  bool isConnected() const { return _connected; }
-  bool isEnabled() const { return _enabled; }
+  bool isConnected() const { return connected_; }
+  bool isEnabled() const { return enabled_; }
 #else
   bool isConnected() const { return false; }
   bool isEnabled() const { return false; }
@@ -63,17 +63,17 @@ public:
 
 private:
 #ifdef USE_BUTTON
-  EepromStore& _eeprom;
-  EffectController& _effects;
-  NotificationController& _notifications;
-  PowerController& _power;
-  RotationController& _rotation;
-  SettingsRepository& _settings;
-  StateNotifier& _stateNotifier;
-  Button _button;
-  int8_t _pin;
-  bool _connected = false;
-  bool _enabled = true;
-  bool _brightDirection = false;
+  EepromStore& eeprom_;
+  EffectController& effects_;
+  NotificationController& notifications_;
+  PowerController& power_;
+  RotationController& rotation_;
+  SettingsRepository& settings_;
+  StateNotifier& stateNotifier_;
+  Button button_;
+  int8_t pin_;
+  bool connected_ = false;
+  bool enabled_ = true;
+  bool brightDirection_ = false;
 #endif
 };

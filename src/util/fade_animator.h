@@ -9,14 +9,14 @@ public:
 
   bool tick(uint32_t now = millis());
 
-  uint8_t value() const { return _value; }
-  uint8_t target() const { return _to; }
-  bool isRunning() const { return _value != _to; }
+  uint8_t value() const { return value_; }
+  uint8_t target() const { return to_; }
+  bool isRunning() const { return value_ != to_; }
 
 private:
-  uint8_t _from = 0;
-  uint8_t _to = 0;
-  uint8_t _value = 0;
-  uint32_t _startedMs = 0;
-  uint16_t _durationMs = 0;
+  uint8_t from_ = 0;
+  uint8_t to_ = 0;
+  uint8_t value_ = 0;
+  uint32_t startedMs_ = 0;
+  uint16_t durationMs_ = 0;
 };

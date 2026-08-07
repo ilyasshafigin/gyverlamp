@@ -18,24 +18,24 @@ public:
     PowerController& power,
     StateNotifier& stateNotifier
   )
-    : _effects(effects),
-      _led(led),
-      _notifications(notifications),
-      _power(power),
-      _stateNotifier(stateNotifier) {}
+    : effects_(effects),
+      led_(led),
+      notifications_(notifications),
+      power_(power),
+      stateNotifier_(stateNotifier) {}
 
   void render(bool forceShow = false);
   void renderNow() { render(true); }
 
 private:
-  EffectController& _effects;
-  Led& _led;
-  NotificationController& _notifications;
-  PowerController& _power;
-  StateNotifier& _stateNotifier;
+  EffectController& effects_;
+  Led& led_;
+  NotificationController& notifications_;
+  PowerController& power_;
+  StateNotifier& stateNotifier_;
 
-  uint32_t _lastFrameMs = 0;
-  bool _offFrameCleared = false;
+  uint32_t lastFrameMs_ = 0;
+  bool offFrameCleared_ = false;
 
   void showOrBlackout(bool forceShow, bool frameChanged, bool visible);
 };

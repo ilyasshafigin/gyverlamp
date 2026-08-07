@@ -16,9 +16,9 @@ public:
   void render(EffectContext& ctx) override;
 
 private:
-  uint8_t _level = 0;
-  uint8_t _bass = 0;
-  uint8_t _treble = 0;
-  uint8_t _peak[WIDTH] = {};
-  uint8_t _sparkX = 0;
+  uint8_t level_ = 0;
+  uint8_t bass_ = 0;
+  uint8_t treble_ = 0;
+  uint8_t peak_[WIDTH] = {};
+  uint8_t sparkX_ = 0;
 };

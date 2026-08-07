@@ -25,72 +25,72 @@ class WifiService;
 class MqttService {
 private:
 #ifdef USE_MQTT
-  AudioService& _audio;
-  EepromStore& _eeprom;
-  EffectController& _effects;
-  NotificationController& _notifications;
-  PowerController& _power;
-  RotationController& _rotation;
-  SettingsRepository& _settings;
-  TouchButton& _button;
-  WifiService& _wifi;
-  WiFiClient _wifiClient;
+  AudioService& audio_;
+  EepromStore& eeprom_;
+  EffectController& effects_;
+  NotificationController& notifications_;
+  PowerController& power_;
+  RotationController& rotation_;
+  SettingsRepository& settings_;
+  TouchButton& button_;
+  WifiService& wifi_;
+  WiFiClient wifiClient_;
 
-  PubSubClient _client;
-  Timer _publishTimer;
+  PubSubClient client_;
+  Timer publishTimer_;
 
-  char _mqttHost[MQTT_HOST_LEN];
-  char _mqttUser[MQTT_USER_LEN];
-  char _mqttPassword[MQTT_PASS_LEN];
-  char _mqttPort[MQTT_PORT_LEN];
+  char mqttHost_[MQTT_HOST_LEN];
+  char mqttUser_[MQTT_USER_LEN];
+  char mqttPassword_[MQTT_PASS_LEN];
+  char mqttPort_[MQTT_PORT_LEN];
 
-  bool _enabled = true;
+  bool enabled_ = true;
 
-  uint32_t _reconnectTiming = 0;
-  uint32_t _reconnectTimeout = 5000;
-  uint8_t _reconnectCount = 0;
+  uint32_t reconnectTiming_ = 0;
+  uint32_t reconnectTimeout_ = 5000;
+  uint8_t reconnectCount_ = 0;
 
-  String _clientId;
-  String _haEffectList;
+  String clientId_;
+  String haEffectList_;
 
-  HADevice _haDevice;
-  HALight _haLight;
-  HASwitch _haRotationSwitch;
-  HASelect _haRotationInterval;
-  HASwitch _haButtonSwitch;
-  HANumber _haEffectScale;
-  HANumber _haEffectSpeed;
-  HANumber _haEffectBrightness;
-  HANumber _haAutoOff;
-  HASensorNumeric _haAutoOffRemaining;
-  HASelect _haPalette;
-  HASelect _haUserNotification;
-  HANumber _haUserNotificationDuration;
-  HASensorNumeric _haUserNotificationRemaining;
-  HAButton _haUserNotify;
-  HAButton _haNextEffect;
-  HAButton _haPrevEffect;
-  HAButton _haRandomEffect;
-  HAText _haUserNotificationText;
-  HASwitch _haNotificationQuietHours;
-  HATime _haNotificationQuietStart;
-  HATime _haNotificationQuietEnd;
-  HASensorText _haNotificationMuteState;
-  HASelect _haAudioMode;
-  HASelect _haAudioBand;
-  HANumber _haAudioAmount;
-  HASensorText _haAudioAvailable;
-  HASensorNumeric _haUptime;
-  HASensorNumeric _haRssi;
-  HASensorNumeric _haRssiPct;
-  HASensorNumeric _haChannel;
-  HASensorNumeric _haVcc;
-  HASensorText _haResetReason;
+  HADevice haDevice_;
+  HALight haLight_;
+  HASwitch haRotationSwitch_;
+  HASelect haRotationInterval_;
+  HASwitch haButtonSwitch_;
+  HANumber haEffectScale_;
+  HANumber haEffectSpeed_;
+  HANumber haEffectBrightness_;
+  HANumber haAutoOff_;
+  HASensorNumeric haAutoOffRemaining_;
+  HASelect haPalette_;
+  HASelect haUserNotification_;
+  HANumber haUserNotificationDuration_;
+  HASensorNumeric haUserNotificationRemaining_;
+  HAButton haUserNotify_;
+  HAButton haNextEffect_;
+  HAButton haPrevEffect_;
+  HAButton haRandomEffect_;
+  HAText haUserNotificationText_;
+  HASwitch haNotificationQuietHours_;
+  HATime haNotificationQuietStart_;
+  HATime haNotificationQuietEnd_;
+  HASensorText haNotificationMuteState_;
+  HASelect haAudioMode_;
+  HASelect haAudioBand_;
+  HANumber haAudioAmount_;
+  HASensorText haAudioAvailable_;
+  HASensorNumeric haUptime_;
+  HASensorNumeric haRssi_;
+  HASensorNumeric haRssiPct_;
+  HASensorNumeric haChannel_;
+  HASensorNumeric haVcc_;
+  HASensorText haResetReason_;
 
-  void setMqttHost(const char* host) { strlcpy(_mqttHost, host, MQTT_HOST_LEN); }
-  void setMqttPort(const char* port) { strlcpy(_mqttPort, port, MQTT_PORT_LEN); }
-  void setMqttUser(const char* user) { strlcpy(_mqttUser, user, MQTT_USER_LEN); }
-  void setMqttPassword(const char* password) { strlcpy(_mqttPassword, password, MQTT_PASS_LEN); }
+  void setMqttHost(const char* host) { strlcpy(mqttHost_, host, MQTT_HOST_LEN); }
+  void setMqttPort(const char* port) { strlcpy(mqttPort_, port, MQTT_PORT_LEN); }
+  void setMqttUser(const char* user) { strlcpy(mqttUser_, user, MQTT_USER_LEN); }
+  void setMqttPassword(const char* password) { strlcpy(mqttPassword_, password, MQTT_PASS_LEN); }
 
   void reconnect();
 
@@ -125,7 +125,7 @@ public:
 
 #ifdef USE_MQTT
   void haCallback(HAEntity* entity, char* topic, byte* payload, unsigned int length);
-  bool isMqttConnected() { return _client.connected(); }
+  bool isMqttConnected() { return client_.connected(); }
 #else
   bool isMqttConnected() { return false; }
 #endif

@@ -12,53 +12,53 @@ namespace {
 } // namespace
 
 void PowerController::init() {
-  _on = _eeprom.readPowerState();
-  _autoOffMinutes = _eeprom.readAutoOffMinutes();
-  _effectOpacity.snapTo(_on ? 255 : 0);
-  _effects.setOutputEnabled(_on);
+  on_ = eeprom_.readPowerState();
+  autoOffMinutes_ = eeprom_.readAutoOffMinutes();
+  effectOpacity_.snapTo(on_ ? 255 : 0);
+  effects_.setOutputEnabled(on_);
 
-  if (_on) {
+  if (on_) {
     resetAutoOffTimer();
   }
 }
 
 void PowerController::on() {
-  if (_on && _effectOpacity.target() == 255) {
+  if (on_ && effectOpacity_.target() == 255) {
     resetAutoOffTimer(); // опционально. Если команда "on" должна продлевать auto-off
     return;
   }
 
-  _on = true;
-  _effects.setOutputEnabled(true);
-  _effectOpacity.fadeTo(255, FADE_ON_MS);
+  on_ = true;
+  effects_.setOutputEnabled(true);
+  effectOpacity_.fadeTo(255, FADE_ON_MS);
   resetAutoOffTimer();
 
-  _eeprom.writePowerState(_on);
-  _stateNotifier.stateChanged();
+  eeprom_.writePowerState(on_);
+  stateNotifier_.stateChanged();
 }
 
 void PowerController::off() {
-  if (!_on && _effectOpacity.target() == 0) {
+  if (!on_ && effectOpacity_.target() == 0) {
     return;
   }
 
-  _on = false;
-  _effectOpacity.fadeTo(0, FADE_OFF_MS);
+  on_ = false;
+  effectOpacity_.fadeTo(0, FADE_OFF_MS);
 
-  _eeprom.writePowerState(_on);
-  _stateNotifier.stateChanged();
+  eeprom_.writePowerState(on_);
+  stateNotifier_.stateChanged();
 }
 
 bool PowerController::tick() {
-  const bool changed = _effectOpacity.tick();
+  const bool changed = effectOpacity_.tick();
 
-  if (!_on && _effectOpacity.value() == 0) {
-    _effects.setOutputEnabled(false);
+  if (!on_ && effectOpacity_.value() == 0) {
+    effects_.setOutputEnabled(false);
   }
 
-  if (_on && _autoOffMinutes > 0) {
-    const uint32_t timeoutMs = static_cast<uint32_t>(_autoOffMinutes) * 60000UL;
-    if (millis() - _turnedOnAtMs >= timeoutMs) {
+  if (on_ && autoOffMinutes_ > 0) {
+    const uint32_t timeoutMs = static_cast<uint32_t>(autoOffMinutes_) * 60000UL;
+    if (millis() - turnedOnAtMs_ >= timeoutMs) {
       off();
     }
   }
@@ -69,25 +69,25 @@ bool PowerController::tick() {
 bool PowerController::setAutoOffMinutes(int minutes) {
   if (minutes < AUTO_OFF_MINUTES_MIN) minutes = AUTO_OFF_MINUTES_MIN;
   if (minutes > AUTO_OFF_MINUTES_MAX) minutes = AUTO_OFF_MINUTES_MAX;
-  if (_autoOffMinutes == static_cast<uint16_t>(minutes)) return true;
+  if (autoOffMinutes_ == static_cast<uint16_t>(minutes)) return true;
 
   const uint16_t clampedMinutes = static_cast<uint16_t>(minutes);
-  if (!_eeprom.writeAutoOffMinutes(clampedMinutes)) return false;
+  if (!eeprom_.writeAutoOffMinutes(clampedMinutes)) return false;
 
-  _autoOffMinutes = clampedMinutes;
+  autoOffMinutes_ = clampedMinutes;
   return true;
 }
 
 uint32_t PowerController::getAutoOffRemainingSeconds() const {
-  if (!_on || _autoOffMinutes == 0) return 0;
+  if (!on_ || autoOffMinutes_ == 0) return 0;
 
-  const uint32_t timeoutMs = static_cast<uint32_t>(_autoOffMinutes) * 60000UL;
-  const uint32_t elapsedMs = millis() - _turnedOnAtMs;
+  const uint32_t timeoutMs = static_cast<uint32_t>(autoOffMinutes_) * 60000UL;
+  const uint32_t elapsedMs = millis() - turnedOnAtMs_;
   if (elapsedMs >= timeoutMs) return 0;
 
   return (timeoutMs - elapsedMs + 999UL) / 1000UL;
 }
 
 void PowerController::resetAutoOffTimer() {
-  _turnedOnAtMs = millis();
+  turnedOnAtMs_ = millis();
 }

@@ -2,10 +2,10 @@
 
 #ifdef PROFILE_LOOP
 
-LoopProfiler::Sample LoopProfiler::_samples[LoopProfiler::SECTION_COUNT];
-uint32_t LoopProfiler::_startUs = 0;
-LoopProfiler::Section LoopProfiler::_current = LoopProfiler::SECTION_COUNT;
-uint32_t LoopProfiler::_resetTimer = 0;
+LoopProfiler::Sample LoopProfiler::samples_[LoopProfiler::SECTION_COUNT];
+uint32_t LoopProfiler::startUs_ = 0;
+LoopProfiler::Section LoopProfiler::current_ = LoopProfiler::SECTION_COUNT;
+uint32_t LoopProfiler::resetTimer_ = 0;
 
 const char* LoopProfiler::sectionName(Section section) {
   switch (section) {
@@ -28,29 +28,29 @@ const char* LoopProfiler::sectionName(Section section) {
 }
 
 void LoopProfiler::begin(Section section) {
-  _current = section;
-  _startUs = micros();
+  current_ = section;
+  startUs_ = micros();
 }
 
 void LoopProfiler::end(Section section) {
-  if (section != _current) return;
-  uint32_t elapsed = micros() - _startUs;
-  Sample& s = _samples[section];
+  if (section != current_) return;
+  uint32_t elapsed = micros() - startUs_;
+  Sample& s = samples_[section];
   s.lastUs = elapsed;
   if (elapsed > s.maxUs) s.maxUs = elapsed;
-  _current = SECTION_COUNT;
+  current_ = SECTION_COUNT;
 }
 
 void LoopProfiler::resetMax() {
   for (uint8_t i = 0; i < SECTION_COUNT; i++) {
-    _samples[i].maxUs = 0;
+    samples_[i].maxUs = 0;
   }
 }
 
 void LoopProfiler::tick() {
   const uint32_t now = millis();
-  if (now - _resetTimer >= RESET_INTERVAL_MS) {
-    _resetTimer = now;
+  if (now - resetTimer_ >= RESET_INTERVAL_MS) {
+    resetTimer_ = now;
     resetMax();
   }
 }

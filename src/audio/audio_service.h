@@ -9,17 +9,17 @@ class EepromStore;
 class AudioService {
 public:
   explicit AudioService(EepromStore& eeprom)
-    : _eeprom(eeprom),
-      _microphone() {}
+    : eeprom_(eeprom),
+      microphone_() {}
 
   void init();
   void tick(bool readEnabled = true);
 
-  const AudioFrame& frame() const { return _frame; }
-  const AudioConfig& config() const { return _config; }
+  const AudioFrame& frame() const { return frame_; }
+  const AudioConfig& config() const { return config_; }
 
-  void setFrame(const AudioFrame& frame) { _frame = frame; }
-  void clearFrame() { _frame = AudioFrame{}; }
+  void setFrame(const AudioFrame& frame) { frame_ = frame; }
+  void clearFrame() { frame_ = AudioFrame{}; }
 
   void setConfig(const AudioConfig& config);
   void setMode(AudioMode mode);
@@ -27,13 +27,13 @@ public:
   void setAmount(uint8_t amount);
 
 private:
-  EepromStore& _eeprom;
-  Microphone _microphone;
-  AudioFrame _frame;
-  AudioConfig _config;
+  EepromStore& eeprom_;
+  Microphone microphone_;
+  AudioFrame frame_;
+  AudioConfig config_;
 
-  bool _configChanged = false;
-  uint32_t _configPersistTimer = 0;
+  bool configChanged_ = false;
+  uint32_t configPersistTimer_ = 0;
 
   void markConfigChanged();
   void persistConfigIfNeeded(uint32_t now);

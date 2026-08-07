@@ -27,3 +27,6 @@ upload *envs:
     else \
         for env in {{envs}}; do pio run -e "$env" -t upload; done; \
     fi
+
+tidy env:
+    @pio check -e "{{env}}" --fail-on-defect=medium

@@ -25,13 +25,13 @@ public:
     uint16_t port
   )
 #ifdef USE_UDP
-    : _effects(effects),
-      _power(power),
-      _settings(settings),
-      _stateNotifier(stateNotifier),
-      _time(time),
-      _button(button),
-      _port(port)
+    : effects_(effects),
+      power_(power),
+      settings_(settings),
+      stateNotifier_(stateNotifier),
+      time_(time),
+      button_(button),
+      port_(port)
 #endif
   {
 #ifndef USE_UDP
@@ -59,14 +59,14 @@ private:
   static constexpr size_t PACKET_BUFFER_SIZE = 255;
   static constexpr size_t REPLY_BUFFER_SIZE = 255;
 
-  EffectController& _effects;
-  PowerController& _power;
-  SettingsRepository& _settings;
-  StateNotifier& _stateNotifier;
-  TimeService& _time;
-  TouchButton& _button;
+  EffectController& effects_;
+  PowerController& power_;
+  SettingsRepository& settings_;
+  StateNotifier& stateNotifier_;
+  TimeService& time_;
+  TouchButton& button_;
   WiFiUDP Udp;
-  uint16_t _port;
+  uint16_t port_;
 
   void handlePacket(const char* packet, int length, char* reply, size_t replySize);
   bool startsWith(const char* packet, const char* command) const;

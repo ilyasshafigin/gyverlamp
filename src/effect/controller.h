@@ -18,23 +18,23 @@ public:
   explicit EffectController(
     AudioService& audio, EepromStore& eeprom, Led& led, SettingsRepository& settings, TimeService& time
   )
-    : _audio(audio),
-      _eeprom(eeprom),
-      _led(led),
-      _settings(settings),
-      _time(time) {}
+    : audio_(audio),
+      eeprom_(eeprom),
+      led_(led),
+      settings_(settings),
+      time_(time) {}
 
   void init();
   bool render(bool force = false);
 
-  Effects::Id getActiveEffectId() const { return _currentEffectId; }
+  Effects::Id getActiveEffectId() const { return currentEffectId_; }
   Effects::Id getSelectedEffectId() const {
-    return _pendingEffectId != Effects::Id::INVALID ? _pendingEffectId : _currentEffectId;
+    return pendingEffectId_ != Effects::Id::INVALID ? pendingEffectId_ : currentEffectId_;
   }
-  uint8_t getRed() const { return _red; }
-  uint8_t getGreen() const { return _green; }
-  uint8_t getBlue() const { return _blue; }
-  EffectSettingsSpec getActiveSettingsSpec() const { return Effects::getEffectSettingsSpec(_currentEffectId); }
+  uint8_t getRed() const { return red_; }
+  uint8_t getGreen() const { return green_; }
+  uint8_t getBlue() const { return blue_; }
+  EffectSettingsSpec getActiveSettingsSpec() const { return Effects::getEffectSettingsSpec(currentEffectId_); }
   EffectSettingsSpec getSelectedSettingsSpec() const { return Effects::getEffectSettingsSpec(getSelectedEffectId()); }
 
   Palettes::Id getSelectedPalette() const;
@@ -52,34 +52,34 @@ public:
   void setEffectScale(uint8_t value);
   bool resetEffectSettingsToDefaults();
   void setColor(uint8_t r, uint8_t g, uint8_t b) {
-    _red = r;
-    _green = g;
-    _blue = b;
+    red_ = r;
+    green_ = g;
+    blue_ = b;
   }
-  void setOutputEnabled(bool enabled) { _outputEnabled = enabled; }
+  void setOutputEnabled(bool enabled) { outputEnabled_ = enabled; }
 
   bool updateTransition();
-  bool isTransitioning() const { return _transitionPhase != TransitionPhase::Idle; }
-  uint8_t getTransitionOpacity() const { return _transitionOpacity.value(); }
+  bool isTransitioning() const { return transitionPhase_ != TransitionPhase::Idle; }
+  uint8_t getTransitionOpacity() const { return transitionOpacity_.value(); }
 
 private:
-  AudioService& _audio;
-  EepromStore& _eeprom;
-  Led& _led;
-  SettingsRepository& _settings;
-  TimeService& _time;
-  Effect* _currentEffect = nullptr;
-  Effects::Id _currentEffectId = Effects::DEFAULT_ID;
-  Effects::Id _pendingEffectId = Effects::Id::INVALID;
-  bool _outputEnabled = false;
-  uint8_t _red = 255;
-  uint8_t _green = 255;
-  uint8_t _blue = 255;
-  uint32_t _tickTimer = 0;
-  uint32_t _lastRenderMs = 0;
+  AudioService& audio_;
+  EepromStore& eeprom_;
+  Led& led_;
+  SettingsRepository& settings_;
+  TimeService& time_;
+  Effect* currentEffect_ = nullptr;
+  Effects::Id currentEffectId_ = Effects::DEFAULT_ID;
+  Effects::Id pendingEffectId_ = Effects::Id::INVALID;
+  bool outputEnabled_ = false;
+  uint8_t red_ = 255;
+  uint8_t green_ = 255;
+  uint8_t blue_ = 255;
+  uint32_t tickTimer_ = 0;
+  uint32_t lastRenderMs_ = 0;
 
-  uint8_t _runtimeBrightness = 0;
-  bool _runtimeBrightnessValid = false;
+  uint8_t runtimeBrightness_ = 0;
+  bool runtimeBrightnessValid_ = false;
 
   void setupCurrentEffect();
   bool switchEffectNow(Effects::Id effectId);
@@ -92,8 +92,8 @@ private:
 
   // Буфер для placement new. Размер вычисляется по самому большому effect.
   /*alignas(alignof(std::max_align_t)) */
-  alignas(8) char _effectBuffer[Effects::STORAGE_SIZE];
+  alignas(8) char effectBuffer_[Effects::STORAGE_SIZE];
 
-  FadeAnimator _transitionOpacity;
-  TransitionPhase _transitionPhase = TransitionPhase::Idle;
+  FadeAnimator transitionOpacity_;
+  TransitionPhase transitionPhase_ = TransitionPhase::Idle;
 };

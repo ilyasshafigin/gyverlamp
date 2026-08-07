@@ -30,11 +30,11 @@ void UserNotificationRenderer::renderNotify(NotificationOverlay& overlay, uint32
 void UserNotificationRenderer::renderText(
   NotificationOverlay& overlay, const String& text, const CRGB& color, uint32_t startedMs
 ) {
-  if (_lastText != text || _lastTextStartedMs != startedMs) {
-    _lastText = text;
-    _lastTextStartedMs = startedMs;
-    _runningText.start(text, color, true);
+  if (lastText_ != text || lastTextStartedMs_ != startedMs) {
+    lastText_ = text;
+    lastTextStartedMs_ = startedMs;
+    runningText_.start(text, color, true);
   }
 
-  _runningText.render(overlay);
+  runningText_.render(overlay);
 }

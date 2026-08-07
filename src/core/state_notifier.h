@@ -2,14 +2,14 @@
 
 class StateNotifier {
 public:
-  void stateChanged() { _changed = true; }
+  void stateChanged() { changed_ = true; }
 
   bool consumeChanged() {
-    const bool changed = _changed;
-    _changed = false;
+    const bool changed = changed_;
+    changed_ = false;
     return changed;
   }
 
 private:
-  bool _changed = false;
+  bool changed_ = false;
 };

@@ -11,17 +11,17 @@ class StateNotifier;
 class RotationController {
 public:
   explicit RotationController(EepromStore& eepromStore, EffectController& effects, StateNotifier& stateNotifier)
-    : _eepromStore(eepromStore),
-      _effects(effects),
-      _stateNotifier(stateNotifier),
-      _timer(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {}
+    : eepromStore_(eepromStore),
+      effects_(effects),
+      stateNotifier_(stateNotifier),
+      timer_(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {}
 
   void init();
   void tick(bool powerOn);
 
-  RotationMode getMode() const { return _mode; }
-  bool isActive() const { return _mode != RotationMode::Off; }
-  uint16_t getIntervalSec() const { return _intervalSec; }
+  RotationMode getMode() const { return mode_; }
+  bool isActive() const { return mode_ != RotationMode::Off; }
+  uint16_t getIntervalSec() const { return intervalSec_; }
 
   void setMode(RotationMode mode);
   void setIntervalSec(uint16_t seconds);
@@ -30,13 +30,13 @@ public:
   void setEnabled(bool value) { value ? setMode(RotationMode::Random) : disable(); }
 
 private:
-  EepromStore& _eepromStore;
-  EffectController& _effects;
-  StateNotifier& _stateNotifier;
-  Timer _timer;
-  RotationMode _mode = RotationMode::Off;
-  uint16_t _intervalSec = ROTATION_INTERVAL_SEC_DEFAULT;
-  bool _powerWasOn = false;
+  EepromStore& eepromStore_;
+  EffectController& effects_;
+  StateNotifier& stateNotifier_;
+  Timer timer_;
+  RotationMode mode_ = RotationMode::Off;
+  uint16_t intervalSec_ = ROTATION_INTERVAL_SEC_DEFAULT;
+  bool powerWasOn_ = false;
 
   void timerCallback();
   void restartTimer();

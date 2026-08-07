@@ -16,7 +16,7 @@
 #endif
 // Сервер времени
 #define NTP_ADDRESS "ru.pool.ntp.org"
-#define NTP_INTERVAL 600 * 1000 // обновление (10 минут)
+#define NTP_INTERVAL (600 * 1000) // обновление (10 минут)
 
 // ---------- МАТРИЦА ---------
 

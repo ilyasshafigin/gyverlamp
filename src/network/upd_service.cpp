@@ -21,7 +21,7 @@ namespace {
 } // namespace
 
 void UpdService::init() {
-  Udp.begin(_port);
+  Udp.begin(port_);
 }
 
 void UpdService::tick() {
@@ -118,12 +118,12 @@ void UpdService::sendReply(const char* reply) {
 }
 
 void UpdService::writeTime(char* buffer, size_t bufferSize) const {
-  snprintf(buffer, bufferSize, "%02u:%02u", _time.getHours(), _time.getMinutes());
+  snprintf(buffer, bufferSize, "%02u:%02u", time_.getHours(), time_.getMinutes());
 }
 
 void UpdService::writeCurrentState(char* reply, size_t replySize) const {
-  const Effects::Id effectId = _effects.getSelectedEffectId();
-  const EffectSettings& settings = _settings.getEffectSettings(effectId);
+  const Effects::Id effectId = effects_.getSelectedEffectId();
+  const EffectSettings& settings = settings_.getEffectSettings(effectId);
   char time[6];
   writeTime(time, sizeof(time));
 
@@ -135,8 +135,8 @@ void UpdService::writeCurrentState(char* reply, size_t replySize) const {
     settings.brightness,
     settings.speed,
     settings.scale,
-    _power.isOn() ? 1 : 0,
-    _button.isEnabled() ? 1 : 0,
+    power_.isOn() ? 1 : 0,
+    button_.isEnabled() ? 1 : 0,
     time
   );
 }
@@ -152,37 +152,37 @@ void UpdService::handleGet(char* reply, size_t replySize) {
 }
 
 void UpdService::handleEffect(uint8_t effectId, char* reply, size_t replySize) {
-  if (_effects.setEffect(Effects::toId(effectId))) {
-    _stateNotifier.stateChanged();
+  if (effects_.setEffect(Effects::toId(effectId))) {
+    stateNotifier_.stateChanged();
   }
   writeCurrentState(reply, replySize);
 }
 
 void UpdService::handleBrightness(uint8_t brightness, char* reply, size_t replySize) {
-  _effects.setEffectBrightness(brightness);
-  _stateNotifier.stateChanged();
+  effects_.setEffectBrightness(brightness);
+  stateNotifier_.stateChanged();
   writeCurrentState(reply, replySize);
 }
 
 void UpdService::handleSpeed(uint8_t speed, char* reply, size_t replySize) {
-  _effects.setEffectSpeed(speed);
-  _stateNotifier.stateChanged();
+  effects_.setEffectSpeed(speed);
+  stateNotifier_.stateChanged();
   writeCurrentState(reply, replySize);
 }
 
 void UpdService::handleScale(uint8_t scale, char* reply, size_t replySize) {
-  _effects.setEffectScale(scale);
-  _stateNotifier.stateChanged();
+  effects_.setEffectScale(scale);
+  stateNotifier_.stateChanged();
   writeCurrentState(reply, replySize);
 }
 
 void UpdService::handlePowerOn(char* reply, size_t replySize) {
-  _power.on();
+  power_.on();
   writeCurrentState(reply, replySize);
 }
 
 void UpdService::handlePowerOff(char* reply, size_t replySize) {
-  _power.off();
+  power_.off();
   writeCurrentState(reply, replySize);
 }
 
@@ -213,7 +213,7 @@ void UpdService::handleDiscover(char* reply, size_t replySize) {
     WiFi.localIP()[1],
     WiFi.localIP()[2],
     WiFi.localIP()[3],
-    _port
+    port_
   );
 }
 
@@ -237,8 +237,8 @@ void UpdService::handleOta() {
 }
 
 void UpdService::handleButton(bool enabled, char* reply, size_t replySize) {
-  _button.setEnabled(enabled);
-  _stateNotifier.stateChanged();
+  button_.setEnabled(enabled);
+  stateNotifier_.stateChanged();
   writeCurrentState(reply, replySize);
 }
 

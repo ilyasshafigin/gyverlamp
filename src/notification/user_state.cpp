@@ -1,31 +1,31 @@
 #include "user_state.h"
 
 void UserNotificationState::start(UserNotificationType type, uint32_t durationMs) {
-  _type = type;
-  _startedMs = millis();
-  _durationMs = durationMs;
+  type_ = type;
+  startedMs_ = millis();
+  durationMs_ = durationMs;
 }
 
 void UserNotificationState::startText(const String& text, const CRGB& color, uint32_t durationMs) {
-  _type = UserNotificationType::Text;
-  _startedMs = millis();
-  _durationMs = durationMs;
-  _text = text;
-  _color = color;
+  type_ = UserNotificationType::Text;
+  startedMs_ = millis();
+  durationMs_ = durationMs;
+  text_ = text;
+  color_ = color;
 }
 
 void UserNotificationState::stop() {
-  _type = UserNotificationType::None;
-  _startedMs = 0;
-  _durationMs = 0;
-  // _text не чистить: нужен для fade-out кадра
-  _color = CRGB::White;
+  type_ = UserNotificationType::None;
+  startedMs_ = 0;
+  durationMs_ = 0;
+  // text_ не чистить: нужен для fade-out кадра
+  color_ = CRGB::White;
 }
 
 bool UserNotificationState::tick(uint32_t now) {
-  if (_type == UserNotificationType::None) return false;
-  if (_durationMs == 0) return false;
-  if (now - _startedMs < _durationMs) return false;
+  if (type_ == UserNotificationType::None) return false;
+  if (durationMs_ == 0) return false;
+  if (now - startedMs_ < durationMs_) return false;
 
   stop();
   return true;

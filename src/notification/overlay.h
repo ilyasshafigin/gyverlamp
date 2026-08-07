@@ -7,9 +7,9 @@ class Led;
 class NotificationOverlay {
 public:
   NotificationOverlay(Led& led, uint8_t opacity, uint8_t holeDim)
-    : _led(led),
-      _opacity(opacity),
-      _holeDim(holeDim) {}
+    : led_(led),
+      opacity_(opacity),
+      holeDim_(holeDim) {}
 
   void drawPixel(uint8_t x, uint8_t y, CRGB color);
   void drawPixelSafe(int x, int y, CRGB color);
@@ -30,7 +30,7 @@ public:
   );
 
 private:
-  Led& _led;
-  uint8_t _opacity = 255;
-  uint8_t _holeDim = 255;
+  Led& led_;
+  uint8_t opacity_ = 255;
+  uint8_t holeDim_ = 255;
 };

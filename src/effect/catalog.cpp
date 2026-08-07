@@ -8,7 +8,7 @@ namespace Effects {
     switch (id) {
 #define EFFECT_CASE(T) \
   case T::ID: return new (buffer) T();
-      EFFECT_REGISTRY(EFFECT_CASE)
+      EFFECT_REGISTRY(EFFECT_CASE) // NOLINT(bugprone-branch-clone)
 #undef EFFECT_CASE
       default:
 #define EFFECT_FALLBACK(T) return new (buffer) T();

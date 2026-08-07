@@ -7,8 +7,8 @@ namespace {
 }
 
 TimeService::TimeService()
-  : _timeTimer(1000),
-    _ntpRetryTimer(5000) {
+  : timeTimer_(1000),
+    ntpRetryTimer_(5000) {
 }
 
 void TimeService::init() {
@@ -35,36 +35,36 @@ bool TimeService::syncTime() {
     return false;
   }
 
-  _hrs = static_cast<uint8_t>(ti.tm_hour);
-  _mins = static_cast<uint8_t>(ti.tm_min);
-  _secs = static_cast<uint8_t>(ti.tm_sec);
-  _days = static_cast<uint8_t>(ti.tm_wday);
-  _minuteCounter = 0;
-  _timeSynced = true;
+  hrs_ = static_cast<uint8_t>(ti.tm_hour);
+  mins_ = static_cast<uint8_t>(ti.tm_min);
+  secs_ = static_cast<uint8_t>(ti.tm_sec);
+  days_ = static_cast<uint8_t>(ti.tm_wday);
+  minuteCounter_ = 0;
+  timeSynced_ = true;
   return true;
 }
 
 void TimeService::tick() {
-  if (_timeTimer.isReady()) {
-    _secs++;
-    if (_secs == 60) {
-      _secs = 0;
-      _mins++;
-      _minuteCounter++;
+  if (timeTimer_.isReady()) {
+    secs_++;
+    if (secs_ == 60) {
+      secs_ = 0;
+      mins_++;
+      minuteCounter_++;
     }
-    if (_mins == 60) {
-      _mins = 0;
-      _hrs++;
-      if (_hrs == 24) {
-        _hrs = 0;
-        _days++;
-        if (_days > 6) _days = 0;
+    if (mins_ == 60) {
+      mins_ = 0;
+      hrs_++;
+      if (hrs_ == 24) {
+        hrs_ = 0;
+        days_++;
+        if (days_ > 6) days_ = 0;
       }
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-      const bool retrySync = !_timeSynced && _ntpRetryTimer.isReady();
-      const bool refreshSync = _timeSynced && _minuteCounter > 30;
+      const bool retrySync = !timeSynced_ && ntpRetryTimer_.isReady();
+      const bool refreshSync = timeSynced_ && minuteCounter_ > 30;
       if (retrySync || refreshSync) {
         syncTime();
       }
@@ -73,7 +73,7 @@ void TimeService::tick() {
 }
 
 String TimeService::getTimeStampString() const {
-  if (!_timeSynced) {
+  if (!timeSynced_) {
     return String();
   }
 

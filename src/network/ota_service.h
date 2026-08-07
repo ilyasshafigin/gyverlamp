@@ -8,9 +8,9 @@ class OtaService {
 public:
   explicit OtaService(FrameRenderer& frameRenderer, NotificationController& notifications, WifiService& wifi)
 #ifdef USE_OTA
-    : _frameRenderer(frameRenderer),
-      _notifications(notifications),
-      _wifi(wifi) {
+    : frameRenderer_(frameRenderer),
+      notifications_(notifications),
+      wifi_(wifi) {
   }
 #else
   {
@@ -25,8 +25,9 @@ public:
 
 private:
 #ifdef USE_OTA
-  FrameRenderer& _frameRenderer;
-  NotificationController& _notifications;
-  WifiService& _wifi;
+  FrameRenderer& frameRenderer_;
+  NotificationController& notifications_;
+  WifiService& wifi_;
+  bool begun_ = false;
 #endif
 };

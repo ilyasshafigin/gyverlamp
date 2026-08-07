@@ -37,45 +37,45 @@ namespace {
 } // namespace
 
 void Microphone::init() {
-  _vol.setDt(0);
-  _vol.setPeriod(5);
-  _vol.setWindow(4);
-  _vol.setVolK(26);
-  _vol.setTrsh(12);
-  _vol.setVolMin(0);
-  _vol.setVolMax(255);
+  vol_.setDt(0);
+  vol_.setPeriod(5);
+  vol_.setWindow(4);
+  vol_.setVolK(26);
+  vol_.setTrsh(12);
+  vol_.setVolMin(0);
+  vol_.setVolMax(255);
 
-  _low.setDt(0);
-  _low.setPeriod(0);
-  _low.setWindow(0);
-  _low.setVolK(26);
-  _low.setTrsh(50);
-  _low.setVolMin(0);
-  _low.setVolMax(255);
+  low_.setDt(0);
+  low_.setPeriod(0);
+  low_.setWindow(0);
+  low_.setVolK(26);
+  low_.setTrsh(50);
+  low_.setVolMin(0);
+  low_.setVolMax(255);
 
-  _high.setDt(0);
-  _high.setPeriod(0);
-  _high.setWindow(0);
-  _high.setVolK(26);
-  _high.setTrsh(50);
-  _high.setVolMin(0);
-  _high.setVolMax(255);
+  high_.setDt(0);
+  high_.setPeriod(0);
+  high_.setWindow(0);
+  high_.setVolK(26);
+  high_.setTrsh(50);
+  high_.setVolMin(0);
+  high_.setVolMax(255);
 
-  _frame = AudioFrame{};
-  _lastTickMs = 0;
+  frame_ = AudioFrame{};
+  lastTickMs_ = 0;
 }
 
 void Microphone::tick() {
 #ifdef SIMULATOR_AUDIO_INPUT
   if (!sim::audioEnabled()) {
-    _frame = AudioFrame{};
+    frame_ = AudioFrame{};
     return;
   }
 #endif
 
   const uint32_t nowMs = millis();
-  if (nowMs - _lastTickMs < 30) return;
-  _lastTickMs = nowMs;
+  if (nowMs - lastTickMs_ < 30) return;
+  lastTickMs_ = nowMs;
 
 #ifdef SIMULATOR_AUDIO_INPUT
   sim::audioClearUnderrun();
@@ -98,7 +98,7 @@ void Microphone::tick() {
 
 #ifdef SIMULATOR_AUDIO_INPUT
   if (sim::audioHadUnderrun()) {
-    _frame = AudioFrame{};
+    frame_ = AudioFrame{};
     return;
   }
 #endif
@@ -109,7 +109,7 @@ void Microphone::tick() {
   }
 
   const uint32_t levelRaw = rawMax - rawMin;
-  _vol.tickSample(levelRaw);
+  vol_.tickSample(levelRaw);
 
   FFT(raw, spectr);
   int32_t lowRaw = 0;
@@ -122,8 +122,8 @@ void Microphone::tick() {
       highRaw += spectr[i];
     }
   }
-  _low.tickSample(lowRaw);
-  _high.tickSample(highRaw);
+  low_.tickSample(lowRaw);
+  high_.tickSample(highRaw);
 
 #ifdef SIMULATOR_AUDIO_INPUT
   static uint32_t simLevelPeak = 0;
@@ -133,16 +133,16 @@ void Microphone::tick() {
   const uint8_t newBass = scaleSimAudioValue(lowRaw, simLowPeak, 1);
   const uint8_t newTreble = scaleSimAudioValue(highRaw, simHighPeak, 1);
 #else
-  const uint8_t newLevel = constrain(_vol.getVol(), 0, 255);
-  const uint8_t newBass = constrain(_low.getVol(), 0, 255);
-  const uint8_t newTreble = constrain(_high.getVol(), 0, 255);
+  const uint8_t newLevel = constrain(vol_.getVol(), 0, 255);
+  const uint8_t newBass = constrain(low_.getVol(), 0, 255);
+  const uint8_t newTreble = constrain(high_.getVol(), 0, 255);
 #endif
 
-  _frame.level = smoothAudio(_frame.level, newLevel);
-  _frame.bass = smoothAudio(_frame.bass, newBass);
-  _frame.treble = smoothAudio(_frame.treble, newTreble);
-  _frame.beat = _vol.getPulse();
-  _frame.available = true;
+  frame_.level = smoothAudio(frame_.level, newLevel);
+  frame_.bass = smoothAudio(frame_.bass, newBass);
+  frame_.treble = smoothAudio(frame_.treble, newTreble);
+  frame_.beat = vol_.getPulse();
+  frame_.available = true;
 }
 
 #else
@@ -151,7 +151,7 @@ void Microphone::init() {
 }
 
 void Microphone::tick() {
-  _frame.available = false;
+  frame_.available = false;
 }
 
 #endif

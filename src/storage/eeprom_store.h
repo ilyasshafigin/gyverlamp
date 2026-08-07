@@ -55,8 +55,8 @@ public:
   bool writeAllEffectSettings(const EffectSettings* effects);
 
 private:
-  WifiConfig _wifiConfigCache = {};
-  MqttConfig _mqttConfigCache = {};
+  WifiConfig wifiConfigCache_ = {};
+  MqttConfig mqttConfigCache_ = {};
 
   void ensureLayoutVersion();
   bool writeLayoutVersion();

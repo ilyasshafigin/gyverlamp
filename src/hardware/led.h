@@ -68,18 +68,18 @@ public:
 
   void init();
 
-  CRGB* getLeds() { return _leds; }
-  CRGB* getLedsBuff() { return _ledsbuff; }
-  const CRGB* getLeds() const { return _leds; }
-  const CRGB* getLedsBuff() const { return _ledsbuff; }
+  CRGB* getLeds() { return leds_; }
+  CRGB* getLedsBuff() { return ledsbuff_; }
+  const CRGB* getLeds() const { return leds_; }
+  const CRGB* getLedsBuff() const { return ledsbuff_; }
 
-  CRGB& getLed(size_t index) { return _leds[index]; }
-  CRGB& getLedBuff(size_t index) { return _ledsbuff[index]; }
-  const CRGB& getLed(size_t index) const { return _leds[index]; }
-  const CRGB& getLedBuff(size_t index) const { return _ledsbuff[index]; }
+  CRGB& getLed(size_t index) { return leds_[index]; }
+  CRGB& getLedBuff(size_t index) { return ledsbuff_[index]; }
+  const CRGB& getLed(size_t index) const { return leds_[index]; }
+  const CRGB& getLedBuff(size_t index) const { return ledsbuff_[index]; }
 
-  void setLed(size_t index, const CRGB& color) { _leds[index] = color; }
-  void setLedBuff(size_t index, const CRGB& color) { _ledsbuff[index] = color; }
+  void setLed(size_t index, const CRGB& color) { leds_[index] = color; }
+  void setLedBuff(size_t index, const CRGB& color) { ledsbuff_[index] = color; }
 
   // Очищает все светодиоды. Чтобы увидеть, нужно вызвать showLeds()
   void clearLeds();
@@ -94,19 +94,19 @@ public:
 
   uint32_t getPixelColor(int x, int y) const {
     if (!isValidXY(x, y)) return 0;
-    return packColor(_leds[getPixelNumber(x, y)]);
+    return packColor(leds_[getPixelNumber(x, y)]);
   }
   uint32_t getPixelColorBuff(int x, int y) const {
     if (!isValidXY(x, y)) return 0;
-    return packColor(_ledsbuff[getPixelNumber(x, y)]);
+    return packColor(ledsbuff_[getPixelNumber(x, y)]);
   }
   uint32_t getPixelColor(uint16_t pixelNum) const {
     if (pixelNum >= NUM_LEDS) return 0;
-    return packColor(_leds[pixelNum]);
+    return packColor(leds_[pixelNum]);
   }
   uint32_t getPixelColorBuff(uint16_t pixelNum) const {
     if (pixelNum >= NUM_LEDS) return 0;
-    return packColor(_ledsbuff[pixelNum]);
+    return packColor(ledsbuff_[pixelNum]);
   }
   uint32_t getPixelColor(const CRGB& pixel) const { return packColor(pixel); }
 
@@ -118,25 +118,25 @@ public:
   }
 
   CRGB& getPixelSafe(int x, int y) {
-    if (!isValidXY(x, y)) return _dummyLed;
-    return _leds[getPixelNumber(x, y)];
+    if (!isValidXY(x, y)) return dummyLed_;
+    return leds_[getPixelNumber(x, y)];
   }
   const CRGB& getPixelSafe(int x, int y) const {
-    if (!isValidXY(x, y)) return _dummyLed;
-    return _leds[getPixelNumber(x, y)];
+    if (!isValidXY(x, y)) return dummyLed_;
+    return leds_[getPixelNumber(x, y)];
   }
 
-  CRGB& getPixel(uint8_t x, uint8_t y) { return _leds[getPixelNumber(x, y)]; }
-  const CRGB& getPixel(uint8_t x, uint8_t y) const { return _leds[getPixelNumber(x, y)]; }
-  CRGB& getPixelBuff(uint8_t x, uint8_t y) { return _ledsbuff[getPixelNumber(x, y)]; }
-  const CRGB& getPixelBuff(uint8_t x, uint8_t y) const { return _ledsbuff[getPixelNumber(x, y)]; }
+  CRGB& getPixel(uint8_t x, uint8_t y) { return leds_[getPixelNumber(x, y)]; }
+  const CRGB& getPixel(uint8_t x, uint8_t y) const { return leds_[getPixelNumber(x, y)]; }
+  CRGB& getPixelBuff(uint8_t x, uint8_t y) { return ledsbuff_[getPixelNumber(x, y)]; }
+  const CRGB& getPixelBuff(uint8_t x, uint8_t y) const { return ledsbuff_[getPixelNumber(x, y)]; }
 
-  void drawPixel(uint8_t x, uint8_t y, const CRGB& color) { _leds[getPixelNumber(x, y)] = color; }
-  void drawPixelBuff(uint8_t x, uint8_t y, const CRGB& color) { _ledsbuff[getPixelNumber(x, y)] = color; }
-  void drawPixelSafe(int x, int y, const CRGB& color) { drawPixelSafe(_leds, x, y, color); }
-  void drawPixelSafeBuff(int x, int y, const CRGB& color) { drawPixelSafe(_ledsbuff, x, y, color); }
-  void drawPixelSafe(float x, float y, const CRGB& color) { drawPixelSafe(_leds, x, y, color); }
-  void drawPixelSafeBuff(float x, float y, const CRGB& color) { drawPixelSafe(_ledsbuff, x, y, color); }
+  void drawPixel(uint8_t x, uint8_t y, const CRGB& color) { leds_[getPixelNumber(x, y)] = color; }
+  void drawPixelBuff(uint8_t x, uint8_t y, const CRGB& color) { ledsbuff_[getPixelNumber(x, y)] = color; }
+  void drawPixelSafe(int x, int y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
+  void drawPixelSafeBuff(int x, int y, const CRGB& color) { drawPixelSafe(ledsbuff_, x, y, color); }
+  void drawPixelSafe(float x, float y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
+  void drawPixelSafeBuff(float x, float y, const CRGB& color) { drawPixelSafe(ledsbuff_, x, y, color); }
 
   // Плавно гасит цвета для всех пикселей
   void fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step);
@@ -167,27 +167,27 @@ public:
 
   void gradientDownTop(uint8_t bottom, const CHSV& bottomColor, uint8_t top, const CHSV& topColor);
   void drawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) {
-    drawLine(_leds, x1, y1, x2, y2, color);
+    drawLine(leds_, x1, y1, x2, y2, color);
   }
   void drawLineBuff(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color) {
-    drawLine(_ledsbuff, x1, y1, x2, y2, color);
+    drawLine(ledsbuff_, x1, y1, x2, y2, color);
   }
-  void drawLine(float x1, float y1, float x2, float y2, const CRGB& color) { drawLine(_leds, x1, y1, x2, y2, color); }
+  void drawLine(float x1, float y1, float x2, float y2, const CRGB& color) { drawLine(leds_, x1, y1, x2, y2, color); }
   void drawLineBuff(float x1, float y1, float x2, float y2, const CRGB& color) {
-    drawLine(_ledsbuff, x1, y1, x2, y2, color);
+    drawLine(ledsbuff_, x1, y1, x2, y2, color);
   }
-  void drawCircle(float x0, float y0, float radius, const CRGB& color) { drawCircle(_leds, x0, y0, radius, color); }
+  void drawCircle(float x0, float y0, float radius, const CRGB& color) { drawCircle(leds_, x0, y0, radius, color); }
   void drawCircleBuff(float x0, float y0, float radius, const CRGB& color) {
-    drawCircle(_ledsbuff, x0, y0, radius, color);
+    drawCircle(ledsbuff_, x0, y0, radius, color);
   }
 
-  const fl::XYMap& xyMap() const { return _xyMap; }
+  const fl::XYMap& xyMap() const { return xyMap_; }
 
 private:
-  CRGB _leds[NUM_LEDS];
-  CRGB _ledsbuff[NUM_LEDS];
-  CRGB _dummyLed = CRGB::Black;
-  fl::XYMap _xyMap;
+  CRGB leds_[NUM_LEDS];
+  CRGB ledsbuff_[NUM_LEDS];
+  CRGB dummyLed_ = CRGB::Black;
+  fl::XYMap xyMap_;
 
   static bool isValidXY(int x, int y) { return static_cast<unsigned>(x) < WIDTH && static_cast<unsigned>(y) < HEIGHT; }
 

@@ -9,7 +9,7 @@ class EepromStore;
 class SettingsRepository {
 public:
   explicit SettingsRepository(EepromStore& eeprom)
-    : _eeprom(eeprom) {}
+    : eeprom_(eeprom) {}
 
   void init();
   void tick(Effects::Id currentEffectId);
@@ -22,21 +22,21 @@ public:
   void markEffectSettingsChanged();
   bool resetEffectSettingsToDefaults(const EffectSettings* defaults);
 
-  Palettes::Id getSelectedPalette() const { return _selectedPalette; }
+  Palettes::Id getSelectedPalette() const { return selectedPalette_; }
   void setPalette(Palettes::Id paletteId);
 
-  uint8_t getGlobalBrightness() const { return _globalBrightness; }
+  uint8_t getGlobalBrightness() const { return globalBrightness_; }
   void setGlobalBrightness(uint8_t value);
 
 private:
-  EepromStore& _eeprom;
-  EffectSettings _effects[Effects::COUNT];
-  bool _effectSettingsChanged = false;
-  uint32_t _persistTimer = 0;
-  Palettes::Id _selectedPalette = Palettes::Id::Auto;
-  bool _paletteChanged = false;
-  uint8_t _globalBrightness = 255;
-  bool _globalBrightnessChanged = false;
+  EepromStore& eeprom_;
+  EffectSettings effects_[Effects::COUNT];
+  bool effectSettingsChanged_ = false;
+  uint32_t persistTimer_ = 0;
+  Palettes::Id selectedPalette_ = Palettes::Id::Auto;
+  bool paletteChanged_ = false;
+  uint8_t globalBrightness_ = 255;
+  bool globalBrightnessChanged_ = false;
 
   bool shouldPersistEffectSettings(uint32_t now);
   bool shouldPersistPalette(uint32_t now);

@@ -41,76 +41,76 @@ public:
     TouchButton& button,
     WifiService& wifi
   )
-    : _audio(audio),
-      _eeprom(eeprom),
-      _effects(effects),
-      _mqtt(mqtt),
-      _notifications(notifications),
-      _power(power),
-      _rotation(rotation),
-      _webSettings(webSettings),
-      _settings(settings),
-      _stateNotifier(stateNotifier),
-      _time(time),
-      _wifi(wifi),
-      _button(button) {}
+    : audio_(audio),
+      eeprom_(eeprom),
+      effects_(effects),
+      mqtt_(mqtt),
+      notifications_(notifications),
+      power_(power),
+      rotation_(rotation),
+      webSettings_(webSettings),
+      settings_(settings),
+      stateNotifier_(stateNotifier),
+      time_(time),
+      wifi_(wifi),
+      button_(button) {}
 
   void init();
   void tick();
 
 private:
-  AudioService& _audio;
-  EepromStore& _eeprom;
-  EffectController& _effects;
-  MqttService& _mqtt;
-  NotificationController& _notifications;
-  PowerController& _power;
-  RotationController& _rotation;
-  SettingsAsync& _webSettings;
-  SettingsRepository& _settings;
-  StateNotifier& _stateNotifier;
-  TimeService& _time;
-  WifiService& _wifi;
-  TouchButton& _button;
+  AudioService& audio_;
+  EepromStore& eeprom_;
+  EffectController& effects_;
+  MqttService& mqtt_;
+  NotificationController& notifications_;
+  PowerController& power_;
+  RotationController& rotation_;
+  SettingsAsync& webSettings_;
+  SettingsRepository& settings_;
+  StateNotifier& stateNotifier_;
+  TimeService& time_;
+  WifiService& wifi_;
+  TouchButton& button_;
 
-  char _inputWifiSsid[WIFI_SSID_LEN];
-  char _inputWifiPass[WIFI_PASS_LEN];
-  char _inputMqttHost[MQTT_HOST_LEN];
-  char _inputMqttPort[MQTT_PORT_LEN];
-  char _inputMqttUser[MQTT_USER_LEN];
-  char _inputMqttPass[MQTT_PASS_LEN];
+  char inputWifiSsid_[WIFI_SSID_LEN];
+  char inputWifiPass_[WIFI_PASS_LEN];
+  char inputMqttHost_[MQTT_HOST_LEN];
+  char inputMqttPort_[MQTT_PORT_LEN];
+  char inputMqttUser_[MQTT_USER_LEN];
+  char inputMqttPass_[MQTT_PASS_LEN];
 
-  bool _powerOn = false;
-  uint8_t _rotationModeIndex = 0;
-  uint8_t _rotationIntervalPresetIndex = ROTATION_PRESET_DEFAULT_INDEX;
-  bool _buttonEnabled = true;
-  uint8_t _selectedEffectIndex = 0;
-  uint8_t _globalBrightness = 0;
-  uint8_t _brightness = 0;
-  uint8_t _speed = 0;
-  uint8_t _scale = 0;
-  uint32_t _color = 0;
-  uint16_t _autoOffMinutes = 0;
-  uint8_t _selectedPaletteIndex = 0;
-  bool _notificationQuietEnabled = false;
-  uint32_t _notificationQuietStartSeconds = 23UL * 60UL * 60UL;
-  uint32_t _notificationQuietEndSeconds = 8UL * 60UL * 60UL;
-  String _effectOptions;
-  String _paletteOptions;
-  String _rotationModeOptions;
-  String _rotationIntervalOptions;
-  uint8_t _audioModeIndex = 0;
-  uint8_t _audioBandIndex = 0;
-  uint8_t _audioAmount = 128;
-  String _audioModeOptions = "Off;Brightness;Speed;Scale;Effect";
-  String _audioBandOptions = "Level;Bass;Treble";
+  bool powerOn_ = false;
+  uint8_t rotationModeIndex_ = 0;
+  uint8_t rotationIntervalPresetIndex_ = ROTATION_PRESET_DEFAULT_INDEX;
+  bool buttonEnabled_ = true;
+  uint8_t selectedEffectIndex_ = 0;
+  uint8_t globalBrightness_ = 0;
+  uint8_t brightness_ = 0;
+  uint8_t speed_ = 0;
+  uint8_t scale_ = 0;
+  uint32_t color_ = 0;
+  uint16_t autoOffMinutes_ = 0;
+  uint8_t selectedPaletteIndex_ = 0;
+  bool notificationQuietEnabled_ = false;
+  uint32_t notificationQuietStartSeconds_ = 23UL * 60UL * 60UL;
+  uint32_t notificationQuietEndSeconds_ = 8UL * 60UL * 60UL;
+  String effectOptions_;
+  String paletteOptions_;
+  String rotationModeOptions_;
+  String rotationIntervalOptions_;
+  uint8_t audioModeIndex_ = 0;
+  uint8_t audioBandIndex_ = 0;
+  uint8_t audioAmount_ = 128;
+  String audioModeOptions_ = "Off;Brightness;Speed;Scale;Effect";
+  String audioBandOptions_ = "Level;Bass;Treble";
 
 #ifdef TEST_NOTIFICATIONS
-  uint16_t _notificationWarningDurationSec = 30;
-  uint16_t _notificationAlarmDurationSec = 30;
-  char _notificationText[65] = "Hello";
-  uint16_t _notificationTextDurationSec = 0;
-  uint8_t _notificationButtonCount = 0;
+  uint16_t notificationWarningDurationSec_ = 30;
+  uint16_t notificationAlarmDurationSec_ = 30;
+  char notificationText_[65] = "Hello";
+  uint16_t notificationTextDurationSec_ = 0;
+  uint8_t notificationButtonCount_ = 0;
 #endif
 
   void settingsBuilder(sets::Builder& b);

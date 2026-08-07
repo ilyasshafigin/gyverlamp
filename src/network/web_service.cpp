@@ -55,48 +55,48 @@ namespace {
 } // namespace
 
 void WebService::init() {
-  const WifiConfig& wifiConfig = _eeprom.readWifiConfig();
+  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
   if (strlen(wifiConfig.ssid) > 0) {
-    strlcpy(_inputWifiSsid, wifiConfig.ssid, WIFI_SSID_LEN);
-    strlcpy(_inputWifiPass, wifiConfig.password, WIFI_PASS_LEN);
+    strlcpy(inputWifiSsid_, wifiConfig.ssid, WIFI_SSID_LEN);
+    strlcpy(inputWifiPass_, wifiConfig.password, WIFI_PASS_LEN);
   }
 
-  const MqttConfig& mqttConfig = _eeprom.readMqttConfig();
+  const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
   if (strlen(mqttConfig.host) > 0) {
-    strlcpy(_inputMqttHost, mqttConfig.host, MQTT_HOST_LEN);
-    strlcpy(_inputMqttPort, mqttConfig.port, MQTT_PORT_LEN);
-    strlcpy(_inputMqttUser, mqttConfig.user, MQTT_USER_LEN);
-    strlcpy(_inputMqttPass, mqttConfig.password, MQTT_PASS_LEN);
+    strlcpy(inputMqttHost_, mqttConfig.host, MQTT_HOST_LEN);
+    strlcpy(inputMqttPort_, mqttConfig.port, MQTT_PORT_LEN);
+    strlcpy(inputMqttUser_, mqttConfig.user, MQTT_USER_LEN);
+    strlcpy(inputMqttPass_, mqttConfig.password, MQTT_PASS_LEN);
   }
 
-  _webSettings.begin(true, _wifi.getDeviceId().c_str());
-  _webSettings.onBuild([this](sets::Builder& b) { settingsBuilder(b); });
-  _webSettings.onUpdate([this](sets::Updater& upd) { settingsUpdate(upd); });
-  _webSettings.setTitle(DEVICE_NAME);
-  _webSettings.setVersion(FIRMWARE_VERSION);
+  webSettings_.begin(true, wifi_.getDeviceId().c_str());
+  webSettings_.onBuild([this](sets::Builder& b) { settingsBuilder(b); });
+  webSettings_.onUpdate([this](sets::Updater& upd) { settingsUpdate(upd); });
+  webSettings_.setTitle(DEVICE_NAME);
+  webSettings_.setVersion(FIRMWARE_VERSION);
 
-  _effectOptions = "";
+  effectOptions_ = "";
   for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
-    if (i > 0) _effectOptions += ';';
-    _effectOptions += Effects::getEffectName(Effects::DISPLAY_ORDER[i]);
+    if (i > 0) effectOptions_ += ';';
+    effectOptions_ += Effects::getEffectName(Effects::DISPLAY_ORDER[i]);
   }
 
-  _paletteOptions = Palettes::getPaletteName(Palettes::Id::Auto);
+  paletteOptions_ = Palettes::getPaletteName(Palettes::Id::Auto);
   for (uint8_t i = 0; i < Palettes::SELECTABLE_COUNT; i++) {
-    _paletteOptions += ';';
-    _paletteOptions += Palettes::getPaletteName(Palettes::SELECTABLE_ORDER[i]);
+    paletteOptions_ += ';';
+    paletteOptions_ += Palettes::getPaletteName(Palettes::SELECTABLE_ORDER[i]);
   }
 
-  _rotationModeOptions = "Off;Sequential;Random";
-  _rotationIntervalOptions = String(ROTATION_PRESET_LABELS[0]);
+  rotationModeOptions_ = "Off;Sequential;Random";
+  rotationIntervalOptions_ = String(ROTATION_PRESET_LABELS[0]);
   for (uint8_t i = 1; i < ROTATION_PRESET_COUNT; i++) {
-    _rotationIntervalOptions += ';';
-    _rotationIntervalOptions += ROTATION_PRESET_LABELS[i];
+    rotationIntervalOptions_ += ';';
+    rotationIntervalOptions_ += ROTATION_PRESET_LABELS[i];
   }
 }
 
 void WebService::tick() {
-  _webSettings.tick();
+  webSettings_.tick();
 }
 
 uint8_t WebService::effectDisplayIndex(Effects::Id id) const {
@@ -119,31 +119,31 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Group g(b, "Lamp");
 
     if (b.build.isBuild()) {
-      _powerOn = _power.isOn();
-      _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
-      _selectedPaletteIndex = paletteDisplayIndex(_effects.getSelectedPalette());
-      _buttonEnabled = _button.isEnabled();
-      _globalBrightness = _settings.getGlobalBrightness();
+      powerOn_ = power_.isOn();
+      selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+      selectedPaletteIndex_ = paletteDisplayIndex(effects_.getSelectedPalette());
+      buttonEnabled_ = button_.isEnabled();
+      globalBrightness_ = settings_.getGlobalBrightness();
     }
 
-    if (b.Switch("Power", &_powerOn)) {
-      _power.setOn(_powerOn);
-      _stateNotifier.stateChanged();
+    if (b.Switch("Power", &powerOn_)) {
+      power_.setOn(powerOn_);
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Slider("Brightness", 0, 255, 1, "", &_globalBrightness)) {
-      _settings.setGlobalBrightness(_globalBrightness);
-      _stateNotifier.stateChanged();
+    if (b.Slider("Brightness", 0, 255, 1, "", &globalBrightness_)) {
+      settings_.setGlobalBrightness(globalBrightness_);
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Select("Effect", _effectOptions, &_selectedEffectIndex)) {
-      _rotation.disable();
-      Effects::Id effectId = Effects::DISPLAY_ORDER[_selectedEffectIndex];
-      if (!_effects.setEffect(effectId)) {
-        _effects.setEffect(Effects::fallback());
+    if (b.Select("Effect", effectOptions_, &selectedEffectIndex_)) {
+      rotation_.disable();
+      Effects::Id effectId = Effects::DISPLAY_ORDER[selectedEffectIndex_];
+      if (!effects_.setEffect(effectId)) {
+        effects_.setEffect(Effects::fallback());
       }
-      _notifications.onEffectNext();
-      _stateNotifier.stateChanged();
+      notifications_.onEffectNext();
+      stateNotifier_.stateChanged();
       b.reload();
     }
 
@@ -151,83 +151,83 @@ void WebService::settingsBuilder(sets::Builder& b) {
       sets::Buttons g(b);
 
       if (b.Button("Prev")) {
-        _effects.setPreviousEffect();
-        _notifications.onEffectPrevious();
-        _rotation.onManualRotation();
-        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
-        _stateNotifier.stateChanged();
+        effects_.setPreviousEffect();
+        notifications_.onEffectPrevious();
+        rotation_.onManualRotation();
+        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        stateNotifier_.stateChanged();
         b.reload();
       }
 
       if (b.Button("Next")) {
-        _effects.setNextEffect();
-        _notifications.onEffectNext();
-        _rotation.onManualRotation();
-        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
-        _stateNotifier.stateChanged();
+        effects_.setNextEffect();
+        notifications_.onEffectNext();
+        rotation_.onManualRotation();
+        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        stateNotifier_.stateChanged();
         b.reload();
       }
 
       if (b.Button("Random")) {
-        _effects.setRandomEffect();
-        _notifications.onEffectNext();
-        _rotation.onManualRotation();
-        _selectedEffectIndex = effectDisplayIndex(_effects.getSelectedEffectId());
-        _stateNotifier.stateChanged();
+        effects_.setRandomEffect();
+        notifications_.onEffectNext();
+        rotation_.onManualRotation();
+        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        stateNotifier_.stateChanged();
         b.reload();
       }
     }
 
-    if (b.Select("Palette", _paletteOptions, &_selectedPaletteIndex)) {
+    if (b.Select("Palette", paletteOptions_, &selectedPaletteIndex_)) {
       Palettes::Id paletteId = Palettes::Id::Auto;
-      if (_selectedPaletteIndex > 0 && _selectedPaletteIndex - 1 < Palettes::SELECTABLE_COUNT) {
-        paletteId = Palettes::SELECTABLE_ORDER[_selectedPaletteIndex - 1];
+      if (selectedPaletteIndex_ > 0 && selectedPaletteIndex_ - 1 < Palettes::SELECTABLE_COUNT) {
+        paletteId = Palettes::SELECTABLE_ORDER[selectedPaletteIndex_ - 1];
       }
-      _effects.setPalette(paletteId);
-      _stateNotifier.stateChanged();
+      effects_.setPalette(paletteId);
+      stateNotifier_.stateChanged();
       b.reload();
     }
 
-    if (b.Switch("Touch button", &_buttonEnabled)) {
-      _button.setEnabled(_buttonEnabled);
-      _stateNotifier.stateChanged();
+    if (b.Switch("Touch button", &buttonEnabled_)) {
+      button_.setEnabled(buttonEnabled_);
+      stateNotifier_.stateChanged();
     }
   }
   {
     sets::Group g(b, "Effect");
 
     if (b.build.isBuild()) {
-      const EffectSettings& settings = _settings.getEffectSettings(_effects.getSelectedEffectId());
-      _brightness = settings.brightness;
-      _speed = settings.speed;
-      _scale = settings.scale;
-      _color = ((uint32_t)_effects.getRed() << 16) | ((uint32_t)_effects.getGreen() << 8) | _effects.getBlue();
+      const EffectSettings& settings = settings_.getEffectSettings(effects_.getSelectedEffectId());
+      brightness_ = settings.brightness;
+      speed_ = settings.speed;
+      scale_ = settings.scale;
+      color_ = ((uint32_t)effects_.getRed() << 16) | ((uint32_t)effects_.getGreen() << 8) | effects_.getBlue();
     }
 
-    if (b.Slider("Brightness", 0, 255, 1, "", &_brightness)) {
-      _effects.setEffectBrightness(_brightness);
-      _stateNotifier.stateChanged();
+    if (b.Slider("Brightness", 0, 255, 1, "", &brightness_)) {
+      effects_.setEffectBrightness(brightness_);
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Slider("Speed", 0, 255, 1, "", &_speed)) {
-      _effects.setEffectSpeed(_speed);
-      _stateNotifier.stateChanged();
+    if (b.Slider("Speed", 0, 255, 1, "", &speed_)) {
+      effects_.setEffectSpeed(speed_);
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Slider("Scale", 0, 255, 1, "", &_scale)) {
-      _effects.setEffectScale(_scale);
-      _stateNotifier.stateChanged();
+    if (b.Slider("Scale", 0, 255, 1, "", &scale_)) {
+      effects_.setEffectScale(scale_);
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Color("Color", &_color)) {
-      _rotation.disable();
-      _effects.setColor((_color >> 16) & 0xFF, (_color >> 8) & 0xFF, _color & 0xFF);
-      _stateNotifier.stateChanged();
+    if (b.Color("Color", &color_)) {
+      rotation_.disable();
+      effects_.setColor((color_ >> 16) & 0xFF, (color_ >> 8) & 0xFF, color_ & 0xFF);
+      stateNotifier_.stateChanged();
     }
 
     if (b.Button("Reset effect settings")) {
-      _effects.resetEffectSettingsToDefaults();
-      _stateNotifier.stateChanged();
+      effects_.resetEffectSettingsToDefaults();
+      stateNotifier_.stateChanged();
       b.reload();
     }
   }
@@ -235,38 +235,38 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Group g(b, "Rotation");
 
     if (b.build.isBuild()) {
-      _rotationModeIndex = static_cast<uint8_t>(_rotation.getMode());
-      _rotationIntervalPresetIndex = rotationPresetIndexForSeconds(_rotation.getIntervalSec());
+      rotationModeIndex_ = static_cast<uint8_t>(rotation_.getMode());
+      rotationIntervalPresetIndex_ = rotationPresetIndexForSeconds(rotation_.getIntervalSec());
     }
 
-    if (b.Select("Rotation", _rotationModeOptions, &_rotationModeIndex)) {
-      const bool wasActive = _rotation.isActive();
-      _rotation.setMode(static_cast<RotationMode>(_rotationModeIndex));
-      if (_rotation.isActive() && !wasActive) {
-        _notifications.onRotationEnabled();
-      } else if (!_rotation.isActive() && wasActive) {
-        _notifications.onRotationDisabled();
+    if (b.Select("Rotation", rotationModeOptions_, &rotationModeIndex_)) {
+      const bool wasActive = rotation_.isActive();
+      rotation_.setMode(static_cast<RotationMode>(rotationModeIndex_));
+      if (rotation_.isActive() && !wasActive) {
+        notifications_.onRotationEnabled();
+      } else if (!rotation_.isActive() && wasActive) {
+        notifications_.onRotationDisabled();
       }
-      _stateNotifier.stateChanged();
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Select("Rotation interval", _rotationIntervalOptions, &_rotationIntervalPresetIndex)) {
-      _rotation.setIntervalSec(rotationPresetSecondsForIndex(_rotationIntervalPresetIndex));
-      _stateNotifier.stateChanged();
+    if (b.Select("Rotation interval", rotationIntervalOptions_, &rotationIntervalPresetIndex_)) {
+      rotation_.setIntervalSec(rotationPresetSecondsForIndex(rotationIntervalPresetIndex_));
+      stateNotifier_.stateChanged();
     }
   }
   {
     sets::Group g(b, "Auto off");
 
     if (b.build.isBuild()) {
-      _autoOffMinutes = _power.getAutoOffMinutes();
+      autoOffMinutes_ = power_.getAutoOffMinutes();
     }
 
-    if (b.Number("Auto-off, min", &_autoOffMinutes, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX)) {
-      _power.setAutoOffMinutes(_autoOffMinutes);
-      _stateNotifier.stateChanged();
+    if (b.Number("Auto-off, min", &autoOffMinutes_, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX)) {
+      power_.setAutoOffMinutes(autoOffMinutes_);
+      stateNotifier_.stateChanged();
     }
-    b.Label("Auto-off remaining", formatRemainingTime(_power.getAutoOffRemainingSeconds()));
+    b.Label("Auto-off remaining", formatRemainingTime(power_.getAutoOffRemainingSeconds()));
   }
   {
     sets::Group g(b, "Quiet mode");
@@ -275,65 +275,65 @@ void WebService::settingsBuilder(sets::Builder& b) {
       loadNotificationQuietHoursForUi();
     }
 
-    if (b.Switch("Quiet hours", &_notificationQuietEnabled)) {
+    if (b.Switch("Quiet hours", &notificationQuietEnabled_)) {
       saveNotificationQuietHoursFromUi();
     }
-    if (b.Time("Mute from", &_notificationQuietStartSeconds)) {
+    if (b.Time("Mute from", &notificationQuietStartSeconds_)) {
       saveNotificationQuietHoursFromUi();
     }
-    if (b.Time("Mute to", &_notificationQuietEndSeconds)) {
+    if (b.Time("Mute to", &notificationQuietEndSeconds_)) {
       saveNotificationQuietHoursFromUi();
     }
-    b.Label("Muted now", _notifications.isMutedNow() ? "yes" : "no");
-    b.Label("Notification remaining", formatRemainingTime(_notifications.getUserNotificationRemainingSeconds()));
+    b.Label("Muted now", notifications_.isMutedNow() ? "yes" : "no");
+    b.Label("Notification remaining", formatRemainingTime(notifications_.getUserNotificationRemainingSeconds()));
   }
   {
     sets::Group g(b, "Audio");
 
     if (b.build.isBuild()) {
-      const AudioConfig& config = _audio.config();
-      _audioModeIndex = static_cast<uint8_t>(config.mode);
-      _audioBandIndex = static_cast<uint8_t>(config.band);
-      _audioAmount = config.amount;
+      const AudioConfig& config = audio_.config();
+      audioModeIndex_ = static_cast<uint8_t>(config.mode);
+      audioBandIndex_ = static_cast<uint8_t>(config.band);
+      audioAmount_ = config.amount;
     }
 
-    if (b.Select("Audio mode", _audioModeOptions, &_audioModeIndex)) {
-      _audio.setMode(static_cast<AudioMode>(_audioModeIndex));
-      _stateNotifier.stateChanged();
+    if (b.Select("Audio mode", audioModeOptions_, &audioModeIndex_)) {
+      audio_.setMode(static_cast<AudioMode>(audioModeIndex_));
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Select("Audio band", _audioBandOptions, &_audioBandIndex)) {
-      _audio.setBand(static_cast<AudioBand>(_audioBandIndex));
-      _stateNotifier.stateChanged();
+    if (b.Select("Audio band", audioBandOptions_, &audioBandIndex_)) {
+      audio_.setBand(static_cast<AudioBand>(audioBandIndex_));
+      stateNotifier_.stateChanged();
     }
 
-    if (b.Slider("Audio amount", 0, 255, 1, "", &_audioAmount)) {
-      _audio.setAmount(_audioAmount);
-      _stateNotifier.stateChanged();
+    if (b.Slider("Audio amount", 0, 255, 1, "", &audioAmount_)) {
+      audio_.setAmount(audioAmount_);
+      stateNotifier_.stateChanged();
     }
 
-    const AudioFrame& audio = _audio.frame();
+    const AudioFrame& audio = audio_.frame();
     b.Label("Audio available", audio.available ? "yes" : "no");
     b.Label("Audio level/bass/treble", String(audio.level) + "/" + String(audio.bass) + "/" + String(audio.treble));
     b.Label("Audio beat", audio.beat ? "yes" : "no");
   }
   {
     sets::Menu g(b, "WiFi");
-    b.Input("SSID", _inputWifiSsid);
-    b.Pass("Password", _inputWifiPass);
+    b.Input("SSID", inputWifiSsid_);
+    b.Pass("Password", inputWifiPass_);
     if (b.Button("Save and restart")) {
-      _eeprom.writeWifiConfig(_inputWifiSsid, _inputWifiPass);
+      eeprom_.writeWifiConfig(inputWifiSsid_, inputWifiPass_);
       ESP.restart();
     }
   }
   {
     sets::Menu g(b, "MQTT");
-    b.Input("Host", _inputMqttHost);
-    b.Number("Port", _inputMqttPort);
-    b.Input("User", _inputMqttUser);
-    b.Pass("Password", _inputMqttPass);
+    b.Input("Host", inputMqttHost_);
+    b.Number("Port", inputMqttPort_);
+    b.Input("User", inputMqttUser_);
+    b.Pass("Password", inputMqttPass_);
     if (b.Button("Save and restart")) {
-      _eeprom.writeMqttConfig(_inputMqttHost, _inputMqttPort, _inputMqttUser, _inputMqttPass);
+      eeprom_.writeMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_);
       ESP.restart();
     }
   }
@@ -344,7 +344,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     bool vccAvailable = (vcc != 0 && vcc >= 2500 && vcc <= 3700);
 
     b.Label("Lamp ID", String(ESP.getChipId(), HEX));
-    b.Label("Device ID", _wifi.getDeviceId());
+    b.Label("Device ID", wifi_.getDeviceId());
     b.Label("Wi-Fi", WiFi.SSID());
     b.Label("WiFi RSSI", String(2 * (WiFi.RSSI() + 100)) + "%");
     b.Label("IP Local", WiFi.localIP().toString());
@@ -363,13 +363,13 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", String(ESP.getFreeHeap() / 1024) + "kb");
     b.Label("Max free block size", String(ESP.getMaxFreeBlockSize() / 1024) + "kb");
     b.Label("Heap fragmentaion", String(ESP.getHeapFragmentation()) + "%");
-    b.Label("MQTT host", String(_eeprom.readMqttConfig().host));
-    b.Label("MQTT connection", _mqtt.isMqttConnected() ? "on" : "off");
+    b.Label("MQTT host", String(eeprom_.readMqttConfig().host));
+    b.Label("MQTT connection", mqtt_.isMqttConnected() ? "on" : "off");
     b.Label("Uptime", uptime_formatter::getUptime());
-    b.Label("Time", _time.getTimeStampString());
+    b.Label("Time", time_.getTimeStampString());
 
     if (b.Button("Restart")) {
-      _webSettings.reload();
+      webSettings_.reload();
       delay(2000);
       ESP.restart();
     }
@@ -387,46 +387,46 @@ void WebService::settingsBuilder(sets::Builder& b) {
     {
       sets::Row g(b, "WiFi");
       if (b.Button("Connecting")) {
-        _notifications.onWifiConnecting();
+        notifications_.onWifiConnecting();
       }
       if (b.Button("Connected")) {
-        _notifications.onWifiConnected();
+        notifications_.onWifiConnected();
       }
       if (b.Button("Error")) {
-        _notifications.onWifiError();
+        notifications_.onWifiError();
       }
       if (b.Button("Disabled")) {
-        _notifications.onWifiDisabled();
+        notifications_.onWifiDisabled();
       }
     }
     {
       sets::Row g(b, "MQTT");
       if (b.Button("Connecting")) {
-        _notifications.onMqttConnecting();
+        notifications_.onMqttConnecting();
       }
       if (b.Button("Connected")) {
-        _notifications.onMqttConnected();
+        notifications_.onMqttConnected();
       }
       if (b.Button("Error")) {
-        _notifications.onMqttError();
+        notifications_.onMqttError();
       }
       if (b.Button("Disabled")) {
-        _notifications.onMqttDisabled();
+        notifications_.onMqttDisabled();
       }
     }
     {
       sets::Row g(b, "OTA");
       if (b.Button("Start")) {
-        _notifications.onOtaStart();
+        notifications_.onOtaStart();
       }
       if (b.Button("Progress")) {
-        _notifications.onOtaProgress(35U);
+        notifications_.onOtaProgress(35U);
       }
       if (b.Button("Error")) {
-        _notifications.onOtaError();
+        notifications_.onOtaError();
       }
       if (b.Button("End")) {
-        _notifications.onOtaEnd();
+        notifications_.onOtaEnd();
       }
     }
 
@@ -435,50 +435,50 @@ void WebService::settingsBuilder(sets::Builder& b) {
       {
         sets::Row g(b);
         if (b.Button("Press")) {
-          _notificationButtonCount = _notificationButtonCount >= 6 ? 0 : _notificationButtonCount + 1;
-          _notifications.onButtonPress(_notificationButtonCount);
+          notificationButtonCount_ = notificationButtonCount_ >= 6 ? 0 : notificationButtonCount_ + 1;
+          notifications_.onButtonPress(notificationButtonCount_);
         }
         if (b.Button("Release")) {
-          _notifications.onButtonRelease();
+          notifications_.onButtonRelease();
         }
         if (b.Button("Dismiss")) {
-          _notifications.onButtonDismiss();
+          notifications_.onButtonDismiss();
         }
       }
       {
         sets::Row g(b);
         if (b.Button("Power on")) {
-          _notifications.onButtonPowerOn();
+          notifications_.onButtonPowerOn();
         }
         if (b.Button("Power off")) {
-          _notifications.onButtonPowerOff();
+          notifications_.onButtonPowerOff();
         }
       }
       {
         sets::Row g(b);
         if (b.Button("Next Effect")) {
-          _notifications.onEffectNext();
+          notifications_.onEffectNext();
         }
         if (b.Button("Prev Effect")) {
-          _notifications.onEffectPrevious();
+          notifications_.onEffectPrevious();
         }
       }
       {
         sets::Row g(b);
         if (b.Button("Brightness increasing")) {
-          _notifications.onButtonBrightness(77, true);
+          notifications_.onButtonBrightness(77, true);
         }
         if (b.Button("Brightness decreasing")) {
-          _notifications.onButtonBrightness(180, false);
+          notifications_.onButtonBrightness(180, false);
         }
       }
       {
         sets::Row g(b);
         if (b.Button("Rotation enabled")) {
-          _notifications.onRotationEnabled();
+          notifications_.onRotationEnabled();
         }
         if (b.Button("Rotation disabled")) {
-          _notifications.onRotationDisabled();
+          notifications_.onRotationDisabled();
         }
       }
     }
@@ -486,10 +486,10 @@ void WebService::settingsBuilder(sets::Builder& b) {
     {
       sets::Group g(b, "Warning");
 
-      b.Number("Warning duration, s", &_notificationWarningDurationSec, 0, 3600);
+      b.Number("Warning duration, s", &notificationWarningDurationSec_, 0, 3600);
       if (b.Button("Start warning")) {
-        _notifications.startUserNotification(
-          UserNotificationType::Warning, static_cast<uint32_t>(_notificationWarningDurationSec * 1000)
+        notifications_.startUserNotification(
+          UserNotificationType::Warning, static_cast<uint32_t>(notificationWarningDurationSec_ * 1000)
         );
       }
     }
@@ -497,10 +497,10 @@ void WebService::settingsBuilder(sets::Builder& b) {
     {
       sets::Group g(b, "Alarm");
 
-      b.Number("Alarm duration, s", &_notificationAlarmDurationSec, 0, 3600);
+      b.Number("Alarm duration, s", &notificationAlarmDurationSec_, 0, 3600);
       if (b.Button("Start alarm")) {
-        _notifications.startUserNotification(
-          UserNotificationType::Alarm, static_cast<uint32_t>(_notificationAlarmDurationSec * 1000)
+        notifications_.startUserNotification(
+          UserNotificationType::Alarm, static_cast<uint32_t>(notificationAlarmDurationSec_ * 1000)
         );
       }
     }
@@ -508,25 +508,25 @@ void WebService::settingsBuilder(sets::Builder& b) {
     {
       sets::Group g(b, "Text");
 
-      b.Input("Notification text", _notificationText);
-      b.Number("Text duration, s", &_notificationTextDurationSec, 0, 3600);
+      b.Input("Notification text", notificationText_);
+      b.Number("Text duration, s", &notificationTextDurationSec_, 0, 3600);
       if (b.Button("Start text")) {
-        _notifications.startUserTextNotification(
-          String(_notificationText).substring(0, 64),
+        notifications_.startUserTextNotification(
+          String(notificationText_).substring(0, 64),
           CRGB::White,
-          static_cast<uint32_t>(_notificationTextDurationSec) * 1000UL
+          static_cast<uint32_t>(notificationTextDurationSec_) * 1000UL
         );
-        _notificationText[0] = '\0';
+        notificationText_[0] = '\0';
         b.reload();
       }
     }
 
     if (b.Button("Notify")) {
-      _notifications.startUserNotification(UserNotificationType::Notify);
+      notifications_.startUserNotification(UserNotificationType::Notify);
     }
 
     if (b.Button("Stop user notification")) {
-      _notifications.stopUserNotification();
+      notifications_.stopUserNotification();
       b.reload();
     }
   }
@@ -549,20 +549,20 @@ void WebService::settingsUpdate(sets::Updater& u) {
 }
 
 void WebService::loadNotificationQuietHoursForUi() {
-  const NotificationQuietHours& q = _notifications.getQuietHours();
-  _notificationQuietEnabled = q.enabled;
-  _notificationQuietStartSeconds = minutesToSeconds(q.startMinutes);
-  _notificationQuietEndSeconds = minutesToSeconds(q.endMinutes);
+  const NotificationQuietHours& q = notifications_.getQuietHours();
+  notificationQuietEnabled_ = q.enabled;
+  notificationQuietStartSeconds_ = minutesToSeconds(q.startMinutes);
+  notificationQuietEndSeconds_ = minutesToSeconds(q.endMinutes);
 }
 
 bool WebService::saveNotificationQuietHoursFromUi() {
   NotificationQuietHours q;
-  q.enabled = _notificationQuietEnabled;
-  q.startMinutes = secondsToMinutes(_notificationQuietStartSeconds);
-  q.endMinutes = secondsToMinutes(_notificationQuietEndSeconds);
+  q.enabled = notificationQuietEnabled_;
+  q.startMinutes = secondsToMinutes(notificationQuietStartSeconds_);
+  q.endMinutes = secondsToMinutes(notificationQuietEndSeconds_);
 
-  if (!_notifications.setQuietHours(q)) return false;
+  if (!notifications_.setQuietHours(q)) return false;
 
-  _stateNotifier.stateChanged();
+  stateNotifier_.stateChanged();
   return true;
 }

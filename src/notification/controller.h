@@ -29,28 +29,28 @@ public:
     StateNotifier& stateNotifier,
     TimeService& time
   )
-    : _eeprom(eeprom),
-      _power(power),
-      _stateNotifier(stateNotifier),
-      _time(time),
-      _systemRenderer(),
-      _userRenderer(runningText),
-      _indicatorRenderer(),
-      _userState() {}
+    : eeprom_(eeprom),
+      power_(power),
+      stateNotifier_(stateNotifier),
+      time_(time),
+      systemRenderer_(),
+      userRenderer_(runningText),
+      indicatorRenderer_(),
+      userState_() {}
 
   void init();
   void tick();
 
-  const NotificationFrame& frame() const { return _frame; }
+  const NotificationFrame& frame() const { return frame_; }
 
   void renderOverlay(NotificationOverlay& overlay, const NotificationFrame& frame);
 
   bool isActive() const;
-  bool isUserNotificationActive() const { return _userState.isActive(); }
-  UserNotificationType getUserNotificationType() const { return _userState.getType(); }
+  bool isUserNotificationActive() const { return userState_.isActive(); }
+  UserNotificationType getUserNotificationType() const { return userState_.getType(); }
   uint32_t getUserNotificationRemainingSeconds() const;
 
-  const NotificationQuietHours& getQuietHours() const { return _quietHours; }
+  const NotificationQuietHours& getQuietHours() const { return quietHours_; }
   bool setQuietHours(const NotificationQuietHours& settings);
   bool isMutedNow() const;
 
@@ -96,38 +96,38 @@ private:
   static constexpr uint16_t NOTIFICATION_FADE_OUT_MS = 600;
   static constexpr uint16_t BUTTON_PRESS_ECHO_MS = 180;
 
-  EepromStore& _eeprom;
-  PowerController& _power;
-  StateNotifier& _stateNotifier;
-  TimeService& _time;
+  EepromStore& eeprom_;
+  PowerController& power_;
+  StateNotifier& stateNotifier_;
+  TimeService& time_;
 
-  SystemNotificationRenderer _systemRenderer;
-  UserNotificationRenderer _userRenderer;
-  IndicatorRenderer _indicatorRenderer;
-  UserNotificationState _userState;
-  NotificationQuietHours _quietHours;
-  bool _userNotificationStopped = false;
-  ConnectionState _wifiState = ConnectionState::Idle;
-  ConnectionState _mqttState = ConnectionState::Idle;
-  OtaState _otaState = OtaState::Idle;
-  uint8_t _otaPercent = 0;
+  SystemNotificationRenderer systemRenderer_;
+  UserNotificationRenderer userRenderer_;
+  IndicatorRenderer indicatorRenderer_;
+  UserNotificationState userState_;
+  NotificationQuietHours quietHours_;
+  bool userNotificationStopped_ = false;
+  ConnectionState wifiState_ = ConnectionState::Idle;
+  ConnectionState mqttState_ = ConnectionState::Idle;
+  OtaState otaState_ = OtaState::Idle;
+  uint8_t otaPercent_ = 0;
 
-  FadeAnimator _opacity;
-  NotificationFrame _frame;
-  NotificationSnapshot _activeNotification;
-  NotificationSnapshot _drawableNotification;
+  FadeAnimator opacity_;
+  NotificationFrame frame_;
+  NotificationSnapshot activeNotification_;
+  NotificationSnapshot drawableNotification_;
 
-  uint32_t _lastWifiChangeMs = 0;
-  uint32_t _lastMqttChangeMs = 0;
-  uint32_t _lastOtaChangeMs = 0;
+  uint32_t lastWifiChangeMs_ = 0;
+  uint32_t lastMqttChangeMs_ = 0;
+  uint32_t lastOtaChangeMs_ = 0;
 
-  IndicatorType _indicatorType = IndicatorType::None;
-  uint32_t _lastIndicatorChangeMs = 0;
-  uint8_t _buttonValue = 0;
-  bool _buttonDirection = true;
-  uint8_t _buttonPressCount = 0;
-  uint32_t _lastButtonPressMs = 0;
-  bool _buttonPressing = false;
+  IndicatorType indicatorType_ = IndicatorType::None;
+  uint32_t lastIndicatorChangeMs_ = 0;
+  uint8_t buttonValue_ = 0;
+  bool buttonDirection_ = true;
+  uint8_t buttonPressCount_ = 0;
+  uint32_t lastButtonPressMs_ = 0;
+  bool buttonPressing_ = false;
 
   void setWifiState(ConnectionState state);
   void setMqttState(ConnectionState state);

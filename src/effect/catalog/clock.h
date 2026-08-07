@@ -18,12 +18,12 @@ public:
 private:
   static constexpr uint8_t TEXT_Y = 4;
 
-  String _text;
-  int16_t _offset = 0;
-  uint8_t _lastMinute = 255;
-  uint8_t _lastSecond = 255;
-  bool _separatorVisible = true;
-  uint32_t _scrollTimer = 0;
+  String text_;
+  int16_t offset_ = 0;
+  uint8_t lastMinute_ = 255;
+  uint8_t lastSecond_ = 255;
+  bool separatorVisible_ = true;
+  uint32_t scrollTimer_ = 0;
 
   void rebuildText(EffectContext& ctx);
 };

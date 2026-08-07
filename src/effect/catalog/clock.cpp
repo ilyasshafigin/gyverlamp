@@ -24,11 +24,11 @@ namespace {
 } // namespace
 
 void EffectClock::setup(EffectContext& ctx) {
-  _offset = ctx.width;
-  _lastMinute = 255;
-  _lastSecond = 255;
-  _separatorVisible = true;
-  _scrollTimer = ctx.nowMs;
+  offset_ = ctx.width;
+  lastMinute_ = 255;
+  lastSecond_ = 255;
+  separatorVisible_ = true;
+  scrollTimer_ = ctx.nowMs;
   rebuildText(ctx);
 }
 
@@ -36,35 +36,35 @@ void EffectClock::render(EffectContext& ctx) {
   const uint8_t mins = ctx.time.getMinutes();
   const uint8_t secs = ctx.time.getSeconds();
 
-  if (mins != _lastMinute || secs != _lastSecond) {
-    _separatorVisible = !_separatorVisible;
-    _lastMinute = mins;
-    _lastSecond = secs;
+  if (mins != lastMinute_ || secs != lastSecond_) {
+    separatorVisible_ = !separatorVisible_;
+    lastMinute_ = mins;
+    lastSecond_ = secs;
     rebuildText(ctx);
   }
 
   const uint16_t scrollInterval = speedToIntervalMs(ctx.speed, 100, 20);
 
-  if (ctx.nowMs - _scrollTimer >= scrollInterval) {
-    _scrollTimer = ctx.nowMs;
+  if (ctx.nowMs - scrollTimer_ >= scrollInterval) {
+    scrollTimer_ = ctx.nowMs;
 
-    const int16_t textWidth = TextRenderer::stringWidth(_text);
-    _offset--;
-    if (_offset < -textWidth) {
-      _offset = ctx.width;
+    const int16_t textWidth = TextRenderer::stringWidth(text_);
+    offset_--;
+    if (offset_ < -textWidth) {
+      offset_ = ctx.width;
     }
   }
 
   ctx.led.clearLeds();
 
   if (ctx.palette) {
-    TextRenderer::drawString(ctx.led, _offset, TEXT_Y, _text, ColorFromPalette(*ctx.palette, ctx.scale), false);
+    TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, ColorFromPalette(*ctx.palette, ctx.scale), false);
   } else {
     const uint8_t hue = ctx.scale;
     if (hue == 1U) {
-      TextRenderer::drawString(ctx.led, _offset, TEXT_Y, _text, CRGB::White, false);
+      TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, CRGB::White, false);
     } else {
-      TextRenderer::drawString(ctx.led, _offset, TEXT_Y, _text, CHSV(hue, 255, 255), false);
+      TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, CHSV(hue, 255, 255), false);
     }
   }
 }
@@ -72,5 +72,5 @@ void EffectClock::render(EffectContext& ctx) {
 void EffectClock::rebuildText(EffectContext& ctx) {
   const uint8_t hrs = ctx.time.getHours();
   const uint8_t mins = ctx.time.getMinutes();
-  _text = formatClock(hrs, mins, _separatorVisible);
+  text_ = formatClock(hrs, mins, separatorVisible_);
 }

@@ -13,36 +13,36 @@
 #include "state_notifier.h"
 
 void FrameRenderer::render(bool forceShow) {
-  if (_effects.updateTransition()) {
-    _stateNotifier.stateChanged();
+  if (effects_.updateTransition()) {
+    stateNotifier_.stateChanged();
   }
-  _notifications.tick();
+  notifications_.tick();
 
-  const NotificationFrame& notification = _notifications.frame();
-  const bool transitionActive = _effects.isTransitioning();
-  const bool forceEffectRender = _power.isFading() || transitionActive || notification.isVisible();
+  const NotificationFrame& notification = notifications_.frame();
+  const bool transitionActive = effects_.isTransitioning();
+  const bool forceEffectRender = power_.isFading() || transitionActive || notification.isVisible();
   const bool visualActive = forceEffectRender;
 
   const uint32_t now = millis();
-  const bool frameDue = forceShow || !visualActive || now - _lastFrameMs >= FRAME_MS;
+  const bool frameDue = forceShow || !visualActive || now - lastFrameMs_ >= FRAME_MS;
 
   if (!frameDue) return;
 
   if (visualActive) {
-    _lastFrameMs = now;
+    lastFrameMs_ = now;
   }
 
   bool frameChanged = false;
 
-  if (_power.isEffectVisible()) {
-    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { frameChanged = _effects.render(forceEffectRender); });
+  if (power_.isEffectVisible()) {
+    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { frameChanged = effects_.render(forceEffectRender); });
 
-    const uint8_t combinedOpacity = scale8(_power.getEffectOpacity(), _effects.getTransitionOpacity());
+    const uint8_t combinedOpacity = scale8(power_.getEffectOpacity(), effects_.getTransitionOpacity());
     if (combinedOpacity < 255) {
       if (combinedOpacity == 0) {
-        _led.clearLeds();
+        led_.clearLeds();
       } else {
-        _led.scale(combinedOpacity);
+        led_.scale(combinedOpacity);
       }
     }
 
@@ -50,34 +50,34 @@ void FrameRenderer::render(bool forceShow) {
       frameChanged = true;
     }
   } else {
-    _led.clearLeds();
+    led_.clearLeds();
     frameChanged = true;
   }
 
   if (notification.isVisible()) {
     if (notification.backdropDim > 0) {
-      _led.fadeToBlack(notification.backdropDim);
+      led_.fadeToBlack(notification.backdropDim);
     }
-    NotificationOverlay overlay(_led, notification.opacity, notification.backdropDim);
-    _notifications.renderOverlay(overlay, notification);
+    NotificationOverlay overlay(led_, notification.opacity, notification.backdropDim);
+    notifications_.renderOverlay(overlay, notification);
     frameChanged = true;
   }
 
-  const bool visible = _power.isEffectVisible() || notification.isVisible();
+  const bool visible = power_.isEffectVisible() || notification.isVisible();
   showOrBlackout(forceShow, frameChanged, visible);
 }
 
 void FrameRenderer::showOrBlackout(bool forceShow, bool frameChanged, bool visible) {
   if (visible) {
     if (forceShow || frameChanged) {
-      LoopProfiler::measure(LoopProfiler::LEDS_SHOW, [this]() { _led.showLeds(_effects.getOutputBrightness()); });
-      _offFrameCleared = false;
+      LoopProfiler::measure(LoopProfiler::LEDS_SHOW, [this]() { led_.showLeds(effects_.getOutputBrightness()); });
+      offFrameCleared_ = false;
     }
     return;
   }
 
-  if (!_offFrameCleared) {
-    _led.blackout();
-    _offFrameCleared = true;
+  if (!offFrameCleared_) {
+    led_.blackout();
+    offFrameCleared_ = true;
   }
 }

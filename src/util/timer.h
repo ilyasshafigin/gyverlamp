@@ -8,43 +8,43 @@ public:
   typedef std::function<void()> CallBackType;
 
   explicit Timer(unsigned long intervalMs)
-    : interval(intervalMs),
-      callback(nullptr),
-      lastRun(0),
-      running(false) {}
+    : interval_(intervalMs),
+      callback_(nullptr),
+      lastRun_(0),
+      running_(false) {}
 
   Timer(unsigned long intervalMs, CallBackType cb)
-    : interval(intervalMs),
-      callback(cb),
-      lastRun(0),
-      running(false) {}
+    : interval_(intervalMs),
+      callback_(cb),
+      lastRun_(0),
+      running_(false) {}
 
-  void setOnTimer(CallBackType cb) { callback = cb; }
+  void setOnTimer(CallBackType cb) { callback_ = cb; }
 
-  void setInterval(unsigned long intervalMs) { interval = intervalMs; }
+  void setInterval(unsigned long intervalMs) { interval_ = intervalMs; }
 
   void start() {
-    lastRun = millis();
-    running = true;
+    lastRun_ = millis();
+    running_ = true;
   }
 
-  void stop() { running = false; }
+  void stop() { running_ = false; }
 
   void update() {
-    if (!running || callback == nullptr) {
+    if (!running_ || callback_ == nullptr) {
       return;
     }
 
     const unsigned long now = millis();
-    if (now - lastRun >= interval) {
-      lastRun = now;
-      callback();
+    if (now - lastRun_ >= interval_) {
+      lastRun_ = now;
+      callback_();
     }
   }
 
 private:
-  unsigned long interval;
-  CallBackType callback;
-  unsigned long lastRun;
-  bool running;
+  unsigned long interval_;
+  CallBackType callback_;
+  unsigned long lastRun_;
+  bool running_;
 };

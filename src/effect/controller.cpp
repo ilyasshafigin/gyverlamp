@@ -14,55 +14,55 @@
 #include "palette_catalog.h"
 
 void EffectController::init() {
-  if (!setEffectImmediate(_eeprom.readCurrentEffectId())) {
+  if (!setEffectImmediate(eeprom_.readCurrentEffectId())) {
     setEffectImmediate(Effects::fallback());
   }
 }
 
 bool EffectController::render(bool force) {
-  if (!_outputEnabled) return false;
+  if (!outputEnabled_) return false;
 
   if (!force) {
-    if (millis() - _tickTimer < FRAME_MS) {
+    if (millis() - tickTimer_ < FRAME_MS) {
       return false;
     }
   }
 
-  _tickTimer = millis();
+  tickTimer_ = millis();
 
   const uint32_t nowMs = millis();
-  uint32_t deltaMs = nowMs - _lastRenderMs;
+  uint32_t deltaMs = nowMs - lastRenderMs_;
   if (deltaMs > 100U) deltaMs = 100U;
-  _lastRenderMs = nowMs;
+  lastRenderMs_ = nowMs;
 
-  const EffectSettings& settings = _settings.getEffectSettings(_currentEffectId);
-  const CRGBPalette16* palette = Palettes::getPalette(_settings.getSelectedPalette());
-  const AudioFrame& audio = _audio.frame();
-  const AudioConfig& audioConfig = _audio.config();
+  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
+  const AudioFrame& audio = audio_.frame();
+  const AudioConfig& audioConfig = audio_.config();
 
   RuntimeEffectSettings runtimeSettings = AudioModulation::applyModulation(settings, audio, audioConfig);
 
-  _runtimeBrightness = runtimeSettings.brightness;
-  _runtimeBrightnessValid = true;
+  runtimeBrightness_ = runtimeSettings.brightness;
+  runtimeBrightnessValid_ = true;
 
-  if (_currentEffect) {
+  if (currentEffect_) {
     EffectContext ctx(
       runtimeSettings.brightness,
       runtimeSettings.speed,
       runtimeSettings.scale,
-      _red,
-      _green,
-      _blue,
+      red_,
+      green_,
+      blue_,
       nowMs,
       deltaMs,
       palette,
       audio,
       audioConfig,
-      _led,
-      _time
+      led_,
+      time_
     );
 
-    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { _currentEffect->render(ctx); });
+    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { currentEffect_->render(ctx); });
 
     return true;
   }
@@ -71,52 +71,52 @@ bool EffectController::render(bool force) {
 }
 
 void EffectController::setupCurrentEffect() {
-  if (!_currentEffect) return;
+  if (!currentEffect_) return;
 
-  _lastRenderMs = millis();
+  lastRenderMs_ = millis();
   const uint32_t nowMs = millis();
   const uint32_t deltaMs = 0;
 
-  const EffectSettings& settings = _settings.getEffectSettings(_currentEffectId);
+  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
   const RuntimeEffectSettings runtimeSettings = RuntimeEffectSettings::fromSettings(settings);
-  const CRGBPalette16* palette = Palettes::getPalette(_settings.getSelectedPalette());
-  const AudioFrame& audio = _audio.frame();
-  const AudioConfig& audioConfig = _audio.config();
+  const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
+  const AudioFrame& audio = audio_.frame();
+  const AudioConfig& audioConfig = audio_.config();
 
-  _runtimeBrightness = runtimeSettings.brightness;
-  _runtimeBrightnessValid = true;
+  runtimeBrightness_ = runtimeSettings.brightness;
+  runtimeBrightnessValid_ = true;
 
   EffectContext ctx(
     runtimeSettings.brightness,
     runtimeSettings.speed,
     runtimeSettings.scale,
-    _red,
-    _green,
-    _blue,
+    red_,
+    green_,
+    blue_,
     nowMs,
     deltaMs,
     palette,
     audio,
     audioConfig,
-    _led,
-    _time
+    led_,
+    time_
   );
-  _currentEffect->setup(ctx);
+  currentEffect_->setup(ctx);
 }
 
 bool EffectController::setEffect(Effects::Id effectId) {
   if (!Effects::isValid(effectId)) return false;
 
-  if (_transitionPhase == TransitionPhase::Idle) {
-    if (effectId == _currentEffectId) {
-      _pendingEffectId = Effects::Id::INVALID;
+  if (transitionPhase_ == TransitionPhase::Idle) {
+    if (effectId == currentEffectId_) {
+      pendingEffectId_ = Effects::Id::INVALID;
       return true;
     }
   } else {
-    if (effectId == _pendingEffectId) return true;
+    if (effectId == pendingEffectId_) return true;
   }
 
-  _pendingEffectId = effectId;
+  pendingEffectId_ = effectId;
   return true;
 }
 
@@ -124,50 +124,50 @@ bool EffectController::setEffectImmediate(Effects::Id effectId) {
   if (!Effects::isValid(effectId)) return false;
 
   switchEffectNow(effectId);
-  _transitionOpacity.snapTo(255);
-  _transitionPhase = TransitionPhase::Idle;
-  _pendingEffectId = Effects::Id::INVALID;
+  transitionOpacity_.snapTo(255);
+  transitionPhase_ = TransitionPhase::Idle;
+  pendingEffectId_ = Effects::Id::INVALID;
   return true;
 }
 
 bool EffectController::switchEffectNow(Effects::Id effectId) {
-  if (_currentEffect) {
-    _currentEffect->~Effect();
-    _currentEffect = nullptr;
+  if (currentEffect_) {
+    currentEffect_->~Effect();
+    currentEffect_ = nullptr;
   }
 
-  _currentEffectId = effectId;
-  _currentEffect = Effects::createEffect(_currentEffectId, _effectBuffer);
+  currentEffectId_ = effectId;
+  currentEffect_ = Effects::createEffect(currentEffectId_, effectBuffer_);
 
-  _led.clearLeds();
-  _runtimeBrightnessValid = false;
+  led_.clearLeds();
+  runtimeBrightnessValid_ = false;
   setupCurrentEffect();
-  _settings.markEffectSettingsChanged();
+  settings_.markEffectSettingsChanged();
   return true;
 }
 
 bool EffectController::updateTransition() {
   const uint32_t nowMs = millis();
-  _transitionOpacity.tick(nowMs);
+  transitionOpacity_.tick(nowMs);
 
-  if (_transitionPhase == TransitionPhase::Idle) {
-    if (_pendingEffectId != Effects::Id::INVALID && _pendingEffectId != _currentEffectId) {
-      _transitionOpacity.fadeTo(0, EFFECT_FADE_OUT_MS, nowMs);
-      _transitionPhase = TransitionPhase::FadingOut;
+  if (transitionPhase_ == TransitionPhase::Idle) {
+    if (pendingEffectId_ != Effects::Id::INVALID && pendingEffectId_ != currentEffectId_) {
+      transitionOpacity_.fadeTo(0, EFFECT_FADE_OUT_MS, nowMs);
+      transitionPhase_ = TransitionPhase::FadingOut;
       return false;
     }
-  } else if (_transitionPhase == TransitionPhase::FadingOut) {
-    if (_transitionOpacity.value() == 0 && _transitionOpacity.target() == 0) {
-      switchEffectNow(_pendingEffectId);
-      _transitionOpacity.fadeTo(255, EFFECT_FADE_IN_MS, nowMs);
-      _transitionPhase = TransitionPhase::FadingIn;
+  } else if (transitionPhase_ == TransitionPhase::FadingOut) {
+    if (transitionOpacity_.value() == 0 && transitionOpacity_.target() == 0) {
+      switchEffectNow(pendingEffectId_);
+      transitionOpacity_.fadeTo(255, EFFECT_FADE_IN_MS, nowMs);
+      transitionPhase_ = TransitionPhase::FadingIn;
       return true;
     }
-  } else if (_transitionPhase == TransitionPhase::FadingIn) {
-    if (_transitionOpacity.value() == 255 && _transitionOpacity.target() == 255) {
-      _transitionPhase = TransitionPhase::Idle;
-      if (_pendingEffectId == _currentEffectId) {
-        _pendingEffectId = Effects::Id::INVALID;
+  } else if (transitionPhase_ == TransitionPhase::FadingIn) {
+    if (transitionOpacity_.value() == 255 && transitionOpacity_.target() == 255) {
+      transitionPhase_ = TransitionPhase::Idle;
+      if (pendingEffectId_ == currentEffectId_) {
+        pendingEffectId_ = Effects::Id::INVALID;
       }
       return false;
     }
@@ -182,10 +182,10 @@ bool EffectController::resetEffectSettingsToDefaults() {
     defaults[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
   }
 
-  if (!_settings.resetEffectSettingsToDefaults(defaults)) return false;
+  if (!settings_.resetEffectSettingsToDefaults(defaults)) return false;
 
   setupCurrentEffect();
-  if (_outputEnabled) {
+  if (outputEnabled_) {
     render(true);
   }
   return true;
@@ -223,15 +223,15 @@ void EffectController::setRandomEffect() {
 }
 
 uint8_t EffectController::getEffectBrightness() const {
-  return _settings.getEffectSettings(getSelectedEffectId()).brightness;
+  return settings_.getEffectSettings(getSelectedEffectId()).brightness;
 }
 
 uint8_t EffectController::getOutputBrightness() const {
-  const uint8_t globalBrightness = _settings.getGlobalBrightness();
-  if (_runtimeBrightnessValid) {
-    return scale8(_runtimeBrightness, globalBrightness);
+  const uint8_t globalBrightness = settings_.getGlobalBrightness();
+  if (runtimeBrightnessValid_) {
+    return scale8(runtimeBrightness_, globalBrightness);
   }
-  return scale8(_settings.getEffectSettings(_currentEffectId).brightness, globalBrightness);
+  return scale8(settings_.getEffectSettings(currentEffectId_).brightness, globalBrightness);
 }
 
 void EffectController::setEffectBrightness(uint8_t value) {
@@ -248,32 +248,32 @@ void EffectController::setEffectScale(uint8_t value) {
 
 void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t value, uint8_t changedParam) {
   const Effects::Id effectId = getSelectedEffectId();
-  EffectSettings& effectSettings = _settings.getEffectSettings(effectId);
+  EffectSettings& effectSettings = settings_.getEffectSettings(effectId);
   if (effectSettings.*field == value) return;
   effectSettings.*field = value;
 
-  if (field == &EffectSettings::brightness && _currentEffectId == effectId) {
-    _runtimeBrightness = value;
-    _runtimeBrightnessValid = true;
+  if (field == &EffectSettings::brightness && currentEffectId_ == effectId) {
+    runtimeBrightness_ = value;
+    runtimeBrightnessValid_ = true;
   }
 
-  if (_currentEffectId == effectId && changedParam != 0) {
+  if (currentEffectId_ == effectId && changedParam != 0) {
     const EffectSettingsSpec spec = Effects::getEffectSettingsSpec(effectId);
     if ((spec.resetOnChange & changedParam) != 0) {
       setupCurrentEffect();
     }
   }
-  _settings.markEffectSettingsChanged();
+  settings_.markEffectSettingsChanged();
 }
 
 Palettes::Id EffectController::getSelectedPalette() const {
-  return _settings.getSelectedPalette();
+  return settings_.getSelectedPalette();
 }
 
 void EffectController::setPalette(Palettes::Id paletteId) {
   const Effects::Id effectId = getSelectedEffectId();
-  _settings.setPalette(paletteId);
-  if (_currentEffectId == effectId) {
+  settings_.setPalette(paletteId);
+  if (currentEffectId_ == effectId) {
     setupCurrentEffect();
   }
 }

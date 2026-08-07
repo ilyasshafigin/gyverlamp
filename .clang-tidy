@@ -1,0 +1,26 @@
+---
+Checks: >
+  -*,
+  clang-analyzer-core.*,
+  clang-analyzer-deadcode.*,
+  clang-analyzer-security.insecureAPI.strcpy,
+  bugprone-branch-clone,
+  bugprone-infinite-loop,
+  bugprone-macro-parentheses,
+  bugprone-misplaced-widening-cast,
+  bugprone-sizeof-expression,
+  bugprone-suspicious-memset-usage,
+  bugprone-use-after-move,
+  modernize-use-nullptr,
+  readability-identifier-naming
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '(^src/|.*/GyverLamp/src/).*'
+FormatStyle: file
+
+CheckOptions:
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: '_'
+...

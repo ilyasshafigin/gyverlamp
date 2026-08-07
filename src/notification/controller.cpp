@@ -6,35 +6,35 @@
 #include "../time/time_service.h"
 
 void NotificationController::init() {
-  _quietHours = _eeprom.readNotificationQuietHours();
+  quietHours_ = eeprom_.readNotificationQuietHours();
 
-  _wifiState = ConnectionState::Idle;
-  _mqttState = ConnectionState::Idle;
-  _otaState = OtaState::Idle;
-  _otaPercent = 0;
+  wifiState_ = ConnectionState::Idle;
+  mqttState_ = ConnectionState::Idle;
+  otaState_ = OtaState::Idle;
+  otaPercent_ = 0;
 
-  _lastWifiChangeMs = millis();
-  _lastMqttChangeMs = millis();
-  _lastOtaChangeMs = millis();
+  lastWifiChangeMs_ = millis();
+  lastMqttChangeMs_ = millis();
+  lastOtaChangeMs_ = millis();
 }
 
 void NotificationController::tick() {
   const uint32_t now = millis();
 
-  if (_userState.tick(now)) {
-    _stateNotifier.stateChanged();
+  if (userState_.tick(now)) {
+    stateNotifier_.stateChanged();
   }
 
   const NotificationSnapshot current = resolveCurrentNotification(now);
 
   if (current.isActive()) {
-    const bool changed = !sameNotification(_activeNotification, current);
+    const bool changed = !sameNotification(activeNotification_, current);
 
     if (changed) {
-      if (_opacity.value() == 0) {
-        _opacity.snapTo(1);
+      if (opacity_.value() == 0) {
+        opacity_.snapTo(1);
       }
-      _opacity.fadeTo(255, NOTIFICATION_FADE_IN_MS, now);
+      opacity_.fadeTo(255, NOTIFICATION_FADE_IN_MS, now);
     }
 
     if (shouldPreFadeOut(current, now)) {
@@ -42,45 +42,45 @@ void NotificationController::tick() {
       const uint32_t remaining = elapsed >= current.durationMs ? 0 : current.durationMs - elapsed;
 
       if (remaining == 0) {
-        _opacity.snapTo(0);
-      } else if (_opacity.target() != 0) {
-        _opacity.fadeTo(0, min<uint32_t>(remaining, NOTIFICATION_FADE_OUT_MS), now);
+        opacity_.snapTo(0);
+      } else if (opacity_.target() != 0) {
+        opacity_.fadeTo(0, min<uint32_t>(remaining, NOTIFICATION_FADE_OUT_MS), now);
       }
     }
 
-    _activeNotification = current;
-    _drawableNotification = current;
+    activeNotification_ = current;
+    drawableNotification_ = current;
   } else {
-    if (_activeNotification.isActive()) {
-      _opacity.fadeTo(0, NOTIFICATION_FADE_OUT_MS, now);
-      _activeNotification = {};
+    if (activeNotification_.isActive()) {
+      opacity_.fadeTo(0, NOTIFICATION_FADE_OUT_MS, now);
+      activeNotification_ = {};
     }
 
-    if (_opacity.value() == 0 && !_opacity.isRunning()) {
-      _drawableNotification = {};
+    if (opacity_.value() == 0 && !opacity_.isRunning()) {
+      drawableNotification_ = {};
     }
   }
 
-  _opacity.tick(now);
+  opacity_.tick(now);
 
-  _frame.snapshot = _drawableNotification;
-  _frame.opacity = _opacity.value();
-  _frame.backdropDim = _frame.snapshot.isActive() ? scale8(_frame.snapshot.targetDim, _frame.opacity) : 0;
+  frame_.snapshot = drawableNotification_;
+  frame_.opacity = opacity_.value();
+  frame_.backdropDim = frame_.snapshot.isActive() ? scale8(frame_.snapshot.targetDim, frame_.opacity) : 0;
 }
 
 void NotificationController::renderOverlay(NotificationOverlay& overlay, const NotificationFrame& frame) {
   const NotificationSnapshot& snaphot = frame.snapshot;
   switch (snaphot.source) {
-    case NotificationSource::User: _userRenderer.render(overlay, snaphot); break;
-    case NotificationSource::Button: _indicatorRenderer.render(overlay, snaphot); break;
+    case NotificationSource::User: userRenderer_.render(overlay, snaphot); break;
+    case NotificationSource::Button: indicatorRenderer_.render(overlay, snaphot); break;
     case NotificationSource::Wifi:
-      _systemRenderer.renderWifi(overlay, snaphot.connectionState, snaphot.startedMs);
+      systemRenderer_.renderWifi(overlay, snaphot.connectionState, snaphot.startedMs);
       break;
     case NotificationSource::Mqtt:
-      _systemRenderer.renderMqtt(overlay, snaphot.connectionState, snaphot.startedMs);
+      systemRenderer_.renderMqtt(overlay, snaphot.connectionState, snaphot.startedMs);
       break;
     case NotificationSource::Ota:
-      _systemRenderer.renderOta(overlay, snaphot.otaState, snaphot.otaPercent, snaphot.startedMs);
+      systemRenderer_.renderOta(overlay, snaphot.otaState, snaphot.otaPercent, snaphot.startedMs);
       break;
     case NotificationSource::None: break;
   }
@@ -91,26 +91,26 @@ bool NotificationController::isActive() const {
 }
 
 uint32_t NotificationController::getUserNotificationRemainingSeconds() const {
-  if (!_userState.isActive() || !_userState.isTimed()) return 0;
+  if (!userState_.isActive() || !userState_.isTimed()) return 0;
 
-  const uint32_t durationMs = _userState.getDurationMs();
-  const uint32_t elapsedMs = millis() - _userState.getStartedMs();
+  const uint32_t durationMs = userState_.getDurationMs();
+  const uint32_t elapsedMs = millis() - userState_.getStartedMs();
   if (elapsedMs >= durationMs) return 0;
 
   return (durationMs - elapsedMs + 999UL) / 1000UL;
 }
 
 bool NotificationController::setQuietHours(const NotificationQuietHours& settings) {
-  _quietHours = settings;
-  return _eeprom.writeNotificationQuietHours(_quietHours);
+  quietHours_ = settings;
+  return eeprom_.writeNotificationQuietHours(quietHours_);
 }
 
 bool NotificationController::isMutedNow() const {
-  if (!_quietHours.enabled) return false;
-  if (_power.isOn()) return false;
-  if (!_time.isSynced()) return false;
+  if (!quietHours_.enabled) return false;
+  if (power_.isOn()) return false;
+  if (!time_.isSynced()) return false;
 
-  return _quietHours.isInQuietHours(_time.getMinutesOfDay());
+  return quietHours_.isInQuietHours(time_.getMinutesOfDay());
 }
 
 void NotificationController::startUserNotification(UserNotificationType type, uint32_t durationMs) {
@@ -119,7 +119,7 @@ void NotificationController::startUserNotification(UserNotificationType type, ui
     return;
   }
 
-  if (getUserNotificationPriority(type) < getUserNotificationPriority(_userState.getType())) {
+  if (getUserNotificationPriority(type) < getUserNotificationPriority(userState_.getType())) {
     return;
   }
 
@@ -127,31 +127,31 @@ void NotificationController::startUserNotification(UserNotificationType type, ui
     durationMs = USER_NOTIFY_DEFAULT_MS;
   }
 
-  _userState.start(type, durationMs);
-  _stateNotifier.stateChanged();
+  userState_.start(type, durationMs);
+  stateNotifier_.stateChanged();
 }
 
 void NotificationController::startUserTextNotification(const String& text, const CRGB& color, uint32_t durationMs) {
   if (text.length() == 0) {
-    if (_userState.isTextActive()) {
+    if (userState_.isTextActive()) {
       stopUserNotification();
     }
     return;
   }
 
-  if (getUserNotificationPriority(UserNotificationType::Text) < getUserNotificationPriority(_userState.getType())) {
+  if (getUserNotificationPriority(UserNotificationType::Text) < getUserNotificationPriority(userState_.getType())) {
     return;
   }
 
-  _userState.startText(text, color, durationMs);
-  _stateNotifier.stateChanged();
+  userState_.startText(text, color, durationMs);
+  stateNotifier_.stateChanged();
 }
 
 void NotificationController::stopUserNotification() {
-  if (!_userState.isActive()) return;
-  _userState.stop();
-  _userNotificationStopped = true;
-  _stateNotifier.stateChanged();
+  if (!userState_.isActive()) return;
+  userState_.stop();
+  userNotificationStopped_ = true;
+  stateNotifier_.stateChanged();
 }
 
 void NotificationController::onWifiConnecting() {
@@ -181,33 +181,33 @@ void NotificationController::onMqttDisabled() {
 }
 
 void NotificationController::setWifiState(ConnectionState state) {
-  if (_wifiState == state) return;
-  _wifiState = state;
-  _lastWifiChangeMs = millis();
+  if (wifiState_ == state) return;
+  wifiState_ = state;
+  lastWifiChangeMs_ = millis();
 }
 
 void NotificationController::setMqttState(ConnectionState state) {
-  if (_mqttState == state) return;
-  _mqttState = state;
-  _lastMqttChangeMs = millis();
+  if (mqttState_ == state) return;
+  mqttState_ = state;
+  lastMqttChangeMs_ = millis();
 }
 
 void NotificationController::onButtonPress(uint8_t count) {
-  _buttonPressCount = count;
-  _lastButtonPressMs = millis();
-  _buttonPressing = true;
+  buttonPressCount_ = count;
+  lastButtonPressMs_ = millis();
+  buttonPressing_ = true;
 
   // Если нет action notification, создаём короткий Button frame,
   // чтобы press echo мог отрисоваться сам по себе.
-  if (_indicatorType == IndicatorType::None) {
-    _indicatorType = IndicatorType::None;
-    _lastIndicatorChangeMs = _lastButtonPressMs;
+  if (indicatorType_ == IndicatorType::None) {
+    indicatorType_ = IndicatorType::None;
+    lastIndicatorChangeMs_ = lastButtonPressMs_;
   }
 }
 
 void NotificationController::onButtonRelease() {
-  _buttonPressing = false;
-  _lastButtonPressMs = millis();
+  buttonPressing_ = false;
+  lastButtonPressMs_ = millis();
 }
 
 void NotificationController::onButtonPowerOn() {
@@ -244,157 +244,157 @@ void NotificationController::onButtonBrightness(uint8_t brightness, bool increas
 
 void NotificationController::startIndicator(IndicatorType type, uint8_t value, bool direction) {
   if (type == IndicatorType::None || type == IndicatorType::PowerOff) {
-    _indicatorType = IndicatorType::None;
+    indicatorType_ = IndicatorType::None;
     return;
   }
 
-  _indicatorType = type;
-  _buttonValue = value;
-  _buttonDirection = direction;
-  _lastIndicatorChangeMs = millis();
+  indicatorType_ = type;
+  buttonValue_ = value;
+  buttonDirection_ = direction;
+  lastIndicatorChangeMs_ = millis();
 }
 
 void NotificationController::onOtaStart() {
-  _otaState = OtaState::Running;
-  _otaPercent = 0;
-  _lastOtaChangeMs = millis();
+  otaState_ = OtaState::Running;
+  otaPercent_ = 0;
+  lastOtaChangeMs_ = millis();
 }
 
 void NotificationController::onOtaProgress(uint8_t percent) {
-  _otaState = OtaState::Running;
-  _otaPercent = percent > 100 ? 100 : percent;
+  otaState_ = OtaState::Running;
+  otaPercent_ = percent > 100 ? 100 : percent;
 }
 
 void NotificationController::onOtaEnd() {
-  _otaState = OtaState::Success;
-  _otaPercent = 100;
-  _lastOtaChangeMs = millis();
+  otaState_ = OtaState::Success;
+  otaPercent_ = 100;
+  lastOtaChangeMs_ = millis();
 }
 
 void NotificationController::onOtaError() {
-  _otaState = OtaState::Error;
-  _lastOtaChangeMs = millis();
+  otaState_ = OtaState::Error;
+  lastOtaChangeMs_ = millis();
 }
 
 NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t now) const {
   NotificationSnapshot snaphot;
 
-  if (_otaState == OtaState::Running) {
+  if (otaState_ == OtaState::Running) {
     snaphot.source = NotificationSource::Ota;
-    snaphot.otaState = _otaState;
-    snaphot.startedMs = _lastOtaChangeMs;
+    snaphot.otaState = otaState_;
+    snaphot.startedMs = lastOtaChangeMs_;
     snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
-    snaphot.otaPercent = _otaPercent;
+    snaphot.otaPercent = otaPercent_;
     return filterMuted(snaphot);
   }
 
-  if (_otaState == OtaState::Error && isRecently(_lastOtaChangeMs, SYSTEM_ERROR_VISIBLE_MS)) {
+  if (otaState_ == OtaState::Error && isRecently(lastOtaChangeMs_, SYSTEM_ERROR_VISIBLE_MS)) {
     snaphot.source = NotificationSource::Ota;
-    snaphot.otaState = _otaState;
-    snaphot.startedMs = _lastOtaChangeMs;
+    snaphot.otaState = otaState_;
+    snaphot.startedMs = lastOtaChangeMs_;
     snaphot.durationMs = SYSTEM_ERROR_VISIBLE_MS;
     snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_otaState == OtaState::Success && isRecently(_lastOtaChangeMs, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (otaState_ == OtaState::Success && isRecently(lastOtaChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
     snaphot.source = NotificationSource::Ota;
-    snaphot.otaState = _otaState;
-    snaphot.startedMs = _lastOtaChangeMs;
+    snaphot.otaState = otaState_;
+    snaphot.startedMs = lastOtaChangeMs_;
     snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
     snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
     snaphot.otaPercent = 100;
     return filterMuted(snaphot);
   }
 
-  if (_userState.isAlertActive()) {
+  if (userState_.isAlertActive()) {
     snaphot.source = NotificationSource::User;
-    snaphot.userType = _userState.getType();
-    snaphot.startedMs = _userState.getStartedMs();
-    snaphot.durationMs = _userState.getDurationMs();
+    snaphot.userType = userState_.getType();
+    snaphot.startedMs = userState_.getStartedMs();
+    snaphot.durationMs = userState_.getDurationMs();
     snaphot.targetDim = USER_ALERT_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_userState.isTextActive()) {
+  if (userState_.isTextActive()) {
     snaphot.source = NotificationSource::User;
     snaphot.userType = UserNotificationType::Text;
-    snaphot.startedMs = _userState.getStartedMs();
-    snaphot.durationMs = _userState.getDurationMs();
+    snaphot.startedMs = userState_.getStartedMs();
+    snaphot.durationMs = userState_.getDurationMs();
     snaphot.targetDim = USER_NOTIFY_DIM;
-    snaphot.text = &_userState.getText();
-    snaphot.color = _userState.getColor();
+    snaphot.text = &userState_.getText();
+    snaphot.color = userState_.getColor();
     return filterMuted(snaphot);
   }
 
   const bool hasPressEcho =
-    _buttonPressCount > 0 && (_buttonPressing || isRecently(_lastButtonPressMs, BUTTON_PRESS_ECHO_MS));
-  const uint32_t buttonDurationMs = getIndicatorDuration(_indicatorType);
-  const bool hasButtonAction = _indicatorType != IndicatorType::None && buttonDurationMs > 0 &&
-                               isRecently(_lastIndicatorChangeMs, buttonDurationMs);
+    buttonPressCount_ > 0 && (buttonPressing_ || isRecently(lastButtonPressMs_, BUTTON_PRESS_ECHO_MS));
+  const uint32_t buttonDurationMs = getIndicatorDuration(indicatorType_);
+  const bool hasButtonAction = indicatorType_ != IndicatorType::None && buttonDurationMs > 0 &&
+                               isRecently(lastIndicatorChangeMs_, buttonDurationMs);
 
   if (hasButtonAction || hasPressEcho) {
     snaphot.source = NotificationSource::Button;
 
     if (hasButtonAction) {
-      snaphot.indicatorType = _indicatorType;
-      snaphot.buttonValue = _buttonValue;
-      snaphot.buttonDirection = _buttonDirection;
-      snaphot.startedMs = _lastIndicatorChangeMs;
+      snaphot.indicatorType = indicatorType_;
+      snaphot.buttonValue = buttonValue_;
+      snaphot.buttonDirection = buttonDirection_;
+      snaphot.startedMs = lastIndicatorChangeMs_;
       snaphot.durationMs = buttonDurationMs;
     } else {
       snaphot.indicatorType = IndicatorType::None;
-      snaphot.startedMs = _lastButtonPressMs;
+      snaphot.startedMs = lastButtonPressMs_;
       snaphot.durationMs = BUTTON_PRESS_ECHO_MS;
     }
 
-    snaphot.buttonPressCount = _buttonPressCount;
-    snaphot.buttonPressMs = _lastButtonPressMs;
-    snaphot.buttonPressing = _buttonPressing;
+    snaphot.buttonPressCount = buttonPressCount_;
+    snaphot.buttonPressMs = lastButtonPressMs_;
+    snaphot.buttonPressing = buttonPressing_;
     snaphot.targetDim = 0;
     return filterMuted(snaphot);
   }
 
-  if (_wifiState == ConnectionState::Connecting || _wifiState == ConnectionState::Error) {
+  if (wifiState_ == ConnectionState::Connecting || wifiState_ == ConnectionState::Error) {
     snaphot.source = NotificationSource::Wifi;
-    snaphot.connectionState = _wifiState;
-    snaphot.startedMs = _lastWifiChangeMs;
-    snaphot.durationMs = _wifiState == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
+    snaphot.connectionState = wifiState_;
+    snaphot.startedMs = lastWifiChangeMs_;
+    snaphot.durationMs = wifiState_ == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
     snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_mqttState == ConnectionState::Connecting || _mqttState == ConnectionState::Error) {
+  if (mqttState_ == ConnectionState::Connecting || mqttState_ == ConnectionState::Error) {
     snaphot.source = NotificationSource::Mqtt;
-    snaphot.connectionState = _mqttState;
-    snaphot.startedMs = _lastMqttChangeMs;
-    snaphot.durationMs = _mqttState == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
+    snaphot.connectionState = mqttState_;
+    snaphot.startedMs = lastMqttChangeMs_;
+    snaphot.durationMs = mqttState_ == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
     snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_userState.isNotifyActive()) {
+  if (userState_.isNotifyActive()) {
     snaphot.source = NotificationSource::User;
     snaphot.userType = UserNotificationType::Notify;
-    snaphot.startedMs = _userState.getStartedMs();
-    snaphot.durationMs = _userState.getDurationMs();
+    snaphot.startedMs = userState_.getStartedMs();
+    snaphot.durationMs = userState_.getDurationMs();
     snaphot.targetDim = USER_NOTIFY_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_wifiState == ConnectionState::Connected && isRecently(_lastWifiChangeMs, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (wifiState_ == ConnectionState::Connected && isRecently(lastWifiChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
     snaphot.source = NotificationSource::Wifi;
-    snaphot.connectionState = _wifiState;
-    snaphot.startedMs = _lastWifiChangeMs;
+    snaphot.connectionState = wifiState_;
+    snaphot.startedMs = lastWifiChangeMs_;
     snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
     snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
     return filterMuted(snaphot);
   }
 
-  if (_mqttState == ConnectionState::Connected && isRecently(_lastMqttChangeMs, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (mqttState_ == ConnectionState::Connected && isRecently(lastMqttChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
     snaphot.source = NotificationSource::Mqtt;
-    snaphot.connectionState = _mqttState;
-    snaphot.startedMs = _lastMqttChangeMs;
+    snaphot.connectionState = mqttState_;
+    snaphot.startedMs = lastMqttChangeMs_;
     snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
     snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
     return filterMuted(snaphot);
@@ -462,10 +462,10 @@ uint32_t NotificationController::getIndicatorDuration(IndicatorType type) {
   switch (type) {
     case IndicatorType::PowerOn: return 700;
     case IndicatorType::Dismiss: return 450;
-    case IndicatorType::NextEffect: return 900;
+    case IndicatorType::NextEffect:
     case IndicatorType::PreviousEffect: return 900;
     case IndicatorType::Brightness: return 1200;
-    case IndicatorType::RotationOn: return 900;
+    case IndicatorType::RotationOn:
     case IndicatorType::RotationOff: return 900;
     case IndicatorType::PowerOff:
     case IndicatorType::None:

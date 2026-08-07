@@ -10,28 +10,28 @@ public:
   void reset();
 
 private:
-  uint32_t _lastTick = 0;
-  uint32_t _intervalMs = 0;
+  uint32_t lastTick_ = 0;
+  uint32_t intervalMs_ = 0;
 };
 
 inline PeriodicTimer::PeriodicTimer(uint32_t intervalMs)
-  : _lastTick(millis()),
-    _intervalMs(intervalMs) {
+  : lastTick_(millis()),
+    intervalMs_(intervalMs) {
 }
 
 inline void PeriodicTimer::setInterval(uint32_t intervalMs) {
-  _intervalMs = intervalMs;
+  intervalMs_ = intervalMs;
 }
 
 inline bool PeriodicTimer::isReady() {
   const uint32_t now = millis();
-  if (now - _lastTick >= _intervalMs) {
-    _lastTick = now;
+  if (now - lastTick_ >= intervalMs_) {
+    lastTick_ = now;
     return true;
   }
   return false;
 }
 
 inline void PeriodicTimer::reset() {
-  _lastTick = millis();
+  lastTick_ = millis();
 }

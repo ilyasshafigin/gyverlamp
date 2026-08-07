@@ -12,14 +12,14 @@ class RunningText;
 class UserNotificationRenderer {
 public:
   explicit UserNotificationRenderer(RunningText& runningText)
-    : _runningText(runningText) {}
+    : runningText_(runningText) {}
 
   void render(NotificationOverlay& overlay, const NotificationSnapshot& notification);
 
 private:
-  RunningText& _runningText;
-  String _lastText;
-  uint32_t _lastTextStartedMs = 0;
+  RunningText& runningText_;
+  String lastText_;
+  uint32_t lastTextStartedMs_ = 0;
 
   void renderAlarm(NotificationOverlay& overlay, uint32_t startedMs);
   void renderWarning(NotificationOverlay& overlay, uint32_t startedMs);

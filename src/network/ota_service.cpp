@@ -13,23 +13,23 @@ void OtaService::init() {
   ArduinoOTA.onStart([this]() {
     Serial.println("[OTA] OTA Start");
 
-    _notifications.onOtaStart();
-    _frameRenderer.renderNow();
+    notifications_.onOtaStart();
+    frameRenderer_.renderNow();
   });
 
   ArduinoOTA.onEnd([this]() {
     Serial.println("[OTA] OTA End");
 
-    _notifications.onOtaEnd();
-    _frameRenderer.renderNow();
+    notifications_.onOtaEnd();
+    frameRenderer_.renderNow();
   });
 
   ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
     const unsigned int percent =
       total == 0 ? 0 : static_cast<unsigned int>((static_cast<uint64_t>(progress) * 100U) / total);
 
-    _notifications.onOtaProgress(percent);
-    _frameRenderer.render();
+    notifications_.onOtaProgress(percent);
+    frameRenderer_.render();
 
     Serial.printf("[OTA] Progress: %u%%\n\r", percent);
   });
@@ -46,19 +46,18 @@ void OtaService::init() {
     else if (error == OTA_END_ERROR)
       Serial.println("[OTA] End Failed");
 
-    _notifications.onOtaError();
-    _frameRenderer.renderNow();
+    notifications_.onOtaError();
+    frameRenderer_.renderNow();
   });
 }
 
 void OtaService::tick() {
-  static bool begun = false;
-  if (!begun) {
-    if (!_wifi.isStaConnected()) {
+  if (!begun_) {
+    if (!wifi_.isStaConnected()) {
       return;
     }
     ArduinoOTA.begin();
-    begun = true;
+    begun_ = true;
   }
   ArduinoOTA.handle();
 }

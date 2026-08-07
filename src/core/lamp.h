@@ -29,55 +29,34 @@ public:
   TimeService time;
   StateNotifier stateNotifier;
   SettingsAsync webSettings;
-  SettingsRepository settings;
-  RunningText runningText;
-  AudioService audio;
-  EffectController effects;
-  PowerController power;
-  NotificationController notifications;
-  FrameRenderer frameRenderer;
-  RotationController rotation;
-  WifiService wifi;
-  TouchButton button;
-  UpdService upd;
-  OtaService ota;
-  MqttService mqtt;
-  WebService web;
-
-  explicit Lamp()
-    : eeprom(),
-      led(),
-      time(),
-      stateNotifier(),
-      webSettings(),
-      settings(eeprom),
-      runningText(led, WIDTH),
-      audio(eeprom),
-      effects(audio, eeprom, led, settings, time),
-      power(eeprom, effects, stateNotifier),
-      notifications(eeprom, power, runningText, stateNotifier, time),
-      frameRenderer(effects, led, notifications, power, stateNotifier),
-      rotation(eeprom, effects, stateNotifier),
-      wifi(eeprom, notifications),
-      button(eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN),
-      upd(effects, power, settings, stateNotifier, time, button, UDP_PORT),
-      ota(frameRenderer, notifications, wifi),
-      mqtt(audio, eeprom, effects, notifications, power, rotation, settings, button, wifi),
-      web(
-        audio,
-        eeprom,
-        effects,
-        mqtt,
-        notifications,
-        power,
-        rotation,
-        webSettings,
-        settings,
-        stateNotifier,
-        time,
-        button,
-        wifi
-      ) {}
+  SettingsRepository settings{eeprom};
+  RunningText runningText{led, WIDTH};
+  AudioService audio{eeprom};
+  EffectController effects{audio, eeprom, led, settings, time};
+  PowerController power{eeprom, effects, stateNotifier};
+  NotificationController notifications{eeprom, power, runningText, stateNotifier, time};
+  FrameRenderer frameRenderer{effects, led, notifications, power, stateNotifier};
+  RotationController rotation{eeprom, effects, stateNotifier};
+  WifiService wifi{eeprom, notifications};
+  TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
+  UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
+  OtaService ota{frameRenderer, notifications, wifi};
+  MqttService mqtt{audio, eeprom, effects, notifications, power, rotation, settings, button, wifi};
+  WebService web{
+    audio,
+    eeprom,
+    effects,
+    mqtt,
+    notifications,
+    power,
+    rotation,
+    webSettings,
+    settings,
+    stateNotifier,
+    time,
+    button,
+    wifi
+  };
 
   void setup();
   void loop();

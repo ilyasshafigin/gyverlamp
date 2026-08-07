@@ -12,7 +12,7 @@ class Microphone {
 public:
   explicit Microphone()
 #ifdef USE_ADC
-    : _vol(A0) {
+    : vol_(A0) {
   }
 #else
   {
@@ -22,12 +22,12 @@ public:
   void init();
   void tick();
 
-  const AudioFrame& frame() const { return _frame; }
+  const AudioFrame& frame() const { return frame_; }
 
 private:
 #ifdef USE_ADC
-  VolAnalyzer _vol, _low, _high;
-  uint32_t _lastTickMs;
+  VolAnalyzer vol_, low_, high_;
+  uint32_t lastTickMs_;
 #endif
-  AudioFrame _frame;
+  AudioFrame frame_;
 };

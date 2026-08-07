@@ -10,38 +10,38 @@ class StateNotifier;
 class PowerController {
 public:
   explicit PowerController(EepromStore& eeprom, EffectController& effects, StateNotifier& stateNotifier)
-    : _eeprom(eeprom),
-      _effects(effects),
-      _stateNotifier(stateNotifier) {}
+    : eeprom_(eeprom),
+      effects_(effects),
+      stateNotifier_(stateNotifier) {}
 
   void init();
 
-  uint16_t getAutoOffMinutes() const { return _autoOffMinutes; }
+  uint16_t getAutoOffMinutes() const { return autoOffMinutes_; }
   bool setAutoOffMinutes(int minutes);
   uint32_t getAutoOffRemainingSeconds() const;
 
-  bool isOn() const { return _on; }
-  bool isEffectVisible() const { return _effectOpacity.value() > 0; }
-  bool isFullyOff() const { return !_on && _effectOpacity.value() == 0; }
-  uint8_t getEffectOpacity() const { return _effectOpacity.value(); }
-  bool isFading() const { return _effectOpacity.isRunning(); }
+  bool isOn() const { return on_; }
+  bool isEffectVisible() const { return effectOpacity_.value() > 0; }
+  bool isFullyOff() const { return !on_ && effectOpacity_.value() == 0; }
+  uint8_t getEffectOpacity() const { return effectOpacity_.value(); }
+  bool isFading() const { return effectOpacity_.isRunning(); }
 
   void on();
   void off();
-  void toggle() { _on ? off() : on(); }
+  void toggle() { on_ ? off() : on(); }
   void setOn(bool value) { value ? on() : off(); }
   bool tick();
 
 private:
-  EepromStore& _eeprom;
-  EffectController& _effects;
-  StateNotifier& _stateNotifier;
+  EepromStore& eeprom_;
+  EffectController& effects_;
+  StateNotifier& stateNotifier_;
 
-  bool _on = false;
-  FadeAnimator _effectOpacity;
+  bool on_ = false;
+  FadeAnimator effectOpacity_;
 
-  uint16_t _autoOffMinutes = 0;
-  uint32_t _turnedOnAtMs = 0;
+  uint16_t autoOffMinutes_ = 0;
+  uint32_t turnedOnAtMs_ = 0;
 
   void resetAutoOffTimer();
 };
