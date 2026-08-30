@@ -71,6 +71,8 @@ private:
   HAButton haNextEffect_;
   HAButton haPrevEffect_;
   HAButton haRandomEffect_;
+  HAButton haResetAllEffectSettings_;
+  HAButton haResetCurrentEffectSettings_;
   HAText haUserNotificationText_;
   HASwitch haNotificationQuietHours_;
   HATime haNotificationQuietStart_;

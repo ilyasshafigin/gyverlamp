@@ -225,8 +225,14 @@ void WebService::settingsBuilder(sets::Builder& b) {
       stateNotifier_.stateChanged();
     }
 
-    if (b.Button("Reset effect settings")) {
+    if (b.Button("Reset all effect settings")) {
       effects_.resetEffectSettingsToDefaults();
+      stateNotifier_.stateChanged();
+      b.reload();
+    }
+
+    if (b.Button("Reset current effect settings")) {
+      effects_.resetCurrentEffectSettingsToDefaults();
       stateNotifier_.stateChanged();
       b.reload();
     }

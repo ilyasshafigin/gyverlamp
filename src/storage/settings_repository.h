@@ -21,6 +21,7 @@ public:
 
   void markEffectSettingsChanged();
   bool resetEffectSettingsToDefaults(const EffectSettings* defaults);
+  void resetEffectSettingsToDefaults(Effects::Id effectId, const EffectSettings& defaults);
 
   Palettes::Id getSelectedPalette() const { return selectedPalette_; }
   void setPalette(Palettes::Id paletteId);

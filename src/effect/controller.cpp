@@ -191,6 +191,19 @@ bool EffectController::resetEffectSettingsToDefaults() {
   return true;
 }
 
+void EffectController::resetCurrentEffectSettingsToDefaults() {
+  const Effects::Id effectId = getSelectedEffectId();
+  const EffectSettings defaults = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(effectId));
+  settings_.resetEffectSettingsToDefaults(effectId, defaults);
+
+  if (currentEffectId_ == effectId) {
+    setupCurrentEffect();
+    if (outputEnabled_) {
+      render(true);
+    }
+  }
+}
+
 void EffectController::setNextEffect() {
   const Effects::Id current = getSelectedEffectId();
   for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {

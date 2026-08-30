@@ -190,6 +190,8 @@ MqttService::MqttService(
     haNextEffect_("_next_effect", "Next Effect", haDevice_),
     haPrevEffect_("_prev_effect", "Previous Effect", haDevice_),
     haRandomEffect_("_random_effect", "Random Effect", haDevice_),
+    haResetAllEffectSettings_("_reset_all_effect_settings", "Reset all effect settings", haDevice_),
+    haResetCurrentEffectSettings_("_reset_current_effect_settings", "Reset current effect settings", haDevice_),
     haUserNotificationText_("_user_notification_text", "User Notification Text", haDevice_, 64),
     haNotificationQuietHours_("_notification_quiet_hours", "Notification Quiet Hours", haDevice_),
     haNotificationQuietStart_("_notification_quiet_start", "Notification Quiet Start", haDevice_),
@@ -274,7 +276,7 @@ void MqttService::init() {
     haLight_.setEffectList(haEffectList_.c_str());
 
     // Capacity must match the number of addEntity() calls below
-    HAMQTT.begin(client_, 32);
+    HAMQTT.begin(client_, 34);
     HAMQTT.addEntity(haLight_);
     HAMQTT.addEntity(haRotationSwitch_);
     HAMQTT.addEntity(haRotationInterval_);
@@ -292,6 +294,8 @@ void MqttService::init() {
     HAMQTT.addEntity(haNextEffect_);
     HAMQTT.addEntity(haPrevEffect_);
     HAMQTT.addEntity(haRandomEffect_);
+    HAMQTT.addEntity(haResetAllEffectSettings_);
+    HAMQTT.addEntity(haResetCurrentEffectSettings_);
     HAMQTT.addEntity(haUserNotificationText_);
     HAMQTT.addEntity(haNotificationQuietHours_);
     HAMQTT.addEntity(haNotificationQuietStart_);
@@ -540,6 +544,12 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
     effects_.setRandomEffect();
     notifications_.onEffectNext();
     rotation_.onManualRotation();
+    updateStates();
+  } else if (entity == &haResetAllEffectSettings_) {
+    effects_.resetEffectSettingsToDefaults();
+    updateStates();
+  } else if (entity == &haResetCurrentEffectSettings_) {
+    effects_.resetCurrentEffectSettingsToDefaults();
     updateStates();
   } else if (
     entity == &haNotificationQuietHours_ || entity == &haNotificationQuietStart_ || entity == &haNotificationQuietEnd_

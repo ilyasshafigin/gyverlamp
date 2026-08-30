@@ -89,6 +89,12 @@ bool SettingsRepository::resetEffectSettingsToDefaults(const EffectSettings* def
   return saved;
 }
 
+void SettingsRepository::resetEffectSettingsToDefaults(Effects::Id effectId, const EffectSettings& defaults) {
+  effectId = Effects::clamp(effectId);
+  effects_[Effects::toIndex(effectId)] = defaults;
+  eeprom_.writeEffectSettings(effectId, defaults);
+}
+
 bool SettingsRepository::shouldPersistEffectSettings(uint32_t now) {
   if (effectSettingsChanged_ && now - persistTimer_ > 30000) {
     effectSettingsChanged_ = false;

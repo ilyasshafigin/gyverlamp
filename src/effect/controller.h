@@ -51,6 +51,7 @@ public:
   void setEffectSpeed(uint8_t value);
   void setEffectScale(uint8_t value);
   bool resetEffectSettingsToDefaults();
+  void resetCurrentEffectSettingsToDefaults();
   void setColor(uint8_t r, uint8_t g, uint8_t b) {
     red_ = r;
     green_ = g;
