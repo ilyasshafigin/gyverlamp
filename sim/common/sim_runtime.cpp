@@ -88,7 +88,7 @@ namespace sim {
   }
 
   void SimRuntime::seedOptions(const RuntimeOptions& options) {
-    if (options.effect != Effects::DEFAULT_ID && Effects::isValid(options.effect)) {
+    if (options.effect != Effects::kDefaultId && Effects::isValid(options.effect)) {
       _effects->setEffectImmediate(options.effect);
     }
 
@@ -297,7 +297,7 @@ namespace sim {
   }
 
   Effects::Id SimRuntime::activeEffect() const {
-    return _effects ? _effects->getActiveEffectId() : Effects::DEFAULT_ID;
+    return _effects ? _effects->getActiveEffectId() : Effects::kDefaultId;
   }
 
   uint8_t SimRuntime::outputBrightness() const {
@@ -326,12 +326,12 @@ namespace sim {
   }
 
   uint8_t SimRuntime::effectCount() {
-    return Effects::DISPLAY_COUNT;
+    return Effects::kDisplayCount;
   }
 
   Effects::Id SimRuntime::effectIdAt(uint8_t index) {
-    if (index >= Effects::DISPLAY_COUNT) return Effects::Id::INVALID;
-    return Effects::DISPLAY_ORDER[index];
+    if (index >= Effects::kDisplayCount) return Effects::Id::INVALID;
+    return Effects::kDisplayOrder[index];
   }
 
   const char* SimRuntime::effectName(Effects::Id id) {
@@ -343,13 +343,13 @@ namespace sim {
   }
 
   uint8_t SimRuntime::paletteCount() {
-    return Palettes::COUNT;
+    return Palettes::kCount;
   }
 
   Palettes::Id SimRuntime::paletteIdAt(uint8_t index) {
     if (index == 0) return Palettes::Id::Auto;
-    if (index - 1 >= Palettes::SELECTABLE_COUNT) return Palettes::Id::Auto;
-    return Palettes::SELECTABLE_ORDER[index - 1];
+    if (index - 1 >= Palettes::kSelectableCount) return Palettes::Id::Auto;
+    return Palettes::kSelectableOrder[index - 1];
   }
 
   const char* SimRuntime::paletteName(Palettes::Id id) {

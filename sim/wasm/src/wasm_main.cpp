@@ -43,7 +43,7 @@ namespace {
 
   sim::RuntimeOptions defaultOptions() {
     sim::RuntimeOptions options;
-    options.effect = Effects::DEFAULT_ID;
+    options.effect = Effects::kDefaultId;
     options.fps = 30;
     options.brightness = 255;
     options.speed = 128;

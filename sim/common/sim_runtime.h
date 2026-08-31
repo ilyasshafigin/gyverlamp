@@ -28,7 +28,7 @@ class TimeService;
 namespace sim {
 
   struct RuntimeOptions {
-    Effects::Id effect = Effects::DEFAULT_ID;
+    Effects::Id effect = Effects::kDefaultId;
     uint8_t fps = 30;
     uint8_t brightness = 255;
     uint8_t speed = 128;
