@@ -7,13 +7,13 @@ void SettingsRepository::init() {
   selectedPalette_ = eeprom_.readGlobalPaletteId();
   globalBrightness_ = eeprom_.readGlobalBrightness();
 
-  for (uint8_t i = 0; i < Effects::COUNT; i++) {
+  for (uint8_t i = 0; i < Effects::kCount; i++) {
     effects_[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
   }
 
   eeprom_.ensureEffectSettings(effects_);
 
-  for (uint8_t i = 0; i < Effects::COUNT; i++) {
+  for (uint8_t i = 0; i < Effects::kCount; i++) {
     Effects::Id effectId = Effects::toId(i);
     eeprom_.readEffectSettings(effectId, effects_[i]);
   }
@@ -78,7 +78,7 @@ void SettingsRepository::setGlobalBrightness(uint8_t value) {
 }
 
 bool SettingsRepository::resetEffectSettingsToDefaults(const EffectSettings* defaults) {
-  for (uint8_t i = 0; i < Effects::COUNT; i++) {
+  for (uint8_t i = 0; i < Effects::kCount; i++) {
     effects_[i] = defaults[i];
   }
 

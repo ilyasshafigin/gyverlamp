@@ -73,16 +73,16 @@ private:
   WifiService& wifi_;
   TouchButton& button_;
 
-  char inputWifiSsid_[WIFI_SSID_LEN];
-  char inputWifiPass_[WIFI_PASS_LEN];
-  char inputMqttHost_[MQTT_HOST_LEN];
-  char inputMqttPort_[MQTT_PORT_LEN];
-  char inputMqttUser_[MQTT_USER_LEN];
-  char inputMqttPass_[MQTT_PASS_LEN];
+  char inputWifiSsid_[kWifiSsidLen];
+  char inputWifiPass_[kWifiPassLen];
+  char inputMqttHost_[kMqttHostLen];
+  char inputMqttPort_[kMqttPortLen];
+  char inputMqttUser_[kMqttUserLen];
+  char inputMqttPass_[kMqttPassLen];
 
   bool powerOn_ = false;
   uint8_t rotationModeIndex_ = 0;
-  uint8_t rotationIntervalPresetIndex_ = ROTATION_PRESET_DEFAULT_INDEX;
+  uint8_t rotationIntervalPresetIndex_ = kRotationPresetDefaultIndex;
   bool buttonEnabled_ = true;
   uint8_t selectedEffectIndex_ = 0;
   uint8_t globalBrightness_ = 0;

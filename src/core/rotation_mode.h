@@ -8,7 +8,7 @@ enum class RotationMode : uint8_t {
   Random = 2,
 };
 
-constexpr RotationMode ROTATION_MODE_DEFAULT = RotationMode::Off;
-constexpr uint16_t ROTATION_INTERVAL_SEC_DEFAULT = 60;
-constexpr uint16_t ROTATION_INTERVAL_SEC_MIN = 10;
-constexpr uint16_t ROTATION_INTERVAL_SEC_MAX = 3600;
+constexpr RotationMode kRotationModeDefault = RotationMode::Off;
+constexpr uint16_t kRotationIntervalSecDefault = 60;
+constexpr uint16_t kRotationIntervalSecMin = 10;
+constexpr uint16_t kRotationIntervalSecMax = 3600;

@@ -1,37 +1,34 @@
 #pragma once
 
-class FrameRenderer;
-class NotificationController;
-class WifiService;
+#include <stdint.h>
+
+#include <functional>
 
 class OtaService {
 public:
-  explicit OtaService(FrameRenderer& frameRenderer, NotificationController& notifications, WifiService& wifi)
-#ifdef USE_OTA
-    : frameRenderer_(frameRenderer),
-      notifications_(notifications),
-      wifi_(wifi) {
-  }
-#else
-  {
-    (void)frameRenderer;
-    (void)notifications;
-    (void)wifi;
-  }
-#endif
+  explicit OtaService() {}
 
-  void init();
-  void tick();
+  using VoidCallback = std::function<void()>;
+  using ProgressCallback = std::function<void(uint8_t)>;
+
+  void setStartHandler(VoidCallback callback) { startCallback_ = callback; }
+  void setProgressHandler(ProgressCallback callback) { progressCallback_ = callback; }
+  void setEndHandler(VoidCallback callback) { endCallback_ = callback; }
+  void setErrorHandler(VoidCallback callback) { errorCallback_ = callback; }
+
+  void init(const char* hostname);
+  void tick(bool isStaConnected);
 
 private:
 #ifdef USE_OTA
-  static constexpr unsigned long BEGIN_RETRY_INTERVAL_MS = 5000;
-
-  FrameRenderer& frameRenderer_;
-  NotificationController& notifications_;
-  WifiService& wifi_;
+  static constexpr unsigned long kBeginRetryIntervalMs = 5000;
 
   bool beginAttempted_ = false;
   unsigned long lastBeginAttemptAt_ = 0;
 #endif
+
+  VoidCallback startCallback_;
+  ProgressCallback progressCallback_;
+  VoidCallback endCallback_;
+  VoidCallback errorCallback_;
 };

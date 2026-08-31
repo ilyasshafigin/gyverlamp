@@ -24,13 +24,13 @@
 #include "web_service.h"
 
 namespace {
-  constexpr uint32_t SECONDS_PER_DAY = 24UL * 60UL * 60UL;
+  constexpr uint32_t kSecondsPerDay = 24UL * 60UL * 60UL;
 
   uint32_t minutesToSeconds(uint16_t minutes) {
     return static_cast<uint32_t>(minutes) * 60UL;
   }
   uint16_t secondsToMinutes(uint32_t seconds) {
-    seconds %= SECONDS_PER_DAY;
+    seconds %= kSecondsPerDay;
     return static_cast<uint16_t>(seconds / 60UL);
   }
 
@@ -57,16 +57,16 @@ namespace {
 void WebService::init() {
   const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
   if (strlen(wifiConfig.ssid) > 0) {
-    strlcpy(inputWifiSsid_, wifiConfig.ssid, WIFI_SSID_LEN);
-    strlcpy(inputWifiPass_, wifiConfig.password, WIFI_PASS_LEN);
+    strlcpy(inputWifiSsid_, wifiConfig.ssid, kWifiSsidLen);
+    strlcpy(inputWifiPass_, wifiConfig.password, kWifiPassLen);
   }
 
   const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
   if (strlen(mqttConfig.host) > 0) {
-    strlcpy(inputMqttHost_, mqttConfig.host, MQTT_HOST_LEN);
-    strlcpy(inputMqttPort_, mqttConfig.port, MQTT_PORT_LEN);
-    strlcpy(inputMqttUser_, mqttConfig.user, MQTT_USER_LEN);
-    strlcpy(inputMqttPass_, mqttConfig.password, MQTT_PASS_LEN);
+    strlcpy(inputMqttHost_, mqttConfig.host, kMqttHostLen);
+    strlcpy(inputMqttPort_, mqttConfig.port, kMqttPortLen);
+    strlcpy(inputMqttUser_, mqttConfig.user, kMqttUserLen);
+    strlcpy(inputMqttPass_, mqttConfig.password, kMqttPassLen);
   }
 
   webSettings_.begin(true, wifi_.getDeviceId().c_str());
@@ -76,22 +76,22 @@ void WebService::init() {
   webSettings_.setVersion(FIRMWARE_VERSION);
 
   effectOptions_ = "";
-  for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
+  for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
     if (i > 0) effectOptions_ += ';';
-    effectOptions_ += Effects::getEffectName(Effects::DISPLAY_ORDER[i]);
+    effectOptions_ += Effects::getEffectName(Effects::kDisplayOrder[i]);
   }
 
   paletteOptions_ = Palettes::getPaletteName(Palettes::Id::Auto);
-  for (uint8_t i = 0; i < Palettes::SELECTABLE_COUNT; i++) {
+  for (uint8_t i = 0; i < Palettes::kSelectableCount; i++) {
     paletteOptions_ += ';';
-    paletteOptions_ += Palettes::getPaletteName(Palettes::SELECTABLE_ORDER[i]);
+    paletteOptions_ += Palettes::getPaletteName(Palettes::kSelectableOrder[i]);
   }
 
   rotationModeOptions_ = "Off;Sequential;Random";
-  rotationIntervalOptions_ = String(ROTATION_PRESET_LABELS[0]);
-  for (uint8_t i = 1; i < ROTATION_PRESET_COUNT; i++) {
+  rotationIntervalOptions_ = String(kRotationPresetLabels[0]);
+  for (uint8_t i = 1; i < kRotationPresetCount; i++) {
     rotationIntervalOptions_ += ';';
-    rotationIntervalOptions_ += ROTATION_PRESET_LABELS[i];
+    rotationIntervalOptions_ += kRotationPresetLabels[i];
   }
 }
 
@@ -100,16 +100,16 @@ void WebService::tick() {
 }
 
 uint8_t WebService::effectDisplayIndex(Effects::Id id) const {
-  for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
-    if (Effects::DISPLAY_ORDER[i] == id) return i;
+  for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
+    if (Effects::kDisplayOrder[i] == id) return i;
   }
   return 0;
 }
 
 uint8_t WebService::paletteDisplayIndex(Palettes::Id id) const {
   if (id == Palettes::Id::Auto) return 0;
-  for (uint8_t i = 0; i < Palettes::SELECTABLE_COUNT; i++) {
-    if (Palettes::SELECTABLE_ORDER[i] == id) return i + 1;
+  for (uint8_t i = 0; i < Palettes::kSelectableCount; i++) {
+    if (Palettes::kSelectableOrder[i] == id) return i + 1;
   }
   return 0;
 }
@@ -138,7 +138,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
     if (b.Select("Effect", effectOptions_, &selectedEffectIndex_)) {
       rotation_.disable();
-      Effects::Id effectId = Effects::DISPLAY_ORDER[selectedEffectIndex_];
+      Effects::Id effectId = Effects::kDisplayOrder[selectedEffectIndex_];
       if (!effects_.setEffect(effectId)) {
         effects_.setEffect(Effects::fallback());
       }
@@ -180,8 +180,8 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
     if (b.Select("Palette", paletteOptions_, &selectedPaletteIndex_)) {
       Palettes::Id paletteId = Palettes::Id::Auto;
-      if (selectedPaletteIndex_ > 0 && selectedPaletteIndex_ - 1 < Palettes::SELECTABLE_COUNT) {
-        paletteId = Palettes::SELECTABLE_ORDER[selectedPaletteIndex_ - 1];
+      if (selectedPaletteIndex_ > 0 && selectedPaletteIndex_ - 1 < Palettes::kSelectableCount) {
+        paletteId = Palettes::kSelectableOrder[selectedPaletteIndex_ - 1];
       }
       effects_.setPalette(paletteId);
       stateNotifier_.stateChanged();
@@ -268,7 +268,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
       autoOffMinutes_ = power_.getAutoOffMinutes();
     }
 
-    if (b.Number("Auto-off, min", &autoOffMinutes_, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX)) {
+    if (b.Number("Auto-off, min", &autoOffMinutes_, kAutoOffMinutesMin, kAutoOffMinutesMax)) {
       power_.setAutoOffMinutes(autoOffMinutes_);
       stateNotifier_.stateChanged();
     }

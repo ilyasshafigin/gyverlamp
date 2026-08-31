@@ -3,7 +3,7 @@
 #include "../config.h"
 #include "render_utils.h"
 
-static constexpr uint8_t TOP_Y = HEIGHT - 1;
+static constexpr uint8_t kTopY = HEIGHT - 1;
 
 void IndicatorRenderer::render(NotificationOverlay& overlay, const NotificationSnapshot& notification) {
   switch (notification.indicatorType) {
@@ -18,9 +18,7 @@ void IndicatorRenderer::render(NotificationOverlay& overlay, const NotificationS
     case IndicatorType::Brightness:
       renderBrightness(overlay, notification.buttonValue, notification.buttonDirection, notification.startedMs);
       break;
-    case IndicatorType::RotationOn:
-      renderRotationDots(overlay, notification.startedMs, true, CRGB(80, 255, 80));
-      break;
+    case IndicatorType::RotationOn: renderRotationDots(overlay, notification.startedMs, true, CRGB(80, 255, 80)); break;
     case IndicatorType::RotationOff:
       renderRotationDots(overlay, notification.startedMs, false, CRGB(255, 80, 80));
       break;
@@ -81,12 +79,12 @@ void IndicatorRenderer::renderBrightness(
       pixel.nscale8(8);
     }
 
-    overlay.drawPixel(x, TOP_Y, pixel);
+    overlay.drawPixel(x, kTopY, pixel);
   }
 
   CRGB markerColor = color;
   markerColor.nscale8(240);
-  overlay.drawPixel(marker, TOP_Y, markerColor);
+  overlay.drawPixel(marker, kTopY, markerColor);
 }
 
 void IndicatorRenderer::renderSwitchSweep(
@@ -123,32 +121,32 @@ void IndicatorRenderer::renderRotationDots(
   NotificationOverlay& overlay, uint32_t startedMs, bool clockwise, const CRGB& color
 ) {
   // Три точки, распределённые равномерно по верхнему кольцу (ряду с wrap).
-  // Каждая пробегает полкольца (WIDTH/2 пикселей) за DURATION_MS.
-  constexpr uint32_t DURATION_MS = 900;
-  constexpr uint32_t FADE_IN_MS = 120;
-  constexpr uint32_t FADE_OUT_MS = 200;
+  // Каждая пробегает полкольца (WIDTH/2 пикселей) за kDurationMs.
+  constexpr uint32_t kDurationMs = 900;
+  constexpr uint32_t kFadeInMs = 120;
+  constexpr uint32_t kFadeOutMs = 200;
   // Короткий затухающий след за каждой точкой — подчёркивает направление движения.
-  constexpr uint8_t TRAIL_LEN = 2;
+  constexpr uint8_t kTrailLen = 2;
 
   const uint32_t elapsed = millis() - startedMs;
-  if (elapsed >= DURATION_MS) return;
+  if (elapsed >= kDurationMs) return;
 
   overlay.clearTop();
 
   uint8_t alpha = 255;
-  if (elapsed < FADE_IN_MS) {
-    alpha = static_cast<uint8_t>(elapsed * 255UL / FADE_IN_MS);
-  } else if (elapsed > DURATION_MS - FADE_OUT_MS) {
-    alpha = static_cast<uint8_t>((DURATION_MS - elapsed) * 255UL / FADE_OUT_MS);
+  if (elapsed < kFadeInMs) {
+    alpha = static_cast<uint8_t>(elapsed * 255UL / kFadeInMs);
+  } else if (elapsed > kDurationMs - kFadeOutMs) {
+    alpha = static_cast<uint8_t>((kDurationMs - elapsed) * 255UL / kFadeOutMs);
   }
 
   const int8_t dir = clockwise ? 1 : -1;
-  const int16_t offset = static_cast<int16_t>(static_cast<int32_t>(elapsed) * (WIDTH / 2) / DURATION_MS);
+  const int16_t offset = static_cast<int16_t>(static_cast<int32_t>(elapsed) * (WIDTH / 2) / kDurationMs);
 
   for (uint8_t i = 0; i < 3; i++) {
     const int16_t base = static_cast<int16_t>(i) * WIDTH / 3;
 
-    for (uint8_t t = 0; t <= TRAIL_LEN; t++) {
+    for (uint8_t t = 0; t <= kTrailLen; t++) {
       int16_t pos = (base + dir * offset - dir * t) % WIDTH;
       if (pos < 0) pos += WIDTH;
 

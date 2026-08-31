@@ -15,7 +15,7 @@
 #define CENTER_Y_MAJOR (static_cast<uint8_t>(HEIGHT / 2U + (HEIGHT % 2U)))
 #define HALF_HEIGHT (static_cast<uint8_t>((HEIGHT + 1) / 2))
 
-constexpr uint8_t NUM_LAYERSMAX = 2;
+constexpr uint8_t kNumLayersMax = 2;
 
 // несколько общих переменных и буферов, которые могут использоваться в любом эффекте
 
@@ -37,7 +37,7 @@ extern float emitterX, emitterY;
 extern uint16_t ff_x, ff_y, ff_z;
 
 // двухслойная маска или хранилище свойств в размер всей матрицы
-extern uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];
+extern uint8_t noise3d[kNumLayersMax][WIDTH][HEIGHT];
 // свойство пикселей в размер строки матрицы
 extern uint8_t line[WIDTH];
 // свойство пикселей в размер столбца матрицы

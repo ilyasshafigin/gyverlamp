@@ -14,7 +14,7 @@ public:
     : eepromStore_(eepromStore),
       effects_(effects),
       stateNotifier_(stateNotifier),
-      timer_(ROTATION_INTERVAL_SEC_DEFAULT * 1000UL) {}
+      timer_(kRotationIntervalSecDefault * 1000UL) {}
 
   void init();
   void tick(bool powerOn);
@@ -35,7 +35,7 @@ private:
   StateNotifier& stateNotifier_;
   Timer timer_;
   RotationMode mode_ = RotationMode::Off;
-  uint16_t intervalSec_ = ROTATION_INTERVAL_SEC_DEFAULT;
+  uint16_t intervalSec_ = kRotationIntervalSecDefault;
   bool powerWasOn_ = false;
 
   void timerCallback();

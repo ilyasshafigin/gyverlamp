@@ -9,7 +9,7 @@ float speedfactor;
 float emitterX, emitterY;
 uint16_t ff_x, ff_y, ff_z;
 
-uint8_t noise3d[NUM_LAYERSMAX][WIDTH][HEIGHT];
+uint8_t noise3d[kNumLayersMax][WIDTH][HEIGHT];
 uint8_t line[WIDTH];
 uint8_t shiftHue[HEIGHT];
 uint8_t shiftValue[HEIGHT];

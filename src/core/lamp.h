@@ -37,10 +37,10 @@ public:
   NotificationController notifications{eeprom, power, runningText, stateNotifier, time};
   FrameRenderer frameRenderer{effects, led, notifications, power, stateNotifier};
   RotationController rotation{eeprom, effects, stateNotifier};
-  WifiService wifi{eeprom, notifications};
+  WifiService wifi{eeprom};
   TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
   UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
-  OtaService ota{frameRenderer, notifications, wifi};
+  OtaService ota;
   MqttService mqtt{audio, eeprom, effects, notifications, power, rotation, settings, button, wifi};
   WebService web{
     audio,

@@ -58,13 +58,13 @@ void EffectClock::render(EffectContext& ctx) {
   ctx.led.clearLeds();
 
   if (ctx.palette) {
-    TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, ColorFromPalette(*ctx.palette, ctx.scale), false);
+    TextRenderer::drawString(ctx.led, offset_, kTextY, text_, ColorFromPalette(*ctx.palette, ctx.scale), false);
   } else {
     const uint8_t hue = ctx.scale;
     if (hue == 1U) {
-      TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, CRGB::White, false);
+      TextRenderer::drawString(ctx.led, offset_, kTextY, text_, CRGB::White, false);
     } else {
-      TextRenderer::drawString(ctx.led, offset_, TEXT_Y, text_, CHSV(hue, 255, 255), false);
+      TextRenderer::drawString(ctx.led, offset_, kTextY, text_, CHSV(hue, 255, 255), false);
     }
   }
 }

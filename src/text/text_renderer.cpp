@@ -34,29 +34,29 @@ uint8_t TextRenderer::readFontByte(const String& text, uint16_t& index) {
 template <typename Target>
 void TextRenderer::drawCharTo(Target& target, int16_t x, int16_t y, uint8_t letter, const CRGB& color, bool wrapX) {
   int8_t start_pos = 0;
-  int8_t finish_pos = LET_WIDTH;
+  int8_t finish_pos = kLetterWidth;
 
-  if (x <= -LET_WIDTH || x >= WIDTH) return;
+  if (x <= -kLetterWidth || x >= WIDTH) return;
 
   if (!wrapX) {
     if (x < 0) start_pos = -x;
-    if (x > WIDTH - LET_WIDTH) finish_pos = WIDTH - x;
+    if (x > WIDTH - kLetterWidth) finish_pos = WIDTH - x;
   }
 
   for (uint8_t i = start_pos; i < finish_pos; i++) {
     int thisByte;
     if (MIRR_V) {
-      thisByte = getFont(static_cast<uint8_t>(letter), LET_WIDTH - 1 - i);
+      thisByte = getFont(static_cast<uint8_t>(letter), kLetterWidth - 1 - i);
     } else {
       thisByte = getFont(static_cast<uint8_t>(letter), i);
     }
 
-    for (uint8_t j = 0; j < LET_HEIGHT; j++) {
+    for (uint8_t j = 0; j < kLetHeight; j++) {
       bool thisBit;
       if (MIRR_H) {
         thisBit = thisByte & (1 << j);
       } else {
-        thisBit = thisByte & (1 << (LET_HEIGHT - 1 - j));
+        thisBit = thisByte & (1 << (kLetHeight - 1 - j));
       }
 
       if (!thisBit) continue;
@@ -93,7 +93,7 @@ int16_t TextRenderer::stringWidth(const String& text) {
     len++;
   }
   if (len == 0) return 0;
-  return len * LET_WIDTH + (len - 1) * SPACE;
+  return len * kLetterWidth + (len - 1) * kSpace;
 }
 
 void TextRenderer::drawString(Led& led, int16_t x, int16_t y, const String& text, const CRGB& color, bool wrapX) {
@@ -102,7 +102,7 @@ void TextRenderer::drawString(Led& led, int16_t x, int16_t y, const String& text
   while (text[index] != '\0') {
     const uint8_t letter = readFontByte(text, index);
     drawChar(led, cursor, y, letter, color, wrapX);
-    cursor += LET_WIDTH + SPACE;
+    cursor += kLetterWidth + kSpace;
   }
 }
 
@@ -114,7 +114,7 @@ void TextRenderer::drawString(
   while (text[index] != '\0') {
     const uint8_t letter = readFontByte(text, index);
     drawChar(overlay, cursor, y, letter, color, true);
-    cursor += LET_WIDTH + SPACE;
+    cursor += kLetterWidth + kSpace;
   }
 }
 

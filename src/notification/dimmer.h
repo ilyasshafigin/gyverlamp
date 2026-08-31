@@ -12,8 +12,8 @@ public:
   void prepareEndingFrame(bool backgroundUpdated, uint8_t targetDim, uint32_t endingStartedMs);
   void reset();
 
-  static constexpr uint16_t FADE_IN_MS = 600;
-  static constexpr uint16_t FADE_OUT_MS = 600;
+  static constexpr uint16_t kFadeInMs = 600;
+  static constexpr uint16_t kFadeOutMs = 600;
 
 private:
   Led& led_;

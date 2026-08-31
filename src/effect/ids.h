@@ -37,7 +37,7 @@ namespace Effects {
     return static_cast<Id>(raw);
   }
 
-  constexpr uint8_t COUNT = toIndex(Id::COUNT);
-  constexpr Id DEFAULT_ID = Id::Color;
+  constexpr uint8_t kCount = toIndex(Id::COUNT);
+  constexpr Id kDefaultId = Id::Color;
 
 } // namespace Effects

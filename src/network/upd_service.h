@@ -56,8 +56,8 @@ private:
     Disable,
   };
 
-  static constexpr size_t PACKET_BUFFER_SIZE = 255;
-  static constexpr size_t REPLY_BUFFER_SIZE = 255;
+  static constexpr size_t kPacketBufferSize = 255;
+  static constexpr size_t kReplyBufferSize = 255;
 
   EffectController& effects_;
   PowerController& power_;

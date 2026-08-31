@@ -4,9 +4,9 @@
 
 class EffectNexus : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::Nexus;
-  static constexpr const char* NAME = "Nexus";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::Nexus;
+  static constexpr const char* kName = "Nexus";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     70,  // speed
     100, // scale

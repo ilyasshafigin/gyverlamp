@@ -4,9 +4,9 @@
 
 class EffectColorChange : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::ColorChange;
-  static constexpr const char* NAME = "Color Change";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::ColorChange;
+  static constexpr const char* kName = "Color Change";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     30,  // speed
     40,  // scale

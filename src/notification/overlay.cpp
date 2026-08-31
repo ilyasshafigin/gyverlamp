@@ -2,7 +2,7 @@
 #include "render_utils.h"
 #include "../hardware/led.h"
 
-static constexpr uint8_t TOP_Y = HEIGHT - 1;
+static constexpr uint8_t kTopY = HEIGHT - 1;
 
 void NotificationOverlay::drawPixel(uint8_t x, uint8_t y, CRGB color) {
   color.nscale8(opacity_);
@@ -35,15 +35,15 @@ void NotificationOverlay::fill(CRGB color) {
 
 void NotificationOverlay::clearTop() {
   for (uint8_t x = 0; x < WIDTH; x++) {
-    led_.drawPixel(x, TOP_Y, CRGB::Black);
+    led_.drawPixel(x, kTopY, CRGB::Black);
     // захватим еще одну строку
-    led_.drawPixel(x, TOP_Y - 1, CRGB::Black);
+    led_.drawPixel(x, kTopY - 1, CRGB::Black);
   }
 }
 
 void NotificationOverlay::drawTopSolid(const CRGB& color) {
   for (uint8_t x = 0; x < WIDTH; x++) {
-    drawPixel(x, TOP_Y, color);
+    drawPixel(x, kTopY, color);
   }
 }
 
@@ -66,7 +66,7 @@ void NotificationOverlay::drawTopSpinner(const CRGB& color, uint32_t startedMs) 
     }
 
     if (pixelColor != CRGB::Black) {
-      drawPixel(x, TOP_Y, pixelColor);
+      drawPixel(x, kTopY, pixelColor);
     }
   }
 }
@@ -83,7 +83,7 @@ void NotificationOverlay::drawTopProgress(const CRGB& color, uint32_t startedMs,
     } else {
       pixelColor.nscale8(25);
     }
-    drawPixel(x, TOP_Y, pixelColor);
+    drawPixel(x, kTopY, pixelColor);
   }
 
   // Живой огонёк поверх прогресса, чтобы было видно, что OTA не зависла

@@ -50,7 +50,7 @@ private:
   static uint32_t startUs_;
   static Section current_;
   static uint32_t resetTimer_;
-  static constexpr uint32_t RESET_INTERVAL_MS = 10000;
+  static constexpr uint32_t kResetIntervalMs = 10000;
 
 #else
   static const char* sectionName(Section) { return ""; }

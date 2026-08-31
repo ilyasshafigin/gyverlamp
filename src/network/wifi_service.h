@@ -2,16 +2,22 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <functional>
 
 class EepromStore;
-class NotificationController;
 
 class WifiService {
 public:
-  explicit WifiService(EepromStore& eeprom, NotificationController& notifications)
+  explicit WifiService(EepromStore& eeprom)
     : eeprom_(eeprom),
-      notifications_(notifications),
       deviceId_(DEVICE_NAME) {}
+
+  using VoidCallback = std::function<void()>;
+
+  void setConnectingHandler(VoidCallback callback) { connectingHandler_ = callback; }
+  void setConnectedHandler(VoidCallback callback) { connectedHandler_ = callback; }
+  void setErrorHandler(VoidCallback callback) { errorHandler_ = callback; }
+  void setDisabledHandler(VoidCallback callback) { disabledHandler_ = callback; }
 
   void init();
   void tick();
@@ -33,9 +39,18 @@ private:
     RetryWait,
   };
 
+  static constexpr uint32_t kReconnectIntervalMs = 5000;
+  static constexpr uint32_t kApRetryIntervalMs = 5000;
+  static constexpr uint32_t kApTimeoutMs = 5UL * 60UL * 1000UL;
+  static constexpr uint32_t kStaConnectTimeoutMs = 10000;
+
   EepromStore& eeprom_;
-  NotificationController& notifications_;
   String deviceId_;
+
+  VoidCallback connectingHandler_;
+  VoidCallback connectedHandler_;
+  VoidCallback errorHandler_;
+  VoidCallback disabledHandler_;
 
   StaState staState_ = StaState::Provisioning;
   ApState apState_ = ApState::Inactive;
@@ -43,10 +58,6 @@ private:
   uint32_t apRetryStartedAt_ = 0;
   uint32_t connectStartedAt_ = 0;
   uint32_t retryStartedAt_ = 0;
-  static constexpr uint32_t RECONNECT_INTERVAL_MS = 5000;
-  static constexpr uint32_t AP_RETRY_INTERVAL_MS = 5000;
-  static constexpr uint32_t AP_TIMEOUT_MS = 5UL * 60UL * 1000UL;
-  static constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 10000;
 
   bool startAp();
   void requestAp();

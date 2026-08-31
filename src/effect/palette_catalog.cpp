@@ -38,7 +38,7 @@ namespace Palettes {
   }
 
   const CRGBPalette16* getPaletteByScale(uint8_t scale) {
-    uint8_t index = static_cast<uint8_t>(map(scale, 0U, 255U, 0U, SELECTABLE_COUNT - 1));
+    uint8_t index = static_cast<uint8_t>(map(scale, 0U, 255U, 0U, kSelectableCount - 1));
     return Palettes::getPalette(Palettes::getPaletteIdByIndex(index));
   }
 

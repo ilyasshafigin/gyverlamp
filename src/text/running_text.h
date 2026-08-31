@@ -20,7 +20,7 @@ public:
   bool render(NotificationOverlay& overlay);
 
 private:
-  static constexpr uint16_t SCROLL_INTERVAL_MS = 50;
+  static constexpr uint16_t kScrollIntervalMs = 50;
 
   Led& led_;
   int width_ = 0;

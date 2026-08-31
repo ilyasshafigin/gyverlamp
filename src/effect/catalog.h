@@ -47,23 +47,23 @@ namespace Effects {
     };
   } // namespace detail
 
-  constexpr size_t STORAGE_SIZE = detail::MaxEffectSize<
+  constexpr size_t kStorageSize = detail::MaxEffectSize<
 #define EFFECT_STORAGE_TYPE(T) T,
     EFFECT_REGISTRY(EFFECT_STORAGE_TYPE)
 #undef EFFECT_STORAGE_TYPE
       detail::EffectStorageMinimum>::value;
 
-  static_assert(STORAGE_SIZE <= 64, "Effect storage grew; increase budget intentionally");
+  static_assert(kStorageSize <= 64, "Effect storage grew; increase budget intentionally");
 
-  constexpr Id DISPLAY_ORDER[] = {
-#define EFFECT_DISPLAY_ID(T) T::ID,
+  constexpr Id kDisplayOrder[] = {
+#define EFFECT_DISPLAY_ID(T) T::kId,
     EFFECT_REGISTRY(EFFECT_DISPLAY_ID)
 #undef EFFECT_DISPLAY_ID
   };
 
-  constexpr uint8_t DISPLAY_COUNT = sizeof(DISPLAY_ORDER) / sizeof(DISPLAY_ORDER[0]);
-  static_assert(DISPLAY_COUNT > 0, "Effect registry must include at least one effect");
-  static_assert(DISPLAY_COUNT <= COUNT, "Effect registry cannot include more effects than known ids");
+  constexpr uint8_t kDisplayCount = sizeof(kDisplayOrder) / sizeof(kDisplayOrder[0]);
+  static_assert(kDisplayCount > 0, "Effect registry must include at least one effect");
+  static_assert(kDisplayCount <= kCount, "Effect registry cannot include more effects than known ids");
 
   Effect* createEffect(Id id, void* buffer);
 

@@ -49,7 +49,7 @@ void LoopProfiler::resetMax() {
 
 void LoopProfiler::tick() {
   const uint32_t now = millis();
-  if (now - resetTimer_ >= RESET_INTERVAL_MS) {
+  if (now - resetTimer_ >= kResetIntervalMs) {
     resetTimer_ = now;
     resetMax();
   }

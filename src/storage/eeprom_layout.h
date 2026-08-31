@@ -8,7 +8,7 @@
 
 static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t EffectSettings");
 
-// EEPROM.begin(EEPROM_SIZE) выделяет адреса 0..EEPROM_SIZE-1.
+// EEPROM.begin(kEepromSize) выделяет адреса 0..kEepromSize-1.
 // Layout v2 не мигрирует старые карты адресов: при несовпадении magic/version
 // EepromStore очищает EEPROM и пишет defaults текущей версии.
 //
@@ -40,110 +40,109 @@ static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t Effe
 //
 //  450..511  Резерв, 62 байт.
 
-constexpr int EEPROM_SIZE = 512;
-constexpr uint32_t EEPROM_LAYOUT_MAGIC = 0x474C4D50; // "GLMP"
-constexpr uint8_t EEPROM_LAYOUT_VERSION_CURRENT = 4;
+constexpr int kEepromSize = 512;
+constexpr uint32_t kEepromLayoutMagic = 0x474C4D50; // "GLMP"
+constexpr uint8_t kEepromLayoutVersionCurrent = 4;
 
-constexpr int EEPROM_LAYOUT_META_ADDR = 0;
-constexpr int EEPROM_LAYOUT_META_SIZE = 5;
+constexpr int kEepromLayoutMetaAddr = 0;
+constexpr int kEepromLayoutMetaSize = 5;
 
-constexpr int EEPROM_RESERVED_TOP_ADDR = 5;
-constexpr int EEPROM_RESERVED_TOP_SIZE = 10;
+constexpr int kEepromReservedTopAddr = 5;
+constexpr int kEepromReservedTopSize = 10;
 
-constexpr int EEPROM_WIFI_BLOCK_ADDR = 15;
-constexpr int EEPROM_WIFI_BLOCK_SIZE = 80;
-constexpr int EEPROM_WIFI_CONFIG_SIZE = WIFI_SSID_LEN + WIFI_PASS_LEN;
-constexpr int EEPROM_WIFI_CONFIG_ADDR = EEPROM_WIFI_BLOCK_ADDR;
+constexpr int kEepromWifiBlockAddr = 15;
+constexpr int kEepromWifiBlockSize = 80;
+constexpr int kEepromWifiConfigSize = kWifiSsidLen + kWifiPassLen;
+constexpr int kEepromWifiConfigAddr = kEepromWifiBlockAddr;
 
-constexpr int EEPROM_MQTT_BLOCK_ADDR = EEPROM_WIFI_BLOCK_ADDR + EEPROM_WIFI_BLOCK_SIZE; // 95
-constexpr int EEPROM_MQTT_BLOCK_SIZE = 140;
-constexpr int EEPROM_MQTT_CONFIG_SIZE = MQTT_HOST_LEN + MQTT_PORT_LEN + MQTT_USER_LEN + MQTT_PASS_LEN;
-constexpr int EEPROM_MQTT_CONFIG_ADDR = EEPROM_MQTT_BLOCK_ADDR;
+constexpr int kEepromMqttBlockAddr = kEepromWifiBlockAddr + kEepromWifiBlockSize; // 95
+constexpr int kEepromMqttBlockSize = 140;
+constexpr int kEepromMqttConfigSize = kMqttHostLen + kMqttPortLen + kMqttUserLen + kMqttPassLen;
+constexpr int kEepromMqttConfigAddr = kEepromMqttBlockAddr;
 
-constexpr int EEPROM_SYSTEM_STATE_BLOCK_ADDR = EEPROM_MQTT_BLOCK_ADDR + EEPROM_MQTT_BLOCK_SIZE; // 235
-constexpr int EEPROM_SYSTEM_STATE_BLOCK_SIZE = 10;
-constexpr int EEPROM_POWER_STATE_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 1;
-constexpr int EEPROM_BUTTON_ENABLED_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 2;
-constexpr int EEPROM_GLOBAL_BRIGHTNESS_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + 3;
+constexpr int kEepromSystemStateBlockAddr = kEepromMqttBlockAddr + kEepromMqttBlockSize; // 235
+constexpr int kEepromSystemStateBlockSize = 10;
+constexpr int kEepromPowerStateAddr = kEepromSystemStateBlockAddr + 1;
+constexpr int kEepromButtonEnabledAddr = kEepromSystemStateBlockAddr + 2;
+constexpr int kEepromGlobalBrightnessAddr = kEepromSystemStateBlockAddr + 3;
 
-constexpr int EEPROM_EFFECT_STATE_BLOCK_ADDR = EEPROM_SYSTEM_STATE_BLOCK_ADDR + EEPROM_SYSTEM_STATE_BLOCK_SIZE; // 245
-constexpr int EEPROM_EFFECT_STATE_BLOCK_SIZE = 10;
-constexpr int EEPROM_CURRENT_MODE_ADDR = EEPROM_EFFECT_STATE_BLOCK_ADDR;
-constexpr int EEPROM_GLOBAL_PALETTE_ID_ADDR = EEPROM_EFFECT_STATE_BLOCK_ADDR + 1;
-constexpr int EEPROM_EFFECT_SETTINGS_COUNT_ADDR = EEPROM_EFFECT_STATE_BLOCK_ADDR + 2;
+constexpr int kEepromEffectStateBlockAddr = kEepromSystemStateBlockAddr + kEepromSystemStateBlockSize; // 245
+constexpr int kEepromEffectStateBlockSize = 10;
+constexpr int kEepromCurrentModeAddr = kEepromEffectStateBlockAddr;
+constexpr int kEepromGlobalPaletteIdAddr = kEepromEffectStateBlockAddr + 1;
+constexpr int kEepromEffectSettingsCountAddr = kEepromEffectStateBlockAddr + 2;
 
-constexpr int EEPROM_ROTATION_BLOCK_ADDR = EEPROM_EFFECT_STATE_BLOCK_ADDR + EEPROM_EFFECT_STATE_BLOCK_SIZE; // 255
-constexpr int EEPROM_ROTATION_BLOCK_SIZE = 10;
-constexpr int EEPROM_ROTATION_MODE_ADDR = EEPROM_ROTATION_BLOCK_ADDR;
-constexpr int EEPROM_ROTATION_INTERVAL_SEC_ADDR = EEPROM_ROTATION_BLOCK_ADDR + 1;
+constexpr int kEepromRotationBlockAddr = kEepromEffectStateBlockAddr + kEepromEffectStateBlockSize; // 255
+constexpr int kEepromRotationBlockSize = 10;
+constexpr int kEepromRotationModeAddr = kEepromRotationBlockAddr;
+constexpr int kEepromRotationIntervalSecAddr = kEepromRotationBlockAddr + 1;
 
-constexpr int EEPROM_AUTO_POWER_BLOCK_ADDR = EEPROM_ROTATION_BLOCK_ADDR + EEPROM_ROTATION_BLOCK_SIZE; // 265
-constexpr int EEPROM_AUTO_POWER_BLOCK_SIZE = 10;
-constexpr int EEPROM_AUTO_OFF_MINUTES_ADDR = EEPROM_AUTO_POWER_BLOCK_ADDR;
+constexpr int kEepromAutoPowerBlockAddr = kEepromRotationBlockAddr + kEepromRotationBlockSize; // 265
+constexpr int kEepromAutoPowerBlockSize = 10;
+constexpr int kEepromAutoOffMinutesAddr = kEepromAutoPowerBlockAddr;
 
-constexpr int EEPROM_NOTIFICATION_BLOCK_ADDR = EEPROM_AUTO_POWER_BLOCK_ADDR + EEPROM_AUTO_POWER_BLOCK_SIZE; // 275
-constexpr int EEPROM_NOTIFICATION_BLOCK_SIZE = 10;
-constexpr int EEPROM_NOTIFICATION_QUIET_ENABLED_ADDR = EEPROM_NOTIFICATION_BLOCK_ADDR;
-constexpr int EEPROM_NOTIFICATION_QUIET_START_ADDR = EEPROM_NOTIFICATION_BLOCK_ADDR + 1;
-constexpr int EEPROM_NOTIFICATION_QUIET_END_ADDR = EEPROM_NOTIFICATION_BLOCK_ADDR + 3;
+constexpr int kEepromNotificationBlockAddr = kEepromAutoPowerBlockAddr + kEepromAutoPowerBlockSize; // 275
+constexpr int kEepromNotificationBlockSize = 10;
+constexpr int kEepromNotificationQuietEnabledAddr = kEepromNotificationBlockAddr;
+constexpr int kEepromNotificationQuietStartAddr = kEepromNotificationBlockAddr + 1;
+constexpr int kEepromNotificationQuietEndAddr = kEepromNotificationBlockAddr + 3;
 
-constexpr int EEPROM_AUDIO_BLOCK_ADDR = EEPROM_NOTIFICATION_BLOCK_ADDR + EEPROM_NOTIFICATION_BLOCK_SIZE; // 285
-constexpr int EEPROM_AUDIO_BLOCK_SIZE = 15;
-constexpr int EEPROM_AUDIO_MARKER_ADDR = EEPROM_AUDIO_BLOCK_ADDR;
-constexpr int EEPROM_AUDIO_MODE_ADDR = EEPROM_AUDIO_BLOCK_ADDR + 1;
-constexpr int EEPROM_AUDIO_BAND_ADDR = EEPROM_AUDIO_BLOCK_ADDR + 2;
-constexpr int EEPROM_AUDIO_AMOUNT_ADDR = EEPROM_AUDIO_BLOCK_ADDR + 3;
-constexpr uint8_t EEPROM_AUDIO_MARKER = 0xA6;
+constexpr int kEepromAudioBlockAddr = kEepromNotificationBlockAddr + kEepromNotificationBlockSize; // 285
+constexpr int kEepromAudioBlockSize = 15;
+constexpr int kEepromAudioMarkerAddr = kEepromAudioBlockAddr;
+constexpr int kEepromAudioModeAddr = kEepromAudioBlockAddr + 1;
+constexpr int kEepromAudioBandAddr = kEepromAudioBlockAddr + 2;
+constexpr int kEepromAudioAmountAddr = kEepromAudioBlockAddr + 3;
+constexpr uint8_t kEepromAudioMarker = 0xA6;
 
-constexpr int EEPROM_EFFECT_SETTINGS_BASE = EEPROM_AUDIO_BLOCK_ADDR + EEPROM_AUDIO_BLOCK_SIZE; // 300
-constexpr uint8_t EEPROM_EFFECT_SETTINGS_CAPACITY = 50;
+constexpr int kEepromEffectSettingsBase = kEepromAudioBlockAddr + kEepromAudioBlockSize; // 300
+constexpr uint8_t kEepromEffectSettingsCapacity = 50;
 
 static_assert(
-  EEPROM_LAYOUT_META_ADDR + EEPROM_LAYOUT_META_SIZE <= EEPROM_WIFI_BLOCK_ADDR,
+  kEepromLayoutMetaAddr + kEepromLayoutMetaSize <= kEepromWifiBlockAddr,
   "EEPROM layout metadata must not overlap WiFi block"
 );
-static_assert(EEPROM_WIFI_CONFIG_SIZE <= EEPROM_WIFI_BLOCK_SIZE, "EEPROM WiFi payload must fit into WiFi block");
+static_assert(kEepromWifiConfigSize <= kEepromWifiBlockSize, "EEPROM WiFi payload must fit into WiFi block");
 static_assert(
-  EEPROM_WIFI_BLOCK_ADDR + EEPROM_WIFI_BLOCK_SIZE <= EEPROM_MQTT_BLOCK_ADDR,
-  "EEPROM WiFi block must not overlap MQTT block"
+  kEepromWifiBlockAddr + kEepromWifiBlockSize <= kEepromMqttBlockAddr, "EEPROM WiFi block must not overlap MQTT block"
 );
-static_assert(EEPROM_MQTT_CONFIG_SIZE <= EEPROM_MQTT_BLOCK_SIZE, "EEPROM MQTT payload must fit into MQTT block");
+static_assert(kEepromMqttConfigSize <= kEepromMqttBlockSize, "EEPROM MQTT payload must fit into MQTT block");
 static_assert(
-  EEPROM_MQTT_BLOCK_ADDR + EEPROM_MQTT_BLOCK_SIZE <= EEPROM_SYSTEM_STATE_BLOCK_ADDR,
+  kEepromMqttBlockAddr + kEepromMqttBlockSize <= kEepromSystemStateBlockAddr,
   "EEPROM MQTT block must not overlap system state block"
 );
 static_assert(
-  EEPROM_SYSTEM_STATE_BLOCK_ADDR + EEPROM_SYSTEM_STATE_BLOCK_SIZE <= EEPROM_EFFECT_STATE_BLOCK_ADDR,
+  kEepromSystemStateBlockAddr + kEepromSystemStateBlockSize <= kEepromEffectStateBlockAddr,
   "EEPROM system state block must not overlap effect state block"
 );
 static_assert(
-  EEPROM_EFFECT_STATE_BLOCK_ADDR + EEPROM_EFFECT_STATE_BLOCK_SIZE <= EEPROM_ROTATION_BLOCK_ADDR,
+  kEepromEffectStateBlockAddr + kEepromEffectStateBlockSize <= kEepromRotationBlockAddr,
   "EEPROM effect state block must not overlap rotation block"
 );
 static_assert(
-  EEPROM_ROTATION_BLOCK_ADDR + EEPROM_ROTATION_BLOCK_SIZE <= EEPROM_AUTO_POWER_BLOCK_ADDR,
+  kEepromRotationBlockAddr + kEepromRotationBlockSize <= kEepromAutoPowerBlockAddr,
   "EEPROM rotation block must not overlap auto power block"
 );
 static_assert(
-  EEPROM_AUTO_POWER_BLOCK_ADDR + EEPROM_AUTO_POWER_BLOCK_SIZE <= EEPROM_NOTIFICATION_BLOCK_ADDR,
+  kEepromAutoPowerBlockAddr + kEepromAutoPowerBlockSize <= kEepromNotificationBlockAddr,
   "EEPROM auto power block must not overlap notification block"
 );
 static_assert(
-  EEPROM_NOTIFICATION_BLOCK_ADDR + EEPROM_NOTIFICATION_BLOCK_SIZE <= EEPROM_AUDIO_BLOCK_ADDR,
+  kEepromNotificationBlockAddr + kEepromNotificationBlockSize <= kEepromAudioBlockAddr,
   "EEPROM notification block must not overlap audio config"
 );
 static_assert(
-  EEPROM_AUDIO_BLOCK_ADDR + EEPROM_AUDIO_BLOCK_SIZE <= EEPROM_EFFECT_SETTINGS_BASE,
+  kEepromAudioBlockAddr + kEepromAudioBlockSize <= kEepromEffectSettingsBase,
   "EEPROM audio config must not overlap effect settings"
 );
 static_assert(
-  Effects::COUNT <= EEPROM_EFFECT_SETTINGS_CAPACITY, "EEPROM effect settings capacity is too small for Effects::COUNT"
+  Effects::kCount <= kEepromEffectSettingsCapacity, "EEPROM effect settings capacity is too small for Effects::kCount"
 );
 static_assert(
-  EEPROM_EFFECT_SETTINGS_BASE + EEPROM_EFFECT_SETTINGS_CAPACITY * sizeof(EffectSettings) <= EEPROM_SIZE,
-  "EEPROM effect settings must fit into EEPROM_SIZE"
+  kEepromEffectSettingsBase + kEepromEffectSettingsCapacity * sizeof(EffectSettings) <= kEepromSize,
+  "EEPROM effect settings must fit into kEepromSize"
 );
 
-constexpr int EEPROM_EFFECT_SETTINGS_ADDR(int effectIndex) {
-  return EEPROM_EFFECT_SETTINGS_BASE + 3 * effectIndex;
+constexpr int kEepromEffectSettingsAddr(int effectIndex) {
+  return kEepromEffectSettingsBase + 3 * effectIndex;
 }

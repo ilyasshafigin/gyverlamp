@@ -7,7 +7,7 @@ namespace Effects {
   Effect* createEffect(Id id, void* buffer) {
     switch (id) {
 #define EFFECT_CASE(T) \
-  case T::ID: return new (buffer) T();
+  case T::kId: return new (buffer) T();
       EFFECT_REGISTRY(EFFECT_CASE) // NOLINT(bugprone-branch-clone)
 #undef EFFECT_CASE
       default:
@@ -19,7 +19,7 @@ namespace Effects {
 
   EffectSettingsSpec getEffectSettingsSpec(Id id) {
 #define EFFECT_SETTINGS_SPEC(T) \
-  case T::ID: return T::SETTINGS;
+  case T::kId: return T::kSettings;
     switch (id) {
       EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default : return {180, 30, 40, EFFECT_PARAM_SPEED | EFFECT_PARAM_SCALE};
     }
@@ -28,14 +28,14 @@ namespace Effects {
 
   const char* getEffectName(Id id) {
 #define EFFECT_NAME(T) \
-  case T::ID: return T::NAME;
+  case T::kId: return T::kName;
     switch (id) { EFFECT_REGISTRY(EFFECT_NAME) default : return ""; }
 #undef EFFECT_NAME
   }
 
   Id getEffectId(const String& effect) {
 #define EFFECT_COMPARE(T) \
-  if (effect.equals(T::NAME)) return T::ID;
+  if (effect.equals(T::kName)) return T::kId;
     EFFECT_REGISTRY(EFFECT_COMPARE)
 #undef EFFECT_COMPARE
     return Id::INVALID;
@@ -44,26 +44,26 @@ namespace Effects {
   Id getEffectId(const char* effect) {
     if (effect == nullptr) return Id::INVALID;
 #define EFFECT_COMPARE(T) \
-  if (strcmp(effect, T::NAME) == 0) return T::ID;
+  if (strcmp(effect, T::kName) == 0) return T::kId;
     EFFECT_REGISTRY(EFFECT_COMPARE)
 #undef EFFECT_COMPARE
     return Id::INVALID;
   }
 
   Id fallback() {
-    return isValid(DEFAULT_ID) ? DEFAULT_ID : DISPLAY_ORDER[0];
+    return isValid(kDefaultId) ? kDefaultId : kDisplayOrder[0];
   }
 
   bool isValid(Id id) {
-    if (toIndex(id) >= COUNT) return false;
-    for (uint8_t i = 0; i < DISPLAY_COUNT; i++) {
-      if (DISPLAY_ORDER[i] == id) return true;
+    if (toIndex(id) >= kCount) return false;
+    for (uint8_t i = 0; i < kDisplayCount; i++) {
+      if (kDisplayOrder[i] == id) return true;
     }
     return false;
   }
 
   bool isValid(uint8_t raw) {
-    return raw < COUNT && isValid(toId(raw));
+    return raw < kCount && isValid(toId(raw));
   }
 
   Id clamp(Id id) {

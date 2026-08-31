@@ -12,7 +12,7 @@
 
 namespace {
 
-  constexpr uint16_t MINUTES_PER_DAY = 24 * 60;
+  constexpr uint16_t kMinutesPerDay = 24 * 60;
 
   void readFieldAt(int& address, char* dest, size_t len) {
     size_t i = 0;
@@ -37,25 +37,25 @@ namespace {
   }
 
   uint16_t clampAutoOffMinutes(uint16_t minutes) {
-    if (minutes < AUTO_OFF_MINUTES_MIN) return AUTO_OFF_MINUTES_MIN;
-    if (minutes > AUTO_OFF_MINUTES_MAX) return AUTO_OFF_MINUTES_MAX;
+    if (minutes < kAutoOffMinutesMin) return kAutoOffMinutesMin;
+    if (minutes > kAutoOffMinutesMax) return kAutoOffMinutesMax;
     return minutes;
   }
 
   bool isValidAutoOffMinutes(uint16_t minutes) {
-    return minutes >= AUTO_OFF_MINUTES_MIN && minutes <= AUTO_OFF_MINUTES_MAX;
+    return minutes >= kAutoOffMinutesMin && minutes <= kAutoOffMinutesMax;
   }
 
   NotificationQuietHours defaultNotificationQuietHours() {
     NotificationQuietHours settings;
-    settings.enabled = DEFAULT_QUIET_ENABLED;
-    settings.startMinutes = DEFAULT_QUIET_START_MINUTES;
-    settings.endMinutes = DEFAULT_QUIET_END_MINUTES;
+    settings.enabled = kDefaultQuietEnabled;
+    settings.startMinutes = kDefaultQuietStartMinutes;
+    settings.endMinutes = kDefaultQuietEndMinutes;
     return settings;
   }
 
   bool isValidMinuteOfDay(uint16_t minutes) {
-    return minutes < MINUTES_PER_DAY;
+    return minutes < kMinutesPerDay;
   }
 
   uint16_t clampMinuteOfDay(uint16_t minutes) {
@@ -75,17 +75,17 @@ namespace {
 } // namespace
 
 void EepromStore::init() {
-  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.begin(kEepromSize);
   ensureLayoutVersion();
 }
 
 void EepromStore::ensureLayoutVersion() {
   uint32_t magic = 0;
   uint8_t version = 0;
-  EEPROM.get(EEPROM_LAYOUT_META_ADDR, magic);
-  EEPROM.get(EEPROM_LAYOUT_META_ADDR + sizeof(magic), version);
+  EEPROM.get(kEepromLayoutMetaAddr, magic);
+  EEPROM.get(kEepromLayoutMetaAddr + sizeof(magic), version);
 
-  if (magic != EEPROM_LAYOUT_MAGIC) {
+  if (magic != kEepromLayoutMagic) {
     // Legacy EEPROM from pre-versioned firmware is not migrated: start clean with current layout.
     if (!initializeLayout()) {
       Serial.println(F("[EEPROM] Layout initialization failed"));
@@ -93,7 +93,7 @@ void EepromStore::ensureLayoutVersion() {
     return;
   }
 
-  if (version == EEPROM_LAYOUT_VERSION_CURRENT) return;
+  if (version == kEepromLayoutVersionCurrent) return;
 
   // Version bump: snapshot user-tunable settings, wipe layout, then restore the
   // snapshot so the device keeps WiFi/MQTT credentials and other config across
@@ -111,7 +111,7 @@ void EepromStore::ensureLayoutVersion() {
   const Palettes::Id preservedPalette = readGlobalPaletteId();
   const NotificationQuietHours preservedQuiet = readNotificationQuietHours();
   const AudioConfig preservedAudio = readAudioConfig();
-  const uint8_t preservedCurrentMode = EEPROM.read(EEPROM_CURRENT_MODE_ADDR);
+  const uint8_t preservedCurrentMode = EEPROM.read(kEepromCurrentModeAddr);
 
   initializeLayout();
 
@@ -124,47 +124,47 @@ void EepromStore::ensureLayoutVersion() {
   writeGlobalPaletteId(preservedPalette);
   writeNotificationQuietHours(preservedQuiet);
   writeAudioConfig(preservedAudio);
-  EEPROM.write(EEPROM_CURRENT_MODE_ADDR, preservedCurrentMode);
+  EEPROM.write(kEepromCurrentModeAddr, preservedCurrentMode);
   EEPROM.commit();
 }
 
 bool EepromStore::writeLayoutVersion() {
-  EEPROM.put(EEPROM_LAYOUT_META_ADDR, EEPROM_LAYOUT_MAGIC);
-  EEPROM.put(EEPROM_LAYOUT_META_ADDR + sizeof(EEPROM_LAYOUT_MAGIC), EEPROM_LAYOUT_VERSION_CURRENT);
+  EEPROM.put(kEepromLayoutMetaAddr, kEepromLayoutMagic);
+  EEPROM.put(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
   return EEPROM.commit();
 }
 
 bool EepromStore::initializeLayout() {
-  for (int address = 0; address < EEPROM_SIZE; ++address) {
+  for (int address = 0; address < kEepromSize; ++address) {
     EEPROM.write(address, 0);
   }
 
-  EEPROM.write(EEPROM_POWER_STATE_ADDR, 0);
-  EEPROM.write(EEPROM_BUTTON_ENABLED_ADDR, 1);
-  EEPROM.put(EEPROM_AUTO_OFF_MINUTES_ADDR, AUTO_OFF_MINUTES_DEFAULT);
-  EEPROM.write(EEPROM_CURRENT_MODE_ADDR, 0);
-  EEPROM.write(EEPROM_EFFECT_SETTINGS_COUNT_ADDR, 0);
-  EEPROM.write(EEPROM_GLOBAL_BRIGHTNESS_ADDR, 255);
-  EEPROM.write(EEPROM_ROTATION_MODE_ADDR, static_cast<uint8_t>(RotationMode::Off));
-  EEPROM.put(EEPROM_ROTATION_INTERVAL_SEC_ADDR, ROTATION_INTERVAL_SEC_DEFAULT);
+  EEPROM.write(kEepromPowerStateAddr, 0);
+  EEPROM.write(kEepromButtonEnabledAddr, 1);
+  EEPROM.put(kEepromAutoOffMinutesAddr, kAutoOffMinutesDefault);
+  EEPROM.write(kEepromCurrentModeAddr, 0);
+  EEPROM.write(kEepromEffectSettingsCountAddr, 0);
+  EEPROM.write(kEepromGlobalBrightnessAddr, 255);
+  EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(RotationMode::Off));
+  EEPROM.put(kEepromRotationIntervalSecAddr, kRotationIntervalSecDefault);
   return writeLayoutVersion();
 }
 
 const WifiConfig& EepromStore::readWifiConfig() {
-  int eeAddress = EEPROM_WIFI_CONFIG_ADDR;
-  readFieldAt(eeAddress, wifiConfigCache_.ssid, WIFI_SSID_LEN);
-  readFieldAt(eeAddress, wifiConfigCache_.password, WIFI_PASS_LEN);
+  int eeAddress = kEepromWifiConfigAddr;
+  readFieldAt(eeAddress, wifiConfigCache_.ssid, kWifiSsidLen);
+  readFieldAt(eeAddress, wifiConfigCache_.password, kWifiPassLen);
   return wifiConfigCache_;
 }
 
 bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
   WifiConfig wifiConfig = {};
-  strlcpy(wifiConfig.ssid, ssid, WIFI_SSID_LEN);
-  strlcpy(wifiConfig.password, password, WIFI_PASS_LEN);
+  strlcpy(wifiConfig.ssid, ssid, kWifiSsidLen);
+  strlcpy(wifiConfig.password, password, kWifiPassLen);
 
-  int eeAddress = EEPROM_WIFI_CONFIG_ADDR;
-  writeFieldAt(eeAddress, wifiConfig.ssid, WIFI_SSID_LEN);
-  writeFieldAt(eeAddress, wifiConfig.password, WIFI_PASS_LEN);
+  int eeAddress = kEepromWifiConfigAddr;
+  writeFieldAt(eeAddress, wifiConfig.ssid, kWifiSsidLen);
+  writeFieldAt(eeAddress, wifiConfig.password, kWifiPassLen);
 
   const bool committed = EEPROM.commit();
   if (committed) {
@@ -174,26 +174,26 @@ bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
 }
 
 const MqttConfig& EepromStore::readMqttConfig() {
-  int eeAddress = EEPROM_MQTT_CONFIG_ADDR;
-  readFieldAt(eeAddress, mqttConfigCache_.host, MQTT_HOST_LEN);
-  readFieldAt(eeAddress, mqttConfigCache_.port, MQTT_PORT_LEN);
-  readFieldAt(eeAddress, mqttConfigCache_.user, MQTT_USER_LEN);
-  readFieldAt(eeAddress, mqttConfigCache_.password, MQTT_PASS_LEN);
+  int eeAddress = kEepromMqttConfigAddr;
+  readFieldAt(eeAddress, mqttConfigCache_.host, kMqttHostLen);
+  readFieldAt(eeAddress, mqttConfigCache_.port, kMqttPortLen);
+  readFieldAt(eeAddress, mqttConfigCache_.user, kMqttUserLen);
+  readFieldAt(eeAddress, mqttConfigCache_.password, kMqttPassLen);
   return mqttConfigCache_;
 }
 
 bool EepromStore::writeMqttConfig(const char* host, const char* port, const char* user, const char* password) {
   MqttConfig mqttConfig = {};
-  strlcpy(mqttConfig.host, host, MQTT_HOST_LEN);
-  strlcpy(mqttConfig.port, port, MQTT_PORT_LEN);
-  strlcpy(mqttConfig.user, user, MQTT_USER_LEN);
-  strlcpy(mqttConfig.password, password, MQTT_PASS_LEN);
+  strlcpy(mqttConfig.host, host, kMqttHostLen);
+  strlcpy(mqttConfig.port, port, kMqttPortLen);
+  strlcpy(mqttConfig.user, user, kMqttUserLen);
+  strlcpy(mqttConfig.password, password, kMqttPassLen);
 
-  int eeAddress = EEPROM_MQTT_CONFIG_ADDR;
-  writeFieldAt(eeAddress, mqttConfig.host, MQTT_HOST_LEN);
-  writeFieldAt(eeAddress, mqttConfig.port, MQTT_PORT_LEN);
-  writeFieldAt(eeAddress, mqttConfig.user, MQTT_USER_LEN);
-  writeFieldAt(eeAddress, mqttConfig.password, MQTT_PASS_LEN);
+  int eeAddress = kEepromMqttConfigAddr;
+  writeFieldAt(eeAddress, mqttConfig.host, kMqttHostLen);
+  writeFieldAt(eeAddress, mqttConfig.port, kMqttPortLen);
+  writeFieldAt(eeAddress, mqttConfig.user, kMqttUserLen);
+  writeFieldAt(eeAddress, mqttConfig.password, kMqttPassLen);
 
   const bool committed = EEPROM.commit();
   if (committed) {
@@ -203,27 +203,27 @@ bool EepromStore::writeMqttConfig(const char* host, const char* port, const char
 }
 
 bool EepromStore::readPowerState() {
-  return EEPROM.read(EEPROM_POWER_STATE_ADDR);
+  return EEPROM.read(kEepromPowerStateAddr);
 }
 
 void EepromStore::writePowerState(bool powerOn) {
-  EEPROM.write(EEPROM_POWER_STATE_ADDR, static_cast<uint8_t>(powerOn));
+  EEPROM.write(kEepromPowerStateAddr, static_cast<uint8_t>(powerOn));
   EEPROM.commit();
 }
 
 uint16_t EepromStore::readAutoOffMinutes() {
-  uint16_t minutes = AUTO_OFF_MINUTES_DEFAULT;
-  EEPROM.get(EEPROM_AUTO_OFF_MINUTES_ADDR, minutes);
-  return isValidAutoOffMinutes(minutes) ? minutes : AUTO_OFF_MINUTES_DEFAULT;
+  uint16_t minutes = kAutoOffMinutesDefault;
+  EEPROM.get(kEepromAutoOffMinutesAddr, minutes);
+  return isValidAutoOffMinutes(minutes) ? minutes : kAutoOffMinutesDefault;
 }
 
 bool EepromStore::writeAutoOffMinutes(uint16_t minutes) {
-  EEPROM.put(EEPROM_AUTO_OFF_MINUTES_ADDR, clampAutoOffMinutes(minutes));
+  EEPROM.put(kEepromAutoOffMinutesAddr, clampAutoOffMinutes(minutes));
   return EEPROM.commit();
 }
 
 RotationMode EepromStore::readRotationMode() {
-  const uint8_t value = EEPROM.read(EEPROM_ROTATION_MODE_ADDR);
+  const uint8_t value = EEPROM.read(kEepromRotationModeAddr);
   if (value > static_cast<uint8_t>(RotationMode::Random)) {
     writeRotationMode(RotationMode::Off);
     return RotationMode::Off;
@@ -232,29 +232,29 @@ RotationMode EepromStore::readRotationMode() {
 }
 
 bool EepromStore::writeRotationMode(RotationMode mode) {
-  EEPROM.write(EEPROM_ROTATION_MODE_ADDR, static_cast<uint8_t>(mode));
+  EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(mode));
   return EEPROM.commit();
 }
 
 uint16_t EepromStore::readRotationIntervalSec() {
-  uint16_t seconds = ROTATION_INTERVAL_SEC_DEFAULT;
-  EEPROM.get(EEPROM_ROTATION_INTERVAL_SEC_ADDR, seconds);
-  if (seconds < ROTATION_INTERVAL_SEC_MIN || seconds > ROTATION_INTERVAL_SEC_MAX) {
-    writeRotationIntervalSec(ROTATION_INTERVAL_SEC_DEFAULT);
-    return ROTATION_INTERVAL_SEC_DEFAULT;
+  uint16_t seconds = kRotationIntervalSecDefault;
+  EEPROM.get(kEepromRotationIntervalSecAddr, seconds);
+  if (seconds < kRotationIntervalSecMin || seconds > kRotationIntervalSecMax) {
+    writeRotationIntervalSec(kRotationIntervalSecDefault);
+    return kRotationIntervalSecDefault;
   }
   return seconds;
 }
 
 bool EepromStore::writeRotationIntervalSec(uint16_t seconds) {
-  if (seconds < ROTATION_INTERVAL_SEC_MIN) seconds = ROTATION_INTERVAL_SEC_MIN;
-  if (seconds > ROTATION_INTERVAL_SEC_MAX) seconds = ROTATION_INTERVAL_SEC_MAX;
-  EEPROM.put(EEPROM_ROTATION_INTERVAL_SEC_ADDR, seconds);
+  if (seconds < kRotationIntervalSecMin) seconds = kRotationIntervalSecMin;
+  if (seconds > kRotationIntervalSecMax) seconds = kRotationIntervalSecMax;
+  EEPROM.put(kEepromRotationIntervalSecAddr, seconds);
   return EEPROM.commit();
 }
 
 bool EepromStore::readButtonEnabled() {
-  const uint8_t value = EEPROM.read(EEPROM_BUTTON_ENABLED_ADDR);
+  const uint8_t value = EEPROM.read(kEepromButtonEnabledAddr);
   if (value != 0 && value != 1) {
     writeButtonEnabled(true);
     return true;
@@ -263,31 +263,31 @@ bool EepromStore::readButtonEnabled() {
 }
 
 bool EepromStore::writeButtonEnabled(bool enabled) {
-  EEPROM.write(EEPROM_BUTTON_ENABLED_ADDR, enabled ? 1 : 0);
+  EEPROM.write(kEepromButtonEnabledAddr, enabled ? 1 : 0);
   return EEPROM.commit();
 }
 
 Palettes::Id EepromStore::readGlobalPaletteId() {
-  const uint8_t value = EEPROM.read(EEPROM_GLOBAL_PALETTE_ID_ADDR);
+  const uint8_t value = EEPROM.read(kEepromGlobalPaletteIdAddr);
   return Palettes::clamp(value);
 }
 
 bool EepromStore::writeGlobalPaletteId(Palettes::Id paletteId) {
   const uint8_t raw = static_cast<uint8_t>(paletteId);
-  if (EEPROM.read(EEPROM_GLOBAL_PALETTE_ID_ADDR) != raw) {
-    EEPROM.write(EEPROM_GLOBAL_PALETTE_ID_ADDR, raw);
+  if (EEPROM.read(kEepromGlobalPaletteIdAddr) != raw) {
+    EEPROM.write(kEepromGlobalPaletteIdAddr, raw);
     return EEPROM.commit();
   }
   return true;
 }
 
 uint8_t EepromStore::readGlobalBrightness() {
-  return EEPROM.read(EEPROM_GLOBAL_BRIGHTNESS_ADDR);
+  return EEPROM.read(kEepromGlobalBrightnessAddr);
 }
 
 bool EepromStore::writeGlobalBrightness(uint8_t value) {
-  if (EEPROM.read(EEPROM_GLOBAL_BRIGHTNESS_ADDR) != value) {
-    EEPROM.write(EEPROM_GLOBAL_BRIGHTNESS_ADDR, value);
+  if (EEPROM.read(kEepromGlobalBrightnessAddr) != value) {
+    EEPROM.write(kEepromGlobalBrightnessAddr, value);
     return EEPROM.commit();
   }
   return true;
@@ -296,12 +296,12 @@ bool EepromStore::writeGlobalBrightness(uint8_t value) {
 NotificationQuietHours EepromStore::readNotificationQuietHours() {
   NotificationQuietHours settings = defaultNotificationQuietHours();
 
-  const uint8_t enabled = EEPROM.read(EEPROM_NOTIFICATION_QUIET_ENABLED_ADDR);
+  const uint8_t enabled = EEPROM.read(kEepromNotificationQuietEnabledAddr);
   uint16_t startMinutes = settings.startMinutes;
   uint16_t endMinutes = settings.endMinutes;
 
-  EEPROM.get(EEPROM_NOTIFICATION_QUIET_START_ADDR, startMinutes);
-  EEPROM.get(EEPROM_NOTIFICATION_QUIET_END_ADDR, endMinutes);
+  EEPROM.get(kEepromNotificationQuietStartAddr, startMinutes);
+  EEPROM.get(kEepromNotificationQuietEndAddr, endMinutes);
 
   if (enabled != 0 && enabled != 1) {
     writeNotificationQuietHours(settings);
@@ -320,70 +320,70 @@ NotificationQuietHours EepromStore::readNotificationQuietHours() {
 }
 
 bool EepromStore::writeNotificationQuietHours(const NotificationQuietHours& settings) {
-  EEPROM.write(EEPROM_NOTIFICATION_QUIET_ENABLED_ADDR, settings.enabled ? 1 : 0);
-  EEPROM.put(EEPROM_NOTIFICATION_QUIET_START_ADDR, clampMinuteOfDay(settings.startMinutes));
-  EEPROM.put(EEPROM_NOTIFICATION_QUIET_END_ADDR, clampMinuteOfDay(settings.endMinutes));
+  EEPROM.write(kEepromNotificationQuietEnabledAddr, settings.enabled ? 1 : 0);
+  EEPROM.put(kEepromNotificationQuietStartAddr, clampMinuteOfDay(settings.startMinutes));
+  EEPROM.put(kEepromNotificationQuietEndAddr, clampMinuteOfDay(settings.endMinutes));
   return EEPROM.commit();
 }
 
 AudioConfig EepromStore::readAudioConfig() {
   AudioConfig config;
 
-  if (EEPROM.read(EEPROM_AUDIO_MARKER_ADDR) != EEPROM_AUDIO_MARKER) {
+  if (EEPROM.read(kEepromAudioMarkerAddr) != kEepromAudioMarker) {
     writeAudioConfig(config);
     return config;
   }
 
-  config.mode = clampAudioMode(EEPROM.read(EEPROM_AUDIO_MODE_ADDR));
-  config.band = clampAudioBand(EEPROM.read(EEPROM_AUDIO_BAND_ADDR));
-  config.amount = EEPROM.read(EEPROM_AUDIO_AMOUNT_ADDR);
+  config.mode = clampAudioMode(EEPROM.read(kEepromAudioModeAddr));
+  config.band = clampAudioBand(EEPROM.read(kEepromAudioBandAddr));
+  config.amount = EEPROM.read(kEepromAudioAmountAddr);
 
   return config;
 }
 
 bool EepromStore::writeAudioConfig(const AudioConfig& config) {
-  EEPROM.write(EEPROM_AUDIO_MARKER_ADDR, EEPROM_AUDIO_MARKER);
-  EEPROM.write(EEPROM_AUDIO_MODE_ADDR, static_cast<uint8_t>(config.mode));
-  EEPROM.write(EEPROM_AUDIO_BAND_ADDR, static_cast<uint8_t>(config.band));
-  EEPROM.write(EEPROM_AUDIO_AMOUNT_ADDR, config.amount);
+  EEPROM.write(kEepromAudioMarkerAddr, kEepromAudioMarker);
+  EEPROM.write(kEepromAudioModeAddr, static_cast<uint8_t>(config.mode));
+  EEPROM.write(kEepromAudioBandAddr, static_cast<uint8_t>(config.band));
+  EEPROM.write(kEepromAudioAmountAddr, config.amount);
   return EEPROM.commit();
 }
 
 void EepromStore::ensureEffectSettings(const EffectSettings* effects) {
-  uint8_t initializedCount = EEPROM.read(EEPROM_EFFECT_SETTINGS_COUNT_ADDR);
-  if (initializedCount == 0xFF || initializedCount > static_cast<uint8_t>(EEPROM_EFFECT_SETTINGS_CAPACITY))
+  uint8_t initializedCount = EEPROM.read(kEepromEffectSettingsCountAddr);
+  if (initializedCount == 0xFF || initializedCount > static_cast<uint8_t>(kEepromEffectSettingsCapacity))
     initializedCount = 0;
-  if (initializedCount >= Effects::COUNT) return;
+  if (initializedCount >= Effects::kCount) return;
 
-  for (uint8_t i = initializedCount; i < Effects::COUNT; i++) {
-    EEPROM.put(EEPROM_EFFECT_SETTINGS_ADDR(i), effects[i]);
+  for (uint8_t i = initializedCount; i < Effects::kCount; i++) {
+    EEPROM.put(kEepromEffectSettingsAddr(i), effects[i]);
   }
 
-  EEPROM.write(EEPROM_EFFECT_SETTINGS_COUNT_ADDR, Effects::COUNT);
+  EEPROM.write(kEepromEffectSettingsCountAddr, Effects::kCount);
   EEPROM.commit();
 }
 
 void EepromStore::readEffectSettings(const Effects::Id effectId, EffectSettings& effectSettings) {
-  EEPROM.get(EEPROM_EFFECT_SETTINGS_ADDR(Effects::toIndex(effectId)), effectSettings);
+  EEPROM.get(kEepromEffectSettingsAddr(Effects::toIndex(effectId)), effectSettings);
 }
 
 void EepromStore::writeEffectSettings(const Effects::Id effectId, const EffectSettings& effectSettings) {
   uint8_t effectIndex = Effects::toIndex(effectId);
-  EEPROM.put(EEPROM_EFFECT_SETTINGS_ADDR(effectIndex), effectSettings);
-  if (EEPROM.read(EEPROM_CURRENT_MODE_ADDR) != effectIndex) {
-    EEPROM.write(EEPROM_CURRENT_MODE_ADDR, effectIndex);
+  EEPROM.put(kEepromEffectSettingsAddr(effectIndex), effectSettings);
+  if (EEPROM.read(kEepromCurrentModeAddr) != effectIndex) {
+    EEPROM.write(kEepromCurrentModeAddr, effectIndex);
   }
   EEPROM.commit();
 }
 
 bool EepromStore::writeAllEffectSettings(const EffectSettings* effects) {
-  for (uint8_t i = 0; i < Effects::COUNT; i++) {
-    EEPROM.put(EEPROM_EFFECT_SETTINGS_ADDR(i), effects[i]);
+  for (uint8_t i = 0; i < Effects::kCount; i++) {
+    EEPROM.put(kEepromEffectSettingsAddr(i), effects[i]);
   }
-  EEPROM.write(EEPROM_EFFECT_SETTINGS_COUNT_ADDR, Effects::COUNT);
+  EEPROM.write(kEepromEffectSettingsCountAddr, Effects::kCount);
   return EEPROM.commit();
 }
 
 Effects::Id EepromStore::readCurrentEffectId() {
-  return Effects::toId(EEPROM.read(EEPROM_CURRENT_MODE_ADDR));
+  return Effects::toId(EEPROM.read(kEepromCurrentModeAddr));
 }

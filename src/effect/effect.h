@@ -68,8 +68,8 @@ public:
 
 class Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::INVALID;
-  static constexpr const char* NAME = "";
+  static constexpr Effects::Id kId = Effects::Id::INVALID;
+  static constexpr const char* kName = "";
 
   virtual ~Effect() = default;
   // Вызывается при установке эффекта

@@ -4,9 +4,9 @@
 
 class EffectFire : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::Fire;
-  static constexpr const char* NAME = "Fire";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::Fire;
+  static constexpr const char* kName = "Fire";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     160, // speed
     15,  // scale

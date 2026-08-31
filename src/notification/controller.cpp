@@ -34,7 +34,7 @@ void NotificationController::tick() {
       if (opacity_.value() == 0) {
         opacity_.snapTo(1);
       }
-      opacity_.fadeTo(255, NOTIFICATION_FADE_IN_MS, now);
+      opacity_.fadeTo(255, kNotificationFadeInMs, now);
     }
 
     if (shouldPreFadeOut(current, now)) {
@@ -44,7 +44,7 @@ void NotificationController::tick() {
       if (remaining == 0) {
         opacity_.snapTo(0);
       } else if (opacity_.target() != 0) {
-        opacity_.fadeTo(0, min<uint32_t>(remaining, NOTIFICATION_FADE_OUT_MS), now);
+        opacity_.fadeTo(0, min<uint32_t>(remaining, kNotificationFadeOutMs), now);
       }
     }
 
@@ -52,7 +52,7 @@ void NotificationController::tick() {
     drawableNotification_ = current;
   } else {
     if (activeNotification_.isActive()) {
-      opacity_.fadeTo(0, NOTIFICATION_FADE_OUT_MS, now);
+      opacity_.fadeTo(0, kNotificationFadeOutMs, now);
       activeNotification_ = {};
     }
 
@@ -124,7 +124,7 @@ void NotificationController::startUserNotification(UserNotificationType type, ui
   }
 
   if (type == UserNotificationType::Notify /* && durationMs == 0*/) {
-    durationMs = USER_NOTIFY_DEFAULT_MS;
+    durationMs = kUserNotifyDefaultMs;
   }
 
   userState_.start(type, durationMs);
@@ -283,26 +283,26 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.source = NotificationSource::Ota;
     snaphot.otaState = otaState_;
     snaphot.startedMs = lastOtaChangeMs_;
-    snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
+    snaphot.targetDim = kSystemHighPriorityDim;
     snaphot.otaPercent = otaPercent_;
     return filterMuted(snaphot);
   }
 
-  if (otaState_ == OtaState::Error && isRecently(lastOtaChangeMs_, SYSTEM_ERROR_VISIBLE_MS)) {
+  if (otaState_ == OtaState::Error && isRecently(lastOtaChangeMs_, kSystemErrorVisibleMs)) {
     snaphot.source = NotificationSource::Ota;
     snaphot.otaState = otaState_;
     snaphot.startedMs = lastOtaChangeMs_;
-    snaphot.durationMs = SYSTEM_ERROR_VISIBLE_MS;
-    snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
+    snaphot.durationMs = kSystemErrorVisibleMs;
+    snaphot.targetDim = kSystemHighPriorityDim;
     return filterMuted(snaphot);
   }
 
-  if (otaState_ == OtaState::Success && isRecently(lastOtaChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (otaState_ == OtaState::Success && isRecently(lastOtaChangeMs_, kSystemSuccessVisibleMs)) {
     snaphot.source = NotificationSource::Ota;
     snaphot.otaState = otaState_;
     snaphot.startedMs = lastOtaChangeMs_;
-    snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
-    snaphot.targetDim = SYSTEM_HIGH_PRIORITY_DIM;
+    snaphot.durationMs = kSystemSuccessVisibleMs;
+    snaphot.targetDim = kSystemHighPriorityDim;
     snaphot.otaPercent = 100;
     return filterMuted(snaphot);
   }
@@ -312,7 +312,7 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.userType = userState_.getType();
     snaphot.startedMs = userState_.getStartedMs();
     snaphot.durationMs = userState_.getDurationMs();
-    snaphot.targetDim = USER_ALERT_DIM;
+    snaphot.targetDim = kUserAlertDim;
     return filterMuted(snaphot);
   }
 
@@ -321,14 +321,14 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.userType = UserNotificationType::Text;
     snaphot.startedMs = userState_.getStartedMs();
     snaphot.durationMs = userState_.getDurationMs();
-    snaphot.targetDim = USER_NOTIFY_DIM;
+    snaphot.targetDim = kUserNotifyDim;
     snaphot.text = &userState_.getText();
     snaphot.color = userState_.getColor();
     return filterMuted(snaphot);
   }
 
   const bool hasPressEcho =
-    buttonPressCount_ > 0 && (buttonPressing_ || isRecently(lastButtonPressMs_, BUTTON_PRESS_ECHO_MS));
+    buttonPressCount_ > 0 && (buttonPressing_ || isRecently(lastButtonPressMs_, kButtonPressEchoMs));
   const uint32_t buttonDurationMs = getIndicatorDuration(indicatorType_);
   const bool hasButtonAction = indicatorType_ != IndicatorType::None && buttonDurationMs > 0 &&
                                isRecently(lastIndicatorChangeMs_, buttonDurationMs);
@@ -345,7 +345,7 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     } else {
       snaphot.indicatorType = IndicatorType::None;
       snaphot.startedMs = lastButtonPressMs_;
-      snaphot.durationMs = BUTTON_PRESS_ECHO_MS;
+      snaphot.durationMs = kButtonPressEchoMs;
     }
 
     snaphot.buttonPressCount = buttonPressCount_;
@@ -359,8 +359,8 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.source = NotificationSource::Wifi;
     snaphot.connectionState = wifiState_;
     snaphot.startedMs = lastWifiChangeMs_;
-    snaphot.durationMs = wifiState_ == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
-    snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
+    snaphot.durationMs = wifiState_ == ConnectionState::Error ? kSystemErrorVisibleMs : 0;
+    snaphot.targetDim = kSystemLowPriorityDim;
     return filterMuted(snaphot);
   }
 
@@ -368,8 +368,8 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.source = NotificationSource::Mqtt;
     snaphot.connectionState = mqttState_;
     snaphot.startedMs = lastMqttChangeMs_;
-    snaphot.durationMs = mqttState_ == ConnectionState::Error ? SYSTEM_ERROR_VISIBLE_MS : 0;
-    snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
+    snaphot.durationMs = mqttState_ == ConnectionState::Error ? kSystemErrorVisibleMs : 0;
+    snaphot.targetDim = kSystemLowPriorityDim;
     return filterMuted(snaphot);
   }
 
@@ -378,25 +378,25 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
     snaphot.userType = UserNotificationType::Notify;
     snaphot.startedMs = userState_.getStartedMs();
     snaphot.durationMs = userState_.getDurationMs();
-    snaphot.targetDim = USER_NOTIFY_DIM;
+    snaphot.targetDim = kUserNotifyDim;
     return filterMuted(snaphot);
   }
 
-  if (wifiState_ == ConnectionState::Connected && isRecently(lastWifiChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (wifiState_ == ConnectionState::Connected && isRecently(lastWifiChangeMs_, kSystemSuccessVisibleMs)) {
     snaphot.source = NotificationSource::Wifi;
     snaphot.connectionState = wifiState_;
     snaphot.startedMs = lastWifiChangeMs_;
-    snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
-    snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
+    snaphot.durationMs = kSystemSuccessVisibleMs;
+    snaphot.targetDim = kSystemLowPriorityDim;
     return filterMuted(snaphot);
   }
 
-  if (mqttState_ == ConnectionState::Connected && isRecently(lastMqttChangeMs_, SYSTEM_SUCCESS_VISIBLE_MS)) {
+  if (mqttState_ == ConnectionState::Connected && isRecently(lastMqttChangeMs_, kSystemSuccessVisibleMs)) {
     snaphot.source = NotificationSource::Mqtt;
     snaphot.connectionState = mqttState_;
     snaphot.startedMs = lastMqttChangeMs_;
-    snaphot.durationMs = SYSTEM_SUCCESS_VISIBLE_MS;
-    snaphot.targetDim = SYSTEM_LOW_PRIORITY_DIM;
+    snaphot.durationMs = kSystemSuccessVisibleMs;
+    snaphot.targetDim = kSystemLowPriorityDim;
     return filterMuted(snaphot);
   }
 
@@ -439,13 +439,13 @@ uint8_t NotificationController::getUserNotificationPriority(UserNotificationType
 bool NotificationController::shouldPreFadeOut(const NotificationSnapshot& snaphot, uint32_t now) const {
   if (snaphot.source == NotificationSource::Button) return false;
   if (!snaphot.isTimed()) return false;
-  if (snaphot.durationMs <= NOTIFICATION_FADE_OUT_MS) return false;
+  if (snaphot.durationMs <= kNotificationFadeOutMs) return false;
 
   const uint32_t elapsed = now - snaphot.startedMs;
   if (elapsed >= snaphot.durationMs) return true;
 
   const uint32_t remaining = snaphot.durationMs - elapsed;
-  return remaining <= NOTIFICATION_FADE_OUT_MS;
+  return remaining <= kNotificationFadeOutMs;
 }
 
 bool NotificationController::shouldMuteNotification(const NotificationSnapshot& snaphot) const {

@@ -1,35 +1,31 @@
 #include "ota_service.h"
 
+#include <stdint.h>
+
 #ifdef USE_OTA
 
 #include <ArduinoOTA.h>
 
-#include "../core/frame_renderer.h"
-#include "../core/power_controller.h"
-#include "../notification/controller.h"
-#include "wifi_service.h"
+void OtaService::init(const char* hostname) {
+  ArduinoOTA.setHostname(hostname);
 
-void OtaService::init() {
   ArduinoOTA.onStart([this]() {
     Serial.println("[OTA] OTA Start");
 
-    notifications_.onOtaStart();
-    frameRenderer_.renderNow();
+    if (startCallback_) startCallback_();
   });
 
   ArduinoOTA.onEnd([this]() {
     Serial.println("[OTA] OTA End");
 
-    notifications_.onOtaEnd();
-    frameRenderer_.renderNow();
+    if (endCallback_) endCallback_();
   });
 
   ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
     const unsigned int percent =
       total == 0 ? 0 : static_cast<unsigned int>((static_cast<uint64_t>(progress) * 100U) / total);
 
-    notifications_.onOtaProgress(percent);
-    frameRenderer_.render();
+    if (progressCallback_) progressCallback_(percent);
 
     Serial.printf("[OTA] Progress: %u%%\n\r", percent);
   });
@@ -46,13 +42,12 @@ void OtaService::init() {
     else if (error == OTA_END_ERROR)
       Serial.println("[OTA] End Failed");
 
-    notifications_.onOtaError();
-    frameRenderer_.renderNow();
+    if (errorCallback_) errorCallback_();
   });
 }
 
-void OtaService::tick() {
-  if (!wifi_.isStaConnected()) {
+void OtaService::tick(bool isStaConnected) {
+  if (!isStaConnected) {
     if (beginAttempted_) {
       ArduinoOTA.end();
     }
@@ -62,7 +57,7 @@ void OtaService::tick() {
   }
 
   const unsigned long now = millis();
-  if (!beginAttempted_ || now - lastBeginAttemptAt_ >= BEGIN_RETRY_INTERVAL_MS) {
+  if (!beginAttempted_ || now - lastBeginAttemptAt_ >= kBeginRetryIntervalMs) {
     ArduinoOTA.begin(false);
     beginAttempted_ = true;
     lastBeginAttemptAt_ = millis();
@@ -73,9 +68,9 @@ void OtaService::tick() {
 
 #else
 
-void OtaService::init() {
+void OtaService::init(const char*) {
 }
-void OtaService::tick() {
+void OtaService::tick(bool) {
 }
 
 #endif

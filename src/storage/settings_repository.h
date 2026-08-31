@@ -31,7 +31,7 @@ public:
 
 private:
   EepromStore& eeprom_;
-  EffectSettings effects_[Effects::COUNT];
+  EffectSettings effects_[Effects::kCount];
   bool effectSettingsChanged_ = false;
   uint32_t persistTimer_ = 0;
   Palettes::Id selectedPalette_ = Palettes::Id::Auto;

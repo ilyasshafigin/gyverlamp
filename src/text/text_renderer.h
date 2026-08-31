@@ -8,9 +8,9 @@ class NotificationOverlay;
 
 class TextRenderer {
 public:
-  static constexpr uint8_t LET_WIDTH = 5;
-  static constexpr uint8_t LET_HEIGHT = 8;
-  static constexpr uint8_t SPACE = 1;
+  static constexpr uint8_t kLetterWidth = 5;
+  static constexpr uint8_t kLetHeight = 8;
+  static constexpr uint8_t kSpace = 1;
 
   // Отрисовать один символ левым верхним углом в (x, y).
   static void drawChar(Led& led, int16_t x, int16_t y, uint8_t letter, const CRGB& color, bool wrapX = false);

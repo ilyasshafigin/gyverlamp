@@ -70,7 +70,7 @@ private:
   SettingsRepository& settings_;
   TimeService& time_;
   Effect* currentEffect_ = nullptr;
-  Effects::Id currentEffectId_ = Effects::DEFAULT_ID;
+  Effects::Id currentEffectId_ = Effects::kDefaultId;
   Effects::Id pendingEffectId_ = Effects::Id::INVALID;
   bool outputEnabled_ = false;
   uint8_t red_ = 255;
@@ -86,14 +86,14 @@ private:
   bool switchEffectNow(Effects::Id effectId);
   void setEffectParam(uint8_t EffectSettings::* field, uint8_t value, uint8_t changedParam);
 
-  static constexpr uint16_t EFFECT_FADE_OUT_MS = 350;
-  static constexpr uint16_t EFFECT_FADE_IN_MS = 350;
+  static constexpr uint16_t kEffectFadeOutMs = 350;
+  static constexpr uint16_t kEffectFadeInMs = 350;
 
   enum class TransitionPhase : uint8_t { Idle, FadingOut, FadingIn };
 
   // Буфер для placement new. Размер вычисляется по самому большому effect.
   /*alignas(alignof(std::max_align_t)) */
-  alignas(8) char effectBuffer_[Effects::STORAGE_SIZE];
+  alignas(8) char effectBuffer_[Effects::kStorageSize];
 
   FadeAnimator transitionOpacity_;
   TransitionPhase transitionPhase_ = TransitionPhase::Idle;

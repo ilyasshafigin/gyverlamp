@@ -85,16 +85,16 @@ public:
   void onRotationDisabled();
 
 private:
-  static constexpr uint16_t SYSTEM_SUCCESS_VISIBLE_MS = 1500;
-  static constexpr uint16_t SYSTEM_ERROR_VISIBLE_MS = 10000;
-  static constexpr uint16_t USER_NOTIFY_DEFAULT_MS = 2200;
-  static constexpr uint16_t SYSTEM_HIGH_PRIORITY_DIM = 210;
-  static constexpr uint16_t SYSTEM_LOW_PRIORITY_DIM = 190;
-  static constexpr uint16_t USER_ALERT_DIM = 230;
-  static constexpr uint16_t USER_NOTIFY_DIM = 210;
-  static constexpr uint16_t NOTIFICATION_FADE_IN_MS = 600;
-  static constexpr uint16_t NOTIFICATION_FADE_OUT_MS = 600;
-  static constexpr uint16_t BUTTON_PRESS_ECHO_MS = 180;
+  static constexpr uint16_t kSystemSuccessVisibleMs = 1500;
+  static constexpr uint16_t kSystemErrorVisibleMs = 10000;
+  static constexpr uint16_t kUserNotifyDefaultMs = 2200;
+  static constexpr uint16_t kSystemHighPriorityDim = 210;
+  static constexpr uint16_t kSystemLowPriorityDim = 190;
+  static constexpr uint16_t kUserAlertDim = 230;
+  static constexpr uint16_t kUserNotifyDim = 210;
+  static constexpr uint16_t kNotificationFadeInMs = 600;
+  static constexpr uint16_t kNotificationFadeOutMs = 600;
+  static constexpr uint16_t kButtonPressEchoMs = 180;
 
   EepromStore& eeprom_;
   PowerController& power_;

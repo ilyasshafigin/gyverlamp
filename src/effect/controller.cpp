@@ -152,14 +152,14 @@ bool EffectController::updateTransition() {
 
   if (transitionPhase_ == TransitionPhase::Idle) {
     if (pendingEffectId_ != Effects::Id::INVALID && pendingEffectId_ != currentEffectId_) {
-      transitionOpacity_.fadeTo(0, EFFECT_FADE_OUT_MS, nowMs);
+      transitionOpacity_.fadeTo(0, kEffectFadeOutMs, nowMs);
       transitionPhase_ = TransitionPhase::FadingOut;
       return false;
     }
   } else if (transitionPhase_ == TransitionPhase::FadingOut) {
     if (transitionOpacity_.value() == 0 && transitionOpacity_.target() == 0) {
       switchEffectNow(pendingEffectId_);
-      transitionOpacity_.fadeTo(255, EFFECT_FADE_IN_MS, nowMs);
+      transitionOpacity_.fadeTo(255, kEffectFadeInMs, nowMs);
       transitionPhase_ = TransitionPhase::FadingIn;
       return true;
     }
@@ -177,8 +177,8 @@ bool EffectController::updateTransition() {
 }
 
 bool EffectController::resetEffectSettingsToDefaults() {
-  EffectSettings defaults[Effects::COUNT];
-  for (uint8_t i = 0; i < Effects::COUNT; i++) {
+  EffectSettings defaults[Effects::kCount];
+  for (uint8_t i = 0; i < Effects::kCount; i++) {
     defaults[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
   }
 
@@ -206,32 +206,32 @@ void EffectController::resetCurrentEffectSettingsToDefaults() {
 
 void EffectController::setNextEffect() {
   const Effects::Id current = getSelectedEffectId();
-  for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
-    if (Effects::DISPLAY_ORDER[i] != current) continue;
+  for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
+    if (Effects::kDisplayOrder[i] != current) continue;
 
-    const uint8_t nextIndex = (i + 1 >= Effects::DISPLAY_COUNT) ? 0 : i + 1;
-    setEffect(Effects::DISPLAY_ORDER[nextIndex]);
+    const uint8_t nextIndex = (i + 1 >= Effects::kDisplayCount) ? 0 : i + 1;
+    setEffect(Effects::kDisplayOrder[nextIndex]);
     return;
   }
 
-  setEffect(Effects::DISPLAY_ORDER[0]);
+  setEffect(Effects::kDisplayOrder[0]);
 }
 
 void EffectController::setPreviousEffect() {
   const Effects::Id current = getSelectedEffectId();
-  for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
-    if (Effects::DISPLAY_ORDER[i] != current) continue;
+  for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
+    if (Effects::kDisplayOrder[i] != current) continue;
 
-    const uint8_t previousIndex = (i == 0) ? Effects::DISPLAY_COUNT - 1 : i - 1;
-    setEffect(Effects::DISPLAY_ORDER[previousIndex]);
+    const uint8_t previousIndex = (i == 0) ? Effects::kDisplayCount - 1 : i - 1;
+    setEffect(Effects::kDisplayOrder[previousIndex]);
     return;
   }
 
-  setEffect(Effects::DISPLAY_ORDER[0]);
+  setEffect(Effects::kDisplayOrder[0]);
 }
 
 void EffectController::setRandomEffect() {
-  const Effects::Id effectId = Effects::DISPLAY_ORDER[random(0, Effects::DISPLAY_COUNT)];
+  const Effects::Id effectId = Effects::kDisplayOrder[random(0, Effects::kDisplayCount)];
   setEffect(effectId);
 }
 

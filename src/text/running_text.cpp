@@ -36,7 +36,7 @@ bool RunningText::render(NotificationOverlay& overlay) {
 bool RunningText::advance(const String& text) {
   const uint32_t now = millis();
 
-  if (now - scrollTimer_ >= SCROLL_INTERVAL_MS) {
+  if (now - scrollTimer_ >= kScrollIntervalMs) {
     scrollTimer_ = now;
 
     const int16_t textWidth = TextRenderer::stringWidth(text);

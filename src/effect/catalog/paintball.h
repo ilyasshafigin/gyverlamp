@@ -4,11 +4,11 @@
 
 class EffectPaintball : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::Paintball;
-  static constexpr const char* NAME = "Paintball";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::Paintball;
+  static constexpr const char* kName = "Paintball";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
-    100,  // speed
+    100, // speed
     40,  // scale
   };
 

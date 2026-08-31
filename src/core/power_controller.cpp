@@ -7,8 +7,8 @@
 #include "state_notifier.h"
 
 namespace {
-  constexpr uint16_t FADE_ON_MS = 400;
-  constexpr uint16_t FADE_OFF_MS = 350;
+  constexpr uint16_t kFadeOnMs = 400;
+  constexpr uint16_t kFadeOffMs = 350;
 } // namespace
 
 void PowerController::init() {
@@ -30,7 +30,7 @@ void PowerController::on() {
 
   on_ = true;
   effects_.setOutputEnabled(true);
-  effectOpacity_.fadeTo(255, FADE_ON_MS);
+  effectOpacity_.fadeTo(255, kFadeOnMs);
   resetAutoOffTimer();
 
   eeprom_.writePowerState(on_);
@@ -43,7 +43,7 @@ void PowerController::off() {
   }
 
   on_ = false;
-  effectOpacity_.fadeTo(0, FADE_OFF_MS);
+  effectOpacity_.fadeTo(0, kFadeOffMs);
 
   eeprom_.writePowerState(on_);
   stateNotifier_.stateChanged();
@@ -67,8 +67,8 @@ bool PowerController::tick() {
 }
 
 bool PowerController::setAutoOffMinutes(int minutes) {
-  if (minutes < AUTO_OFF_MINUTES_MIN) minutes = AUTO_OFF_MINUTES_MIN;
-  if (minutes > AUTO_OFF_MINUTES_MAX) minutes = AUTO_OFF_MINUTES_MAX;
+  if (minutes < kAutoOffMinutesMin) minutes = kAutoOffMinutesMin;
+  if (minutes > kAutoOffMinutesMax) minutes = kAutoOffMinutesMax;
   if (autoOffMinutes_ == static_cast<uint16_t>(minutes)) return true;
 
   const uint16_t clampedMinutes = static_cast<uint16_t>(minutes);

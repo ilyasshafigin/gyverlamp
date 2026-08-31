@@ -4,9 +4,9 @@
 
 class EffectTwinkles : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::Twinkles;
-  static constexpr const char* NAME = "Twinkles";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::Twinkles;
+  static constexpr const char* kName = "Twinkles";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     200, // speed
     100, // scale

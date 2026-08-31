@@ -4,9 +4,9 @@
 
 class EffectMatrix : public Effect {
 public:
-  static constexpr Effects::Id ID = Effects::Id::Matrix;
-  static constexpr const char* NAME = "Matrix";
-  static constexpr EffectSettingsSpec SETTINGS = {
+  static constexpr Effects::Id kId = Effects::Id::Matrix;
+  static constexpr const char* kName = "Matrix";
+  static constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     16,  // speed
     80,  // scale

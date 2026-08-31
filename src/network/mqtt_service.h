@@ -25,8 +25,8 @@ class WifiService;
 class MqttService {
 private:
 #ifdef USE_MQTT
-  static constexpr uint16_t WIFI_CLIENT_TIMEOUT_MS = 2000;
-  static constexpr uint16_t MQTT_SOCKET_TIMEOUT_SECONDS = 2;
+  static constexpr uint16_t kWifiClientTimeoutMs = 2000;
+  static constexpr uint16_t kMqttSocketTimeoutSeconds = 2;
 
   AudioService& audio_;
   EepromStore& eeprom_;
@@ -42,10 +42,10 @@ private:
   PubSubClient client_;
   Timer publishTimer_;
 
-  char mqttHost_[MQTT_HOST_LEN];
-  char mqttUser_[MQTT_USER_LEN];
-  char mqttPassword_[MQTT_PASS_LEN];
-  char mqttPort_[MQTT_PORT_LEN];
+  char mqttHost_[kMqttHostLen];
+  char mqttUser_[kMqttUserLen];
+  char mqttPassword_[kMqttPassLen];
+  char mqttPort_[kMqttPortLen];
 
   bool enabled_ = true;
 
@@ -92,10 +92,10 @@ private:
   HASensorNumeric haVcc_;
   HASensorText haResetReason_;
 
-  void setMqttHost(const char* host) { strlcpy(mqttHost_, host, MQTT_HOST_LEN); }
-  void setMqttPort(const char* port) { strlcpy(mqttPort_, port, MQTT_PORT_LEN); }
-  void setMqttUser(const char* user) { strlcpy(mqttUser_, user, MQTT_USER_LEN); }
-  void setMqttPassword(const char* password) { strlcpy(mqttPassword_, password, MQTT_PASS_LEN); }
+  void setMqttHost(const char* host) { strlcpy(mqttHost_, host, kMqttHostLen); }
+  void setMqttPort(const char* port) { strlcpy(mqttPort_, port, kMqttPortLen); }
+  void setMqttUser(const char* user) { strlcpy(mqttUser_, user, kMqttUserLen); }
+  void setMqttPassword(const char* password) { strlcpy(mqttPassword_, password, kMqttPassLen); }
 
   void reconnect();
 

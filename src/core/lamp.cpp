@@ -15,9 +15,34 @@ void Lamp::setup() {
   power.init();
   button.init();
 
+  wifi.setConnectingHandler([this] { notifications.onWifiConnecting(); });
+  wifi.setConnectedHandler([this] { notifications.onWifiConnected(); });
+  wifi.setErrorHandler([this] { notifications.onWifiError(); });
+  wifi.setDisabledHandler([this] { notifications.onWifiDisabled(); });
+
+  ota.setStartHandler([this] {
+    notifications.onOtaStart();
+    frameRenderer.renderNow();
+  });
+
+  ota.setProgressHandler([this](uint8_t percent) {
+    notifications.onOtaProgress(percent);
+    frameRenderer.render();
+  });
+
+  ota.setEndHandler([this] {
+    notifications.onOtaEnd();
+    frameRenderer.renderNow();
+  });
+
+  ota.setErrorHandler([this]() {
+    notifications.onOtaError();
+    frameRenderer.renderNow();
+  });
+
   wifi.init();
   upd.init();
-  ota.init();
+  ota.init(wifi.getDeviceId().c_str());
   mqtt.init();
   time.init();
   web.init();
@@ -36,7 +61,7 @@ void Lamp::loop() {
   LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });
   LoopProfiler::measure(LoopProfiler::BUTTON, [this]() { button.tick(); });
   LoopProfiler::measure(LoopProfiler::WIFI, [this]() { wifi.tick(); });
-  LoopProfiler::measure(LoopProfiler::OTA, [this]() { ota.tick(); });
+  LoopProfiler::measure(LoopProfiler::OTA, [this]() { ota.tick(wifi.isStaConnected()); });
   LoopProfiler::measure(LoopProfiler::UDP, [this]() { upd.tick(); });
   LoopProfiler::measure(LoopProfiler::WEB, [this]() { web.tick(); });
   LoopProfiler::measure(LoopProfiler::MQTT, [this]() { mqtt.tick(); });

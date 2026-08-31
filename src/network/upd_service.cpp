@@ -30,8 +30,8 @@ void UpdService::tick() {
     return;
   }
 
-  char packet[PACKET_BUFFER_SIZE + 1];
-  const int length = Udp.read(packet, PACKET_BUFFER_SIZE);
+  char packet[kPacketBufferSize + 1];
+  const int length = Udp.read(packet, kPacketBufferSize);
   if (length <= 0) {
     return;
   }
@@ -42,7 +42,7 @@ void UpdService::tick() {
     return;
   }
 
-  char reply[REPLY_BUFFER_SIZE + 1] = {0};
+  char reply[kReplyBufferSize + 1] = {0};
   handlePacket(packet, length, reply, sizeof(reply));
   sendReply(reply);
 }

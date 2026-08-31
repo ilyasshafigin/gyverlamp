@@ -3,7 +3,7 @@
 #include <time.h>
 
 namespace {
-  constexpr time_t MIN_VALID_TIME = 1704067200LL; // 2024-01-01 UTC
+  constexpr time_t kMinValidTime = 1704067200LL; // 2024-01-01 UTC
 }
 
 TimeService::TimeService()
@@ -26,7 +26,7 @@ bool TimeService::syncTime() {
   }
 
   time_t now = time(nullptr);
-  if (now < MIN_VALID_TIME) {
+  if (now < kMinValidTime) {
     return false;
   }
 
@@ -79,7 +79,7 @@ String TimeService::getTimeStampString() const {
 
   time_t rawtime = time(nullptr);
   struct tm ti;
-  if (rawtime < MIN_VALID_TIME || localtime_r(&rawtime, &ti) == nullptr) {
+  if (rawtime < kMinValidTime || localtime_r(&rawtime, &ti) == nullptr) {
     return String();
   }
 

@@ -31,24 +31,24 @@
 
 namespace Palettes {
 
-  constexpr Id SELECTABLE_ORDER[] = {
+  constexpr Id kSelectableOrder[] = {
 #define PALETTE_SELECTABLE_ID(ID, NAME, PTR) ID,
     PALETTE_REGISTRY(PALETTE_SELECTABLE_ID)
 #undef PALETTE_SELECTABLE_ID
   };
 
-  constexpr Id AUTO_ORDER[] = {
+  constexpr Id kAutoOrder[] = {
 #define PALETTE_AUTO_ID(ID, NAME, PTR) ID,
     PALETTE_REGISTRY_AUTO(PALETTE_AUTO_ID)
 #undef PALETTE_AUTO_ID
   };
 
-  constexpr uint8_t SELECTABLE_COUNT = sizeof(SELECTABLE_ORDER) / sizeof(SELECTABLE_ORDER[0]);
-  constexpr uint8_t AUTO_COUNT = sizeof(AUTO_ORDER) / sizeof(AUTO_ORDER[0]);
-  constexpr uint8_t COUNT = SELECTABLE_COUNT + AUTO_COUNT;
+  constexpr uint8_t kSelectableCount = sizeof(kSelectableOrder) / sizeof(kSelectableOrder[0]);
+  constexpr uint8_t kAutoCount = sizeof(kAutoOrder) / sizeof(kAutoOrder[0]);
+  constexpr uint8_t kCount = kSelectableCount + kAutoCount;
 
   constexpr bool isValid(uint8_t raw) {
-    return raw < COUNT;
+    return raw < kCount;
   }
   constexpr Id clamp(uint8_t raw) {
     return isValid(raw) ? static_cast<Id>(raw) : Id::Auto;
@@ -58,7 +58,7 @@ namespace Palettes {
   }
 
   inline Id getPaletteIdByIndex(uint8_t index) {
-    return index >= SELECTABLE_COUNT ? Id::Auto : SELECTABLE_ORDER[index];
+    return index >= kSelectableCount ? Id::Auto : kSelectableOrder[index];
   }
 
   const char* getPaletteName(Id id);

@@ -17,8 +17,8 @@
 
 CRGB solidRainColor = CRGB(60, 80, 90);
 
-static constexpr uint8_t CLOUD_HEIGHT = (HEIGHT * 2U) / 5U + 1U;
-static uint8_t cloudNoise[WIDTH * CLOUD_HEIGHT];
+static constexpr uint8_t kCloudHeight = (HEIGHT * 2U) / 5U + 1U;
+static uint8_t cloudNoise[WIDTH * kCloudHeight];
 
 static uint8_t wrapX(int8_t x) {
   return (x + WIDTH) % WIDTH;
@@ -134,17 +134,17 @@ static void rain(
         250; // A value of 1 will be so zoomed in, you'll mostly see solid colors. A value of 4011 will be very zoomed out and shimmery
       int xoffset = noiseScale * x + hue;
 
-      for (uint8_t z = 0; z < CLOUD_HEIGHT; z++) {
+      for (uint8_t z = 0; z < kCloudHeight; z++) {
         int yoffset = noiseScale * z - hue;
         uint8_t dataSmoothing = 192;
         uint8_t noiseData = qsub8(inoise8(ff_x + xoffset, ff_y + yoffset, ff_z), 16);
         noiseData = qadd8(noiseData, scale8(noiseData, 39));
-        const uint16_t noiseIndex = x * CLOUD_HEIGHT + z;
+        const uint16_t noiseIndex = x * kCloudHeight + z;
         cloudNoise[noiseIndex] = scale8(cloudNoise[noiseIndex], dataSmoothing) + scale8(noiseData, 256 - dataSmoothing);
         nblend(
           led.getLedBuff(led.getPixelNumber(x, HEIGHT - z - 1)),
           ColorFromPalette(cloudsPalette, cloudNoise[noiseIndex]),
-          (CLOUD_HEIGHT - z) * (250 / CLOUD_HEIGHT)
+          (kCloudHeight - z) * (250 / kCloudHeight)
         );
       }
       ff_z++;

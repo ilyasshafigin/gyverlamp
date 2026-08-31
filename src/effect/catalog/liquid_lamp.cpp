@@ -12,22 +12,22 @@
 // Масштабируемые константы (вычисляются при инициализации)
 
 // Вспомогательная константа для получения масштабируемого значения
-static const float SCALE_FACTOR = min(WIDTH, HEIGHT) / 16.0f; // 16x16 — базовый размер
+static const float kScaleFactor = min(WIDTH, HEIGHT) / 16.0f; // 16x16 — базовый размер
 
 // Масса пузырей: масштабируется с площадью матрицы
-static const unsigned MASS_MIN = max(5U, static_cast<unsigned>(10 * SCALE_FACTOR));
-static const unsigned MASS_MAX = max(20U, static_cast<unsigned>(50 * SCALE_FACTOR));
+static const unsigned kMassMin = max(5U, static_cast<unsigned>(10 * kScaleFactor));
+static const unsigned kMassMax = max(20U, static_cast<unsigned>(50 * kScaleFactor));
 // Радиус пузыря: 12.5%-18.75% от меньшей стороны матрицы
-static const float BASE_RADIUS_MIN = 0.125f * min(WIDTH, HEIGHT);
-static const float BASE_RADIUS_MAX = 0.1875f * min(WIDTH, HEIGHT);
+static const float kBaseRadiusMin = 0.125f * min(WIDTH, HEIGHT);
+static const float kBaseRadiusMax = 0.1875f * min(WIDTH, HEIGHT);
 // Сила возмущения: масштабируется с размером
-static const float BASE_FORCE_MIN = 40.0f * SCALE_FACTOR;
-static const float BASE_FORCE_MAX = 80.0f * SCALE_FACTOR;
+static const float kBaseForceMin = 40.0f * kScaleFactor;
+static const float kBaseForceMax = 80.0f * kScaleFactor;
 // Радиус возмущения: 37.5%-62.5% от меньшей стороны
-static const float BASE_DISTURB_MIN = 0.375f * min(WIDTH, HEIGHT);
-static const float BASE_DISTURB_MAX = 0.625f * min(WIDTH, HEIGHT);
+static const float kBaseDisturbMin = 0.375f * min(WIDTH, HEIGHT);
+static const float kBaseDisturbMax = 0.625f * min(WIDTH, HEIGHT);
 // Отступ от границ для отключения физики: ~18.75% от высоты
-static const float BOUNDARY_MARGIN = max(2.0f, 0.1875f * HEIGHT);
+static const float kBoundaryMargin = max(2.0f, 0.1875f * HEIGHT);
 
 float liquidLampHot[enlargedObjectMaxCount];
 float liquidLampSpf[enlargedObjectMaxCount];
@@ -47,7 +47,7 @@ inline void LiquidLampPosition() {
 
     // Гравитация: масштабируется с высотой для постоянной скорости падения
     if (trackingObjectPosY[i] > 0) {
-      trackingObjectSpeedY[i] -= 0.07f * SCALE_FACTOR;
+      trackingObjectSpeedY[i] -= 0.07f * kScaleFactor;
     }
 
     if (trackingObjectSpeedY[i]) trackingObjectSpeedY[i] *= 0.85;
@@ -71,10 +71,10 @@ inline void LiquidLampPosition() {
 void LiquidLampPhysic() {
   for (uint8_t i = 0; i < enlargedObjectNum; i++) {
     // Отключаем физику у границ
-    if (trackingObjectPosY[i] < BOUNDARY_MARGIN || trackingObjectPosY[i] > HEIGHT - 1 - BOUNDARY_MARGIN) continue;
+    if (trackingObjectPosY[i] < kBoundaryMargin || trackingObjectPosY[i] > HEIGHT - 1 - kBoundaryMargin) continue;
 
     for (uint8_t j = i + 1; j < enlargedObjectNum; j++) { // Оптимизация: j = i+1
-      if (trackingObjectPosY[j] < BOUNDARY_MARGIN || trackingObjectPosY[j] > HEIGHT - 1 - BOUNDARY_MARGIN) continue;
+      if (trackingObjectPosY[j] < kBoundaryMargin || trackingObjectPosY[j] > HEIGHT - 1 - kBoundaryMargin) continue;
 
       // Радиус взаимодействия масштабируется с размером матрицы
       float radius = (trackingObjectShift[i] + trackingObjectShift[j]) * 0.5f;
@@ -147,20 +147,20 @@ void EffectLiquidLamp::setup(EffectContext& ctx) {
     trackingObjectPosX[i] = random8(WIDTH);
     trackingObjectPosY[i] = 0;
 
-    // Масса: в диапазоне MASS_MIN..MASS_MAX
-    trackingObjectState[i] = random(MASS_MIN, MASS_MAX);
+    // Масса: в диапазоне kMassMin..kMassMax
+    trackingObjectState[i] = random(kMassMin, kMassMax);
 
     // Скорость плавучести: обратно пропорциональна массе, с учётом масштаба
-    liquidLampSpf[i] = fmap(trackingObjectState[i], MASS_MIN, MASS_MAX, 0.0015f / SCALE_FACTOR, 0.0005f / SCALE_FACTOR);
+    liquidLampSpf[i] = fmap(trackingObjectState[i], kMassMin, kMassMax, 0.0015f / kScaleFactor, 0.0005f / kScaleFactor);
 
-    // Радиус пузыря: в диапазоне BASE_RADIUS_MIN..BASE_RADIUS_MAX
-    trackingObjectShift[i] = fmap(trackingObjectState[i], MASS_MIN, MASS_MAX, BASE_RADIUS_MIN, BASE_RADIUS_MAX);
+    // Радиус пузыря: в диапазоне kBaseRadiusMin..kBaseRadiusMax
+    trackingObjectShift[i] = fmap(trackingObjectState[i], kMassMin, kMassMax, kBaseRadiusMin, kBaseRadiusMax);
 
     // Сила возмущения поля
-    liquidLampMX[i] = fmap(trackingObjectState[i], MASS_MIN, MASS_MAX, BASE_FORCE_MIN, BASE_FORCE_MAX);
+    liquidLampMX[i] = fmap(trackingObjectState[i], kMassMin, kMassMax, kBaseForceMin, kBaseForceMax);
 
     // Радиус возмущения
-    liquidLampSC[i] = fmap(trackingObjectState[i], MASS_MIN, MASS_MAX, BASE_DISTURB_MIN, BASE_DISTURB_MAX);
+    liquidLampSC[i] = fmap(trackingObjectState[i], kMassMin, kMassMax, kBaseDisturbMin, kBaseDisturbMax);
 
     // Порог оптимизации (2/3 от радиуса возмущения)
     liquidLampTR[i] = liquidLampSC[i] * 2.0f / 3.0f;
@@ -169,7 +169,7 @@ void EffectLiquidLamp::setup(EffectContext& ctx) {
 
 void EffectLiquidLamp::render(EffectContext& ctx) {
   // Speedfactor: масштабируется с размером для постоянной визуальной скорости
-  speedfactor = (ctx.speed / 64.0f + 0.1f) / SCALE_FACTOR; // Компенсация размера матрицы
+  speedfactor = (ctx.speed / 64.0f + 0.1f) / kScaleFactor; // Компенсация размера матрицы
 
   bool rebuildPalette = false;
 

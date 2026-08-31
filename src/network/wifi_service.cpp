@@ -1,6 +1,5 @@
 #include "wifi_service.h"
 #include "../config.h"
-#include "../notification/controller.h"
 #include "../storage/eeprom_store.h"
 
 void WifiService::init() {
@@ -9,7 +8,9 @@ void WifiService::init() {
     WiFi.mode(WIFI_AP);
     requestAp();
     staState_ = StaState::Provisioning;
-    notifications_.onWifiDisabled();
+
+    if (disabledHandler_) disabledHandler_();
+
     Serial.println("[WIFI] No STA config, AP open for setup");
   } else {
     WiFi.mode(WIFI_AP_STA);
@@ -92,7 +93,8 @@ void WifiService::startStaConnection() {
     return;
   }
 
-  notifications_.onWifiConnecting();
+  if (connectingHandler_) connectingHandler_();
+
   WiFi.begin(wifiConfig.ssid, wifiConfig.password);
   staState_ = StaState::Connecting;
   connectStartedAt_ = millis();
@@ -105,11 +107,13 @@ void WifiService::checkStaConnecting() {
     return;
   }
 
-  if (millis() - connectStartedAt_ < STA_CONNECT_TIMEOUT_MS) return;
+  if (millis() - connectStartedAt_ < kStaConnectTimeoutMs) return;
 
   staState_ = StaState::RetryWait;
   retryStartedAt_ = millis();
-  notifications_.onWifiError();
+
+  if (errorHandler_) errorHandler_();
+
   Serial.println("[WIFI] STA connection failed, keeping AP for setup");
 }
 
@@ -119,13 +123,15 @@ void WifiService::checkStaRetryWait() {
     return;
   }
 
-  if (millis() - retryStartedAt_ < RECONNECT_INTERVAL_MS) return;
+  if (millis() - retryStartedAt_ < kReconnectIntervalMs) return;
   startStaConnection();
 }
 
 void WifiService::onStaConnected() {
   staState_ = StaState::Connected;
-  notifications_.onWifiConnected();
+
+  if (connectedHandler_) connectedHandler_();
+
   Serial.print("[WIFI] STA IP: ");
   Serial.println(WiFi.localIP());
   stopAp();
@@ -133,14 +139,14 @@ void WifiService::onStaConnected() {
 
 void WifiService::checkApRetry() {
   if (apState_ != ApState::RetryWait) return;
-  if (millis() - apRetryStartedAt_ < AP_RETRY_INTERVAL_MS) return;
+  if (millis() - apRetryStartedAt_ < kApRetryIntervalMs) return;
 
   requestAp();
 }
 
 void WifiService::checkApTimeout() {
   if (apState_ != ApState::Active) return;
-  if (millis() - apStartedAt_ < AP_TIMEOUT_MS) return;
+  if (millis() - apStartedAt_ < kApTimeoutMs) return;
 
   if (WiFi.softAPgetStationNum() > 0) {
     apStartedAt_ = millis();

@@ -26,71 +26,71 @@
 namespace {
   MqttService* gMqttService = nullptr;
 
-  const char* USER_NOTIFICATION_OFF = "Off";
-  const char* USER_NOTIFICATION_WARNING = "Warning";
-  const char* USER_NOTIFICATION_ALARM = "Alarm";
-  const char* USER_NOTIFICATION_TEXT = "Text";
-  const char* USER_NOTIFICATION_OPTIONS[] = {
-    USER_NOTIFICATION_OFF, USER_NOTIFICATION_TEXT, USER_NOTIFICATION_WARNING, USER_NOTIFICATION_ALARM
+  const char* kUserNotificationOff = "Off";
+  const char* kUserNotificationWarning = "Warning";
+  const char* kUserNotificationAlarm = "Alarm";
+  const char* kUserNotificationText = "Text";
+  const char* kUserNotificationOptions[] = {
+    kUserNotificationOff, kUserNotificationText, kUserNotificationWarning, kUserNotificationAlarm
   };
-  constexpr uint8_t USER_NOTIFICATION_OPTIONS_COUNT =
-    sizeof(USER_NOTIFICATION_OPTIONS) / sizeof(USER_NOTIFICATION_OPTIONS[0]);
+  constexpr uint8_t kUserNotificationOptionsCount =
+    sizeof(kUserNotificationOptions) / sizeof(kUserNotificationOptions[0]);
 
-  static const char* AUDIO_MODE_OFF = "Off";
-  static const char* AUDIO_MODE_BRIGHTNESS = "Brightness";
-  static const char* AUDIO_MODE_SPEED = "Speed";
-  static const char* AUDIO_MODE_SCALE = "Scale";
-  static const char* AUDIO_MODE_EFFECT = "Effect";
+  static const char* kAudioModeOff = "Off";
+  static const char* kAudioModeBrightness = "Brightness";
+  static const char* kAudioModeSpeed = "Speed";
+  static const char* kAudioModeScale = "Scale";
+  static const char* kAudioModeEffect = "Effect";
 
-  static const char* AUDIO_MODE_OPTIONS[] = {
-    AUDIO_MODE_OFF,
-    AUDIO_MODE_BRIGHTNESS,
-    AUDIO_MODE_SPEED,
-    AUDIO_MODE_SCALE,
-    AUDIO_MODE_EFFECT,
+  static const char* kAudioModeOptions[] = {
+    kAudioModeOff,
+    kAudioModeBrightness,
+    kAudioModeSpeed,
+    kAudioModeScale,
+    kAudioModeEffect,
   };
 
-  static const char* AUDIO_BAND_LEVEL = "Level";
-  static const char* AUDIO_BAND_BASS = "Bass";
-  static const char* AUDIO_BAND_TREBLE = "Treble";
+  static const char* kAudioBandLevel = "Level";
+  static const char* kAudioBandBass = "Bass";
+  static const char* kAudioBandTreble = "Treble";
 
-  static const char* AUDIO_BAND_OPTIONS[] = {
-    AUDIO_BAND_LEVEL,
-    AUDIO_BAND_BASS,
-    AUDIO_BAND_TREBLE,
+  static const char* kAudioBandOptions[] = {
+    kAudioBandLevel,
+    kAudioBandBass,
+    kAudioBandTreble,
   };
 
   static const char* audioModeName(AudioMode mode) {
     switch (mode) {
-      case AudioMode::Brightness: return AUDIO_MODE_BRIGHTNESS;
-      case AudioMode::Speed: return AUDIO_MODE_SPEED;
-      case AudioMode::Scale: return AUDIO_MODE_SCALE;
-      case AudioMode::Effect: return AUDIO_MODE_EFFECT;
+      case AudioMode::Brightness: return kAudioModeBrightness;
+      case AudioMode::Speed: return kAudioModeSpeed;
+      case AudioMode::Scale: return kAudioModeScale;
+      case AudioMode::Effect: return kAudioModeEffect;
       case AudioMode::Off:
-      default: return AUDIO_MODE_OFF;
+      default: return kAudioModeOff;
     }
   }
 
   static AudioMode parseAudioMode(const char* value) {
-    if (strcmp(value, AUDIO_MODE_BRIGHTNESS) == 0) return AudioMode::Brightness;
-    if (strcmp(value, AUDIO_MODE_SPEED) == 0) return AudioMode::Speed;
-    if (strcmp(value, AUDIO_MODE_SCALE) == 0) return AudioMode::Scale;
-    if (strcmp(value, AUDIO_MODE_EFFECT) == 0) return AudioMode::Effect;
+    if (strcmp(value, kAudioModeBrightness) == 0) return AudioMode::Brightness;
+    if (strcmp(value, kAudioModeSpeed) == 0) return AudioMode::Speed;
+    if (strcmp(value, kAudioModeScale) == 0) return AudioMode::Scale;
+    if (strcmp(value, kAudioModeEffect) == 0) return AudioMode::Effect;
     return AudioMode::Off;
   }
 
   static const char* audioBandName(AudioBand band) {
     switch (band) {
-      case AudioBand::Bass: return AUDIO_BAND_BASS;
-      case AudioBand::Treble: return AUDIO_BAND_TREBLE;
+      case AudioBand::Bass: return kAudioBandBass;
+      case AudioBand::Treble: return kAudioBandTreble;
       case AudioBand::Level:
-      default: return AUDIO_BAND_LEVEL;
+      default: return kAudioBandLevel;
     }
   }
 
   static AudioBand parseAudioBand(const char* value) {
-    if (strcmp(value, AUDIO_BAND_BASS) == 0) return AudioBand::Bass;
-    if (strcmp(value, AUDIO_BAND_TREBLE) == 0) return AudioBand::Treble;
+    if (strcmp(value, kAudioBandBass) == 0) return AudioBand::Bass;
+    if (strcmp(value, kAudioBandTreble) == 0) return AudioBand::Treble;
     return AudioBand::Level;
   }
 
@@ -173,16 +173,16 @@ MqttService::MqttService(
     haDevice_(clientId_.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
     haLight_("_light", "Gyver Lamp", haDevice_),
     haRotationSwitch_("_rotation", "Rotation", haDevice_),
-    haRotationInterval_("_rotation_interval", "Rotation Interval", haDevice_, ROTATION_PRESET_COUNT),
+    haRotationInterval_("_rotation_interval", "Rotation Interval", haDevice_, kRotationPresetCount),
     haButtonSwitch_("_button", "Touch Button", haDevice_),
     haEffectScale_("_effect_scale", "Effect Scale", haDevice_, 1, 255, 1),
     haEffectSpeed_("_effect_speed", "Effect Speed", haDevice_, 1, 255, 1),
     haEffectBrightness_("_effect_brightness", "Effect brightness", haDevice_, 0, 255, 1),
-    haAutoOff_("_auto_off_minutes", "Auto Off Minutes", haDevice_, AUTO_OFF_MINUTES_MIN, AUTO_OFF_MINUTES_MAX, 1),
+    haAutoOff_("_auto_off_minutes", "Auto Off Minutes", haDevice_, kAutoOffMinutesMin, kAutoOffMinutesMax, 1),
     haAutoOffRemaining_("_auto_off_remaining", "Auto Off Remaining", haDevice_, "s", 0),
-    haPalette_("_palette", "Palette", haDevice_, Palettes::COUNT),
+    haPalette_("_palette", "Palette", haDevice_, Palettes::kCount),
     haUserNotification_(
-      "_user_notification", "User Notification", haDevice_, USER_NOTIFICATION_OPTIONS_COUNT, USER_NOTIFICATION_OPTIONS
+      "_user_notification", "User Notification", haDevice_, kUserNotificationOptionsCount, kUserNotificationOptions
     ),
     haUserNotificationDuration_("_user_notification_duration", "User Notification Duration", haDevice_, 0, 3600, 1),
     haUserNotificationRemaining_("_user_notification_remaining", "User Notification Remaining", haDevice_, "s", 0),
@@ -197,8 +197,8 @@ MqttService::MqttService(
     haNotificationQuietStart_("_notification_quiet_start", "Notification Quiet Start", haDevice_),
     haNotificationQuietEnd_("_notification_quiet_end", "Notification Quiet End", haDevice_),
     haNotificationMuteState_("_notification_mute_state", "Notification Mute State", haDevice_, 16),
-    haAudioMode_("_audio_mode", "Audio Mode", haDevice_, 5, AUDIO_MODE_OPTIONS),
-    haAudioBand_("_audio_band", "Audio Band", haDevice_, 3, AUDIO_BAND_OPTIONS),
+    haAudioMode_("_audio_mode", "Audio Mode", haDevice_, 5, kAudioModeOptions),
+    haAudioBand_("_audio_band", "Audio Band", haDevice_, 3, kAudioBandOptions),
     haAudioAmount_("_audio_amount", "Audio Amount", haDevice_, 0, 255, 1),
     haAudioAvailable_("_audio_available", "Audio Available", haDevice_, 8),
     haUptime_("_uptime", "Uptime", haDevice_, "s", 0),
@@ -227,16 +227,16 @@ MqttService::MqttService(
     }
   });
 
-  haUserNotification_.setState(USER_NOTIFICATION_OFF);
+  haUserNotification_.setState(kUserNotificationOff);
   haUserNotificationDuration_.setState(0);
   haPalette_.setState(Palettes::getPaletteName(Palettes::Id::Auto));
   haPalette_.addOption(Palettes::getPaletteName(Palettes::Id::Auto));
-  for (uint8_t i = 0; i < Palettes::SELECTABLE_COUNT; i++) {
-    haPalette_.addOption(Palettes::getPaletteName(Palettes::SELECTABLE_ORDER[i]));
+  for (uint8_t i = 0; i < Palettes::kSelectableCount; i++) {
+    haPalette_.addOption(Palettes::getPaletteName(Palettes::kSelectableOrder[i]));
   }
 
-  for (uint8_t i = 0; i < ROTATION_PRESET_COUNT; i++) {
-    haRotationInterval_.addOption(ROTATION_PRESET_LABELS[i]);
+  for (uint8_t i = 0; i < kRotationPresetCount; i++) {
+    haRotationInterval_.addOption(kRotationPresetLabels[i]);
   }
   haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.getIntervalSec()));
 
@@ -246,14 +246,14 @@ MqttService::MqttService(
   haAudioAmount_.setState(audioConfig.amount);
 
   mqttHost_[0] = '\0';
-  strlcpy(mqttUser_, "user", MQTT_USER_LEN);
-  strlcpy(mqttPassword_, "pass", MQTT_PASS_LEN);
-  strlcpy(mqttPort_, "1883", MQTT_PORT_LEN);
+  strlcpy(mqttUser_, "user", kMqttUserLen);
+  strlcpy(mqttPassword_, "pass", kMqttPassLen);
+  strlcpy(mqttPort_, "1883", kMqttPortLen);
 }
 
 void MqttService::init() {
-  wifiClient_.setTimeout(WIFI_CLIENT_TIMEOUT_MS);
-  client_.setSocketTimeout(MQTT_SOCKET_TIMEOUT_SECONDS);
+  wifiClient_.setTimeout(kWifiClientTimeoutMs);
+  client_.setSocketTimeout(kMqttSocketTimeoutSeconds);
 
   const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
 
@@ -272,9 +272,9 @@ void MqttService::init() {
 
   if (enabled_) {
     haEffectList_ = "";
-    for (uint8_t i = 0; i < Effects::DISPLAY_COUNT; i++) {
+    for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
       if (i > 0) haEffectList_ += ',';
-      haEffectList_ += Effects::getEffectName(Effects::DISPLAY_ORDER[i]);
+      haEffectList_ += Effects::getEffectName(Effects::kDisplayOrder[i]);
     }
     haLight_.setEffectList(haEffectList_.c_str());
 
@@ -362,13 +362,13 @@ void MqttService::updateStates() {
   haNotificationMuteState_.setState(notifications_.isMutedNow() ? "muted" : "active");
 
   if (userNotificationType == UserNotificationType::Alarm) {
-    haUserNotification_.setState(USER_NOTIFICATION_ALARM);
+    haUserNotification_.setState(kUserNotificationAlarm);
   } else if (userNotificationType == UserNotificationType::Warning) {
-    haUserNotification_.setState(USER_NOTIFICATION_WARNING);
+    haUserNotification_.setState(kUserNotificationWarning);
   } else if (userNotificationType == UserNotificationType::Text) {
-    haUserNotification_.setState(USER_NOTIFICATION_TEXT);
+    haUserNotification_.setState(kUserNotificationText);
   } else {
-    haUserNotification_.setState(USER_NOTIFICATION_OFF);
+    haUserNotification_.setState(kUserNotificationOff);
   }
 
   const AudioConfig& audioConfig = audio_.config();
@@ -505,15 +505,15 @@ void MqttService::haCallback(HAEntity* entity, char* topic, byte* payload, unsig
     const char* notification = haUserNotification_.getState();
     const uint32_t durationMs = static_cast<uint32_t>(haUserNotificationDuration_.getState()) * 1000UL;
 
-    if (strcmp(notification, USER_NOTIFICATION_OFF) == 0) {
+    if (strcmp(notification, kUserNotificationOff) == 0) {
       notifications_.stopUserNotification();
-    } else if (strcmp(notification, USER_NOTIFICATION_TEXT) == 0) {
+    } else if (strcmp(notification, kUserNotificationText) == 0) {
       String text = String(haUserNotificationText_.getState()).substring(0, 64);
       notifications_.startUserTextNotification(text, CRGB::White, durationMs);
       haUserNotificationText_.setState("");
-    } else if (strcmp(notification, USER_NOTIFICATION_WARNING) == 0) {
+    } else if (strcmp(notification, kUserNotificationWarning) == 0) {
       notifications_.startUserNotification(UserNotificationType::Warning, durationMs);
-    } else if (strcmp(notification, USER_NOTIFICATION_ALARM) == 0) {
+    } else if (strcmp(notification, kUserNotificationAlarm) == 0) {
       notifications_.startUserNotification(UserNotificationType::Alarm, durationMs);
     }
 
