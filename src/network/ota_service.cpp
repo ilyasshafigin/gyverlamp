@@ -52,13 +52,22 @@ void OtaService::init() {
 }
 
 void OtaService::tick() {
-  if (!begun_) {
-    if (!wifi_.isStaConnected()) {
-      return;
+  if (!wifi_.isStaConnected()) {
+    if (beginAttempted_) {
+      ArduinoOTA.end();
     }
-    ArduinoOTA.begin();
-    begun_ = true;
+    beginAttempted_ = false;
+    lastBeginAttemptAt_ = 0;
+    return;
   }
+
+  const unsigned long now = millis();
+  if (!beginAttempted_ || now - lastBeginAttemptAt_ >= BEGIN_RETRY_INTERVAL_MS) {
+    ArduinoOTA.begin(false);
+    beginAttempted_ = true;
+    lastBeginAttemptAt_ = millis();
+  }
+
   ArduinoOTA.handle();
 }
 

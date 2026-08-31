@@ -252,6 +252,9 @@ MqttService::MqttService(
 }
 
 void MqttService::init() {
+  wifiClient_.setTimeout(WIFI_CLIENT_TIMEOUT_MS);
+  client_.setSocketTimeout(MQTT_SOCKET_TIMEOUT_SECONDS);
+
   const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
 
   if (strlen(mqttConfig.host) > 0) {
@@ -399,7 +402,7 @@ void MqttService::reconnect() {
     resetReconnectBackoff();
     updateStates();
   } else {
-    registerReconnectFailure(now);
+    registerReconnectFailure(millis());
     notifications_.onMqttError();
 
     if (shouldDisableAfterReconnectFailures()) {

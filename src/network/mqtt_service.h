@@ -25,6 +25,9 @@ class WifiService;
 class MqttService {
 private:
 #ifdef USE_MQTT
+  static constexpr uint16_t WIFI_CLIENT_TIMEOUT_MS = 2000;
+  static constexpr uint16_t MQTT_SOCKET_TIMEOUT_SECONDS = 2;
+
   AudioService& audio_;
   EepromStore& eeprom_;
   EffectController& effects_;

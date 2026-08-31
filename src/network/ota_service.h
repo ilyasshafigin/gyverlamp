@@ -25,9 +25,13 @@ public:
 
 private:
 #ifdef USE_OTA
+  static constexpr unsigned long BEGIN_RETRY_INTERVAL_MS = 5000;
+
   FrameRenderer& frameRenderer_;
   NotificationController& notifications_;
   WifiService& wifi_;
-  bool begun_ = false;
+
+  bool beginAttempted_ = false;
+  unsigned long lastBeginAttemptAt_ = 0;
 #endif
 };
