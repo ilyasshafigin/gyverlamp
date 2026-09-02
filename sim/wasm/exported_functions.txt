@@ -44,7 +44,6 @@ _sim_effect_name_at
 _sim_effect_default_brightness
 _sim_effect_default_speed
 _sim_effect_default_scale
-_sim_effect_reset_on_change
 _sim_palette_count
 _sim_palette_id_at
 _sim_palette_name_at

@@ -948,7 +948,6 @@ class WasmRunner {
           brightness: this.call('sim_effect_default_brightness', i),
           speed: this.call('sim_effect_default_speed', i),
           scale: this.call('sim_effect_default_scale', i),
-          resetOnChange: this.call('sim_effect_reset_on_change', i),
         },
       });
     }

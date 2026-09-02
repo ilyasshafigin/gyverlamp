@@ -10,7 +10,6 @@ public:
     255, // brightness
     70,  // speed
     100, // scale
-    EFFECT_PARAM_SPEED
   };
 
   void setup(EffectContext& ctx) override;

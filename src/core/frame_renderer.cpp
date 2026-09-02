@@ -13,14 +13,17 @@
 #include "state_notifier.h"
 
 void FrameRenderer::render(bool forceShow) {
-  if (effects_.updateTransition()) {
+  const bool effectChanged = effects_.tick();
+  if (effectChanged) {
     stateNotifier_.stateChanged();
   }
   notifications_.tick();
 
   const NotificationFrame& notification = notifications_.frame();
   const bool transitionActive = effects_.isTransitioning();
-  const bool forceEffectRender = power_.isFading() || transitionActive || notification.isVisible();
+  const bool parameterTransitionActive = effects_.isParameterTransitioning();
+  const bool forceEffectRender =
+    power_.isFading() || transitionActive || parameterTransitionActive || notification.isVisible();
   const bool visualActive = forceEffectRender;
 
   const uint32_t now = millis();

@@ -14,9 +14,20 @@
 #include "palette_catalog.h"
 
 void EffectController::init() {
+  globalBrightness_.snapTo(settings_.getGlobalBrightness());
+
   if (!setEffectImmediate(eeprom_.readCurrentEffectId())) {
     setEffectImmediate(Effects::fallback());
   }
+}
+
+bool EffectController::tick() {
+  const uint32_t nowMs = millis();
+  globalBrightness_.tick(nowMs);
+  effectBrightness_.tick(nowMs);
+  effectSpeed_.tick(nowMs);
+  effectScale_.tick(nowMs);
+  return updateTransition(nowMs);
 }
 
 bool EffectController::render(bool force) {
@@ -35,12 +46,12 @@ bool EffectController::render(bool force) {
   if (deltaMs > 100U) deltaMs = 100U;
   lastRenderMs_ = nowMs;
 
-  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  const RuntimeEffectSettings appliedSettings = getAppliedSettings();
   const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
   const AudioFrame& audio = audio_.frame();
   const AudioConfig& audioConfig = audio_.config();
 
-  RuntimeEffectSettings runtimeSettings = AudioModulation::applyModulation(settings, audio, audioConfig);
+  RuntimeEffectSettings runtimeSettings = AudioModulation::applyModulation(appliedSettings, audio, audioConfig);
 
   runtimeBrightness_ = runtimeSettings.brightness;
   runtimeBrightnessValid_ = true;
@@ -70,6 +81,28 @@ bool EffectController::render(bool force) {
   return force;
 }
 
+RuntimeEffectSettings EffectController::getAppliedSettings() const {
+  return {
+    effectBrightness_.value(),
+    effectSpeed_.value(),
+    effectScale_.value(),
+  };
+}
+
+void EffectController::snapActiveEffectSettings(uint32_t now) {
+  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  effectBrightness_.snapTo(settings.brightness, now);
+  effectSpeed_.snapTo(settings.speed, now);
+  effectScale_.snapTo(settings.scale, now);
+}
+
+void EffectController::retargetActiveEffectSettings(uint32_t now) {
+  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  effectBrightness_.setTarget(settings.brightness, kBrightnessRatePerSecond, kParameterSnapThreshold, now);
+  effectSpeed_.setTarget(settings.speed, kSpeedScaleRatePerSecond, kParameterSnapThreshold, now);
+  effectScale_.setTarget(settings.scale, kSpeedScaleRatePerSecond, kParameterSnapThreshold, now);
+}
+
 void EffectController::setupCurrentEffect() {
   if (!currentEffect_) return;
 
@@ -77,14 +110,12 @@ void EffectController::setupCurrentEffect() {
   const uint32_t nowMs = millis();
   const uint32_t deltaMs = 0;
 
-  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
-  const RuntimeEffectSettings runtimeSettings = RuntimeEffectSettings::fromSettings(settings);
+  const RuntimeEffectSettings runtimeSettings = getAppliedSettings();
   const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
   const AudioFrame& audio = audio_.frame();
   const AudioConfig& audioConfig = audio_.config();
 
-  runtimeBrightness_ = runtimeSettings.brightness;
-  runtimeBrightnessValid_ = true;
+  runtimeBrightnessValid_ = false;
 
   EffectContext ctx(
     runtimeSettings.brightness,
@@ -139,15 +170,15 @@ bool EffectController::switchEffectNow(Effects::Id effectId) {
   currentEffectId_ = effectId;
   currentEffect_ = Effects::createEffect(currentEffectId_, effectBuffer_);
 
-  led_.clearLeds();
+  snapActiveEffectSettings();
   runtimeBrightnessValid_ = false;
+  led_.clearLeds();
   setupCurrentEffect();
   settings_.markEffectSettingsChanged();
   return true;
 }
 
-bool EffectController::updateTransition() {
-  const uint32_t nowMs = millis();
+bool EffectController::updateTransition(uint32_t nowMs) {
   transitionOpacity_.tick(nowMs);
 
   if (transitionPhase_ == TransitionPhase::Idle) {
@@ -182,13 +213,14 @@ bool EffectController::resetEffectSettingsToDefaults() {
     defaults[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
   }
 
-  if (!settings_.resetEffectSettingsToDefaults(defaults)) return false;
+  const bool saved = settings_.resetEffectSettingsToDefaults(defaults);
 
+  retargetActiveEffectSettings();
   setupCurrentEffect();
   if (outputEnabled_) {
     render(true);
   }
-  return true;
+  return saved;
 }
 
 void EffectController::resetCurrentEffectSettingsToDefaults() {
@@ -197,6 +229,7 @@ void EffectController::resetCurrentEffectSettingsToDefaults() {
   settings_.resetEffectSettingsToDefaults(effectId, defaults);
 
   if (currentEffectId_ == effectId) {
+    retargetActiveEffectSettings();
     setupCurrentEffect();
     if (outputEnabled_) {
       render(true);
@@ -240,42 +273,52 @@ uint8_t EffectController::getEffectBrightness() const {
 }
 
 uint8_t EffectController::getOutputBrightness() const {
-  const uint8_t globalBrightness = settings_.getGlobalBrightness();
+  const uint8_t globalBrightness = globalBrightness_.value();
   if (runtimeBrightnessValid_) {
     return scale8(runtimeBrightness_, globalBrightness);
   }
-  return scale8(settings_.getEffectSettings(currentEffectId_).brightness, globalBrightness);
+  return scale8(effectBrightness_.value(), globalBrightness);
+}
+
+bool EffectController::isParameterTransitioning() const {
+  return globalBrightness_.isRunning() || effectBrightness_.isRunning() || effectSpeed_.isRunning() ||
+         effectScale_.isRunning();
+}
+
+void EffectController::setGlobalBrightness(uint8_t value) {
+  settings_.setGlobalBrightness(value);
+  globalBrightness_.setTarget(value, kBrightnessRatePerSecond, kParameterSnapThreshold);
 }
 
 void EffectController::setEffectBrightness(uint8_t value) {
-  setEffectParam(&EffectSettings::brightness, value, 0);
+  setEffectParam(&EffectSettings::brightness, value);
 }
 
 void EffectController::setEffectSpeed(uint8_t value) {
-  setEffectParam(&EffectSettings::speed, value, EFFECT_PARAM_SPEED);
+  setEffectParam(&EffectSettings::speed, value);
 }
 
 void EffectController::setEffectScale(uint8_t value) {
-  setEffectParam(&EffectSettings::scale, value, EFFECT_PARAM_SCALE);
+  setEffectParam(&EffectSettings::scale, value);
 }
 
-void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t value, uint8_t changedParam) {
+void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t value) {
   const Effects::Id effectId = getSelectedEffectId();
   EffectSettings& effectSettings = settings_.getEffectSettings(effectId);
   if (effectSettings.*field == value) return;
   effectSettings.*field = value;
 
-  if (field == &EffectSettings::brightness && currentEffectId_ == effectId) {
-    runtimeBrightness_ = value;
-    runtimeBrightnessValid_ = true;
-  }
-
-  if (currentEffectId_ == effectId && changedParam != 0) {
-    const EffectSettingsSpec spec = Effects::getEffectSettingsSpec(effectId);
-    if ((spec.resetOnChange & changedParam) != 0) {
-      setupCurrentEffect();
+  if (currentEffectId_ == effectId) {
+    const uint32_t nowMs = millis();
+    if (field == &EffectSettings::brightness) {
+      effectBrightness_.setTarget(value, kBrightnessRatePerSecond, kParameterSnapThreshold, nowMs);
+    } else if (field == &EffectSettings::speed) {
+      effectSpeed_.setTarget(value, kSpeedScaleRatePerSecond, kParameterSnapThreshold, nowMs);
+    } else if (field == &EffectSettings::scale) {
+      effectScale_.setTarget(value, kSpeedScaleRatePerSecond, kParameterSnapThreshold, nowMs);
     }
   }
+
   settings_.markEffectSettingsChanged();
 }
 

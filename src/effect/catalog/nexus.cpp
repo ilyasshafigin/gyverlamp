@@ -10,10 +10,7 @@
 static void nexusReset(uint8_t i) {
   trackingObjectHue[i] = random8();
   trackingObjectState[i] = random8(4);
-  //trackingObjectSpeedX[i] = (255. + random8()) / 255.;
-  trackingObjectSpeedX[i] =
-    static_cast<float>(random8(5, 11)) / 70 +
-    speedfactor; // делаем частицам немного разное ускорение и сразу пересчитываем под общую скорость
+  trackingObjectSpeedX[i] = static_cast<float>(random8(5, 11)) / 70;
   switch (trackingObjectState[i]) {
     case B01:
       trackingObjectPosY[i] = HEIGHT;
@@ -34,21 +31,19 @@ static void nexusReset(uint8_t i) {
   }
 }
 
-void EffectNexus::setup(EffectContext& ctx) {
-  speedfactor = fmap(ctx.speed, 1, 255, 0.1, 0.33);
+void EffectNexus::setup(EffectContext&) {
   for (uint8_t i = 0; i < enlargedObjectMaxCount; i++) {
     trackingObjectPosX[i] = random8(WIDTH);
     trackingObjectPosY[i] = random8(HEIGHT);
-    trackingObjectSpeedX[i] =
-      static_cast<float>(random8(5, 11)) / 70 +
-      speedfactor; // делаем частицам немного разное ускорение и сразу пересчитываем под общую скорость
+    trackingObjectSpeedX[i] = static_cast<float>(random8(5, 11)) / 70;
     trackingObjectHue[i] = random8();
     trackingObjectState[i] = random8(4); // задаем направление
   }
-  deltaValue = 255U - map(ctx.speed, 1, 255, 11, 33);
 }
 
 void EffectNexus::render(EffectContext& ctx) {
+  const float speedfactor = fmap(ctx.speed, 1, 255, 0.1, 0.33);
+  const uint8_t deltaValue = 255U - map(ctx.speed, 1, 255, 11, 33);
   ctx.led.scale(deltaValue);
 
   enlargedObjectNum = map8(ctx.scale, 1U, enlargedObjectMaxCount);
@@ -56,19 +51,19 @@ void EffectNexus::render(EffectContext& ctx) {
   for (uint8_t i = 0; i < enlargedObjectNum; i++) {
     switch (trackingObjectState[i]) {
       case B01:
-        trackingObjectPosY[i] -= trackingObjectSpeedX[i];
+        trackingObjectPosY[i] -= trackingObjectSpeedX[i] + speedfactor;
         if (trackingObjectPosY[i] <= -1) nexusReset(i);
         break;
       case B00:
-        trackingObjectPosY[i] += trackingObjectSpeedX[i];
+        trackingObjectPosY[i] += trackingObjectSpeedX[i] + speedfactor;
         if (trackingObjectPosY[i] >= HEIGHT) nexusReset(i);
         break;
       case B10:
-        trackingObjectPosX[i] -= trackingObjectSpeedX[i];
+        trackingObjectPosX[i] -= trackingObjectSpeedX[i] + speedfactor;
         if (trackingObjectPosX[i] <= -1) nexusReset(i);
         break;
       case B11:
-        trackingObjectPosX[i] += trackingObjectSpeedX[i];
+        trackingObjectPosX[i] += trackingObjectSpeedX[i] + speedfactor;
         if (trackingObjectPosX[i] >= WIDTH) nexusReset(i);
         break;
     }

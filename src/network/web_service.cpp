@@ -132,7 +132,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     }
 
     if (b.Slider("Brightness", 0, 255, 1, "", &globalBrightness_)) {
-      settings_.setGlobalBrightness(globalBrightness_);
+      effects_.setGlobalBrightness(globalBrightness_);
       stateNotifier_.stateChanged();
     }
 

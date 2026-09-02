@@ -24,6 +24,8 @@
 - `Lamp::setup()` order matters: LED, button, notifications, EEPROM, settings, effects, power, WiFi, OTA, MQTT, time, web, rotation timer.
 - `Lamp::loop()` services rotation timer, power/frame rendering, delayed settings persistence, time, button, WiFi, OTA, web, MQTT, state-notifier MQTT publish, profiler, then `yield()`.
 - Hardware/network constants live in `src/config.h`; per-lamp `DEVICE_NAME` (which feeds `AP_SSID`) and `CURRENT_LIMIT` are injected by `platformio.local.ini` build flags.
+- `FrameRenderer::render()` ticks global/effect parameter limiters before frame scheduling. While a limiter runs, rendering is forced so applied values reach LED output at frame cadence.
+- `Led::showLeds()` applies a per-frame proportional brightness envelope from FastLED power estimation and `CURRENT_LIMIT`; FastLED's configured current limiter remains the final safety net.
 
 ## Effects and persistence gotchas
 
@@ -32,12 +34,14 @@
 - Adding/removing effects must keep `Effects::Id`, `Effects::COUNT`, `EFFECT_REGISTRY`, `Effects::DISPLAY_ORDER`, and `createEffect()` in sync; web and MQTT enumerate `Effects::DISPLAY_COUNT`.
 - `EffectController` uses placement-new into storage sized by `Effects::STORAGE_SIZE`; static assert caps max effect object size at 64 bytes.
 - `EffectSettings` must remain exactly 3 bytes (`brightness`, `speed`, `scale`); `eeprom_layout.h` has static assert because EEPROM addresses assume this shape.
+- `SettingsRepository` stores target brightness and effect settings; `EffectController` owns separately applied values used for rendering. Do not publish state notifier events for per-frame applied-value changes.
 - EEPROM layout is append-only/versioned in `src/storage/eeprom_layout.h`.
 - Settings changes persist after ~30s via `SettingsRepository::tick()`; direct effect changes may not hit EEPROM immediately.
 
 ## Network/UI behavior
 
 - Active control interfaces: web UI (`src/network/web_service.cpp`), MQTT/Home Assistant (`src/network/mqtt_service.cpp`, built on the `HaMqttEntities` library), and optional UDP (`src/network/upd_service.cpp`, compiled in only when `USE_UDP` is defined — disabled by default, not present in `platformio.local.example.ini`).
+- MQTT command handlers update only affected HA entity targets immediately. `HaMqttEntities` publishes dirty entities in its controller loop; `MqttService` retains full state synchronization on reconnect and performs an additional full refresh every 30 seconds. Telemetry remains on its separate one-minute timer.
 - The web UI is built with the `SettingsAsync` library (GyverLibs/Settings): `WebService::settingsBuilder()` renders forms via `sets::Builder`, and `settingsUpdate()` consumes submits via `sets::Updater`. There are no hand-rolled route registrations or HTML chunk streaming helpers.
 - WiFi and MQTT credentials are captured through the web UI (not a captive portal) and stored in fixed-size buffers from `src/network/wifi_config.h` and `src/network/mqtt_config.h`; use `strlcpy` and keep EEPROM size impact in mind.
 - `WifiService` (`src/network/wifi_service.cpp`) drives STA/AP directly with the ESP8266 WiFi API (no WiFiManager). The initial STA connect is **non-blocking**: on boot it immediately opens the setup AP at `AP_IP` / `AP_SSID` in `WIFI_AP_STA` (or `WIFI_AP` when no STA config is saved) and resolves the STA attempt asynchronously in `tick()` within `STA_CONNECT_TIMEOUT_MS` (~10s). The setup AP stays open if STA fails or no config is saved, is closed on successful STA connect (`closeAP` semantics), and auto-stops after `AP_TIMEOUT_MS` with no stations connected. Failed or dropped STA connections wait `RECONNECT_INTERVAL_MS` (5s) before a new bounded connection attempt.

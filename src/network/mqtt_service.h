@@ -40,7 +40,8 @@ private:
   WiFiClient wifiClient_;
 
   PubSubClient client_;
-  Timer publishTimer_;
+  Timer telemetryTimer_;
+  Timer stateRefreshTimer_;
 
   char mqttHost_[kMqttHostLen];
   char mqttUser_[kMqttUserLen];
@@ -104,7 +105,12 @@ private:
   void registerReconnectFailure(uint32_t now);
   bool shouldDisableAfterReconnectFailures() const;
 
-  void publishTimerCallback();
+  void telemetryTimerCallback();
+  void stateRefreshTimerCallback();
+  void syncLightState();
+  void syncSelectedEffectState();
+  void syncQuietHoursState();
+  void syncUserNotificationState();
   void onLightCommand(bool on, uint8_t brightness);
   void onEffectCommand(const char* effectName);
   void onColorCommand(uint8_t r, uint8_t g, uint8_t b);

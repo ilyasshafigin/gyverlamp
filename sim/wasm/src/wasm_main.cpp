@@ -399,13 +399,6 @@ WASM_KEEPALIVE uint8_t sim_effect_default_scale(int index) {
   return sim::SimRuntime::effectSettingsSpec(id).defaultScale;
 }
 
-WASM_KEEPALIVE uint8_t sim_effect_reset_on_change(int index) {
-  if (index < 0 || index >= sim::SimRuntime::effectCount()) return 0;
-  Effects::Id id = sim::SimRuntime::effectIdAt(index);
-  if (!Effects::isValid(id)) return 0;
-  return sim::SimRuntime::effectSettingsSpec(id).resetOnChange;
-}
-
 WASM_KEEPALIVE uint8_t sim_palette_count() {
   return sim::SimRuntime::paletteCount();
 }

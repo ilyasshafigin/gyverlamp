@@ -20,9 +20,7 @@ namespace Effects {
   EffectSettingsSpec getEffectSettingsSpec(Id id) {
 #define EFFECT_SETTINGS_SPEC(T) \
   case T::kId: return T::kSettings;
-    switch (id) {
-      EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default : return {180, 30, 40, EFFECT_PARAM_SPEED | EFFECT_PARAM_SCALE};
-    }
+    switch (id) { EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default : return {180, 30, 40}; }
 #undef EFFECT_SETTINGS_SPEC
   }
 

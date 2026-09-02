@@ -16,6 +16,7 @@ namespace AudioModulation {
   // the full base range (no collapse at base=255).
   uint8_t applyAudioCrossfade(uint8_t base, uint8_t signal, uint8_t amount);
 
-  RuntimeEffectSettings applyModulation(EffectSettings settings, const AudioFrame& audio, const AudioConfig& config);
+  RuntimeEffectSettings
+  applyModulation(const RuntimeEffectSettings& settings, const AudioFrame& audio, const AudioConfig& config);
 
 } // namespace AudioModulation

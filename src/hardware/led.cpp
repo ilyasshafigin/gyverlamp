@@ -24,12 +24,13 @@ void Led::init() {
   FastLED.show(0);
 }
 
-//void Led::clearLeds() { fill_solid(leds_, NUM_LEDS, CRGB::Black); } - не работает
 void Led::clearLeds() {
   FastLED.clear();
 }
 void Led::showLeds(uint8_t brightness) {
-  FastLED.show(brightness);
+  const uint8_t safeAtFull = calculate_max_brightness_for_power_mW(255, 5UL * CURRENT_LIMIT);
+  const uint32_t effectiveBrightness = (static_cast<uint32_t>(brightness) * safeAtFull + 127U) / 255U;
+  FastLED.show(static_cast<uint8_t>(effectiveBrightness));
 }
 void Led::blackout() {
   FastLED.clear(true);

@@ -79,7 +79,6 @@ Error: emcmake not found. Emscripten is required to build the WASM simulator.
   - `uint8_t sim_effect_default_brightness(int index)`
   - `uint8_t sim_effect_default_speed(int index)`
   - `uint8_t sim_effect_default_scale(int index)`
-  - `uint8_t sim_effect_reset_on_change(int index)`
   - `uint8_t sim_palette_count()`
   - `int sim_palette_id_at(int index)`
   - `const char* sim_palette_name_at(int index)`

@@ -18,8 +18,9 @@ namespace AudioModulation {
     return static_cast<uint8_t>((b * (255U - a) + s * a) / 255U);
   }
 
-  RuntimeEffectSettings applyModulation(EffectSettings settings, const AudioFrame& audio, const AudioConfig& config) {
-    RuntimeEffectSettings runtime = RuntimeEffectSettings::fromSettings(settings);
+  RuntimeEffectSettings
+  applyModulation(const RuntimeEffectSettings& settings, const AudioFrame& audio, const AudioConfig& config) {
+    RuntimeEffectSettings runtime = settings;
 
     if (!audio.available || config.mode == AudioMode::Off || config.mode == AudioMode::Effect) {
       return runtime;

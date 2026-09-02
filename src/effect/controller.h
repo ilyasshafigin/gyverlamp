@@ -6,6 +6,7 @@
 #include "palette_ids.h"
 #include "settings.h"
 #include "../util/fade_animator.h"
+#include "../util/linear_u8_rate_limiter.h"
 
 class AudioService;
 class EepromStore;
@@ -25,6 +26,7 @@ public:
       time_(time) {}
 
   void init();
+  bool tick();
   bool render(bool force = false);
 
   Effects::Id getActiveEffectId() const { return currentEffectId_; }
@@ -47,6 +49,7 @@ public:
   void setRandomEffect();
   uint8_t getEffectBrightness() const;
   uint8_t getOutputBrightness() const;
+  void setGlobalBrightness(uint8_t value);
   void setEffectBrightness(uint8_t value);
   void setEffectSpeed(uint8_t value);
   void setEffectScale(uint8_t value);
@@ -59,8 +62,8 @@ public:
   }
   void setOutputEnabled(bool enabled) { outputEnabled_ = enabled; }
 
-  bool updateTransition();
   bool isTransitioning() const { return transitionPhase_ != TransitionPhase::Idle; }
+  bool isParameterTransitioning() const;
   uint8_t getTransitionOpacity() const { return transitionOpacity_.value(); }
 
 private:
@@ -79,15 +82,27 @@ private:
   uint32_t tickTimer_ = 0;
   uint32_t lastRenderMs_ = 0;
 
+  LinearU8RateLimiter globalBrightness_;
+  LinearU8RateLimiter effectBrightness_;
+  LinearU8RateLimiter effectSpeed_;
+  LinearU8RateLimiter effectScale_;
+
   uint8_t runtimeBrightness_ = 0;
   bool runtimeBrightnessValid_ = false;
 
+  RuntimeEffectSettings getAppliedSettings() const;
+  void snapActiveEffectSettings(uint32_t now = millis());
+  void retargetActiveEffectSettings(uint32_t now = millis());
   void setupCurrentEffect();
   bool switchEffectNow(Effects::Id effectId);
-  void setEffectParam(uint8_t EffectSettings::* field, uint8_t value, uint8_t changedParam);
+  void setEffectParam(uint8_t EffectSettings::* field, uint8_t value);
+  bool updateTransition(uint32_t nowMs);
 
   static constexpr uint16_t kEffectFadeOutMs = 350;
   static constexpr uint16_t kEffectFadeInMs = 350;
+  static constexpr uint8_t kParameterSnapThreshold = 5;
+  static constexpr uint16_t kBrightnessRatePerSecond = 255;
+  static constexpr uint16_t kSpeedScaleRatePerSecond = 255;
 
   enum class TransitionPhase : uint8_t { Idle, FadingOut, FadingIn };
 
