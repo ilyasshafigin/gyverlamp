@@ -30,6 +30,9 @@ public:
   bool readButtonEnabled();
   bool writeButtonEnabled(bool enabled);
 
+  bool readOtaEnabled();
+  bool writeOtaEnabled(bool enabled);
+
   RotationMode readRotationMode();
   bool writeRotationMode(RotationMode mode);
 

@@ -40,7 +40,7 @@ public:
   WifiService wifi{eeprom};
   TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
   UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
-  OtaService ota;
+  OtaService ota{eeprom};
   MqttService mqtt{audio, eeprom, effects, notifications, power, rotation, settings, button, wifi};
   WebService web{
     audio,
@@ -48,6 +48,7 @@ public:
     effects,
     mqtt,
     notifications,
+    ota,
     power,
     rotation,
     webSettings,

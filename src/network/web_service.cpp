@@ -13,6 +13,7 @@
 #include "../effect/palette_catalog.h"
 #include "../hardware/button.h"
 #include "../network/mqtt_service.h"
+#include "../network/ota_service.h"
 #include "../network/wifi_service.h"
 #include "../notification/controller.h"
 #include "../notification/quiet_hours.h"
@@ -343,6 +344,25 @@ void WebService::settingsBuilder(sets::Builder& b) {
       ESP.restart();
     }
   }
+#ifdef USE_OTA
+  {
+    sets::Menu g(b, "OTA");
+
+    if (b.build.isBuild()) {
+      otaEnabled_ = ota_.isEnabled();
+    }
+
+    b.Label("Status", ota_.stateName());
+    if (b.Switch("Enabled", &otaEnabled_)) {
+      ota_.requestEnabled(otaEnabled_);
+      b.reload();
+    }
+    if (b.Button("Restart OTA")) {
+      ota_.requestRestart();
+      b.reload();
+    }
+  }
+#endif
   {
     sets::Menu g(b, "Information");
 

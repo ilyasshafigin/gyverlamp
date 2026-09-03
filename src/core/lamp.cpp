@@ -20,6 +20,7 @@ void Lamp::setup() {
   wifi.setErrorHandler([this] { notifications.onWifiError(); });
   wifi.setDisabledHandler([this] { notifications.onWifiDisabled(); });
 
+#ifdef USE_OTA
   ota.setStartHandler([this] {
     notifications.onOtaStart();
     frameRenderer.renderNow();
@@ -39,6 +40,7 @@ void Lamp::setup() {
     notifications.onOtaError();
     frameRenderer.renderNow();
   });
+#endif
 
   wifi.init();
   upd.init();

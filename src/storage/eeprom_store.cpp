@@ -141,6 +141,7 @@ bool EepromStore::initializeLayout() {
 
   EEPROM.write(kEepromPowerStateAddr, 0);
   EEPROM.write(kEepromButtonEnabledAddr, 1);
+  EEPROM.write(kEepromOtaPolicyAddr, kEepromOtaPolicyDisabled);
   EEPROM.put(kEepromAutoOffMinutesAddr, kAutoOffMinutesDefault);
   EEPROM.write(kEepromCurrentModeAddr, 0);
   EEPROM.write(kEepromEffectSettingsCountAddr, 0);
@@ -264,6 +265,18 @@ bool EepromStore::readButtonEnabled() {
 
 bool EepromStore::writeButtonEnabled(bool enabled) {
   EEPROM.write(kEepromButtonEnabledAddr, enabled ? 1 : 0);
+  return EEPROM.commit();
+}
+
+bool EepromStore::readOtaEnabled() {
+  return EEPROM.read(kEepromOtaPolicyAddr) == kEepromOtaPolicyEnabled;
+}
+
+bool EepromStore::writeOtaEnabled(bool enabled) {
+  const uint8_t value = enabled ? kEepromOtaPolicyEnabled : kEepromOtaPolicyDisabled;
+  if (EEPROM.read(kEepromOtaPolicyAddr) == value) return true;
+
+  EEPROM.write(kEepromOtaPolicyAddr, value);
   return EEPROM.commit();
 }
 

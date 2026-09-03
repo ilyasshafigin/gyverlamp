@@ -16,6 +16,7 @@ class EffectController;
 class EepromStore;
 class MqttService;
 class NotificationController;
+class OtaService;
 class PowerController;
 class RotationController;
 class SettingsRepository;
@@ -32,6 +33,7 @@ public:
     EffectController& effects,
     MqttService& mqtt,
     NotificationController& notifications,
+    OtaService& ota,
     PowerController& power,
     RotationController& rotation,
     SettingsAsync& webSettings,
@@ -46,6 +48,7 @@ public:
       effects_(effects),
       mqtt_(mqtt),
       notifications_(notifications),
+      ota_(ota),
       power_(power),
       rotation_(rotation),
       webSettings_(webSettings),
@@ -53,7 +56,8 @@ public:
       stateNotifier_(stateNotifier),
       time_(time),
       wifi_(wifi),
-      button_(button) {}
+      button_(button) {
+  }
 
   void init();
   void tick();
@@ -64,6 +68,7 @@ private:
   EffectController& effects_;
   MqttService& mqtt_;
   NotificationController& notifications_;
+  OtaService& ota_;
   PowerController& power_;
   RotationController& rotation_;
   SettingsAsync& webSettings_;
@@ -104,6 +109,7 @@ private:
   uint8_t audioAmount_ = 128;
   String audioModeOptions_ = "Off;Brightness;Speed;Scale;Effect";
   String audioBandOptions_ = "Level;Bass;Treble";
+  bool otaEnabled_ = false;
 
 #ifdef TEST_NOTIFICATIONS
   uint16_t notificationWarningDurationSec_ = 30;
