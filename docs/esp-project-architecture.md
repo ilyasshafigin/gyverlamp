@@ -10,11 +10,11 @@
 - один корневой объект приложения;
 - явное владение сервисами и передача зависимостей через конструкторы;
 - разделение прикладной логики, оборудования, сети и постоянного хранения;
-- неблокирующий жизненный цикл `init()`/`tick()`;
+- кооперативный жизненный цикл `init()`/`tick()` с явными ограничениями библиотек;
 - единое управление EEPROM layout;
 - отдельный RAM-репозиторий изменяемых настроек;
 - независимые адаптеры Web и MQTT над общей моделью устройства;
-- обязательные WiFi и OTA;
+- обязательный WiFi и опциональный PlatformIO OTA;
 - разделение общей PlatformIO-конфигурации и локальных параметров конкретных устройств.
 
 Конкретные названия классов зависят от назначения устройства. `App`, `DeviceController` и `DeviceState` ниже — условные имена. В проекте лампы их аналогами служат `Lamp`, контроллеры питания/эффектов и состояние лампы.
@@ -42,7 +42,7 @@
 - `init()` — одноразовая настройка после запуска;
 - `tick()` — короткая порция периодической работы без длительного ожидания.
 
-Допустимы более предметные имена вроде `render()`, `poll()` или `update()`, если они точнее выражают операцию. Главное требование: основной `loop()` не должен надолго блокироваться.
+Допустимы более предметные имена вроде `render()`, `poll()` или `update()`, если они точнее выражают операцию. Главное требование: основной `loop()` не должен надолго блокироваться из-за собственной логики. Ограничения подключённых библиотек нужно документировать и ограничивать lifecycle-границами: например, `PubSubClient`/`HaMqttEntities` выполняют синхронный connect и могут блокировать около 2 секунд.
 
 Вместо `delay()` для повторных попыток, таймаутов и отложенного сохранения используются `millis()`, небольшие timer-классы или конечные автоматы. После обслуживания всех компонентов цикл должен вернуть управление ESP runtime; для ESP8266 обычно вызывается `yield()`.
 
@@ -175,7 +175,7 @@ private:
   DeviceController device_{led_, settings_, stateNotifier_};
 
   WifiService wifi_{eeprom_};
-  OtaService ota_{wifi_};
+  OtaService ota_{eeprom_};
   MqttService mqtt_{eeprom_, device_, settings_, wifi_};
   SettingsAsync webSettings_;
   WebService web_{eeprom_, settings_, device_, mqtt_, webSettings_, wifi_};
@@ -195,7 +195,7 @@ private:
 3. загрузить настройки в RAM;
 4. инициализировать прикладные контроллеры;
 5. запустить WiFi state machine;
-6. настроить OTA callbacks;
+6. инициализировать опциональный OTA-сервис и его callbacks;
 7. настроить MQTT entities/callbacks;
 8. запустить Web UI;
 9. запустить остальные таймеры и фоновые сервисы.
@@ -508,7 +508,7 @@ AP имеет независимые состояния:
 - `Active`;
 - `RetryWait`.
 
-Разделение важно: STA может переподключаться, пока setup AP остаётся доступной.
+Разделение важно: persistent provisioning AP существует только при пустом SSID; fallback AP и STA retries независимы.
 
 ### Поведение `init()`
 
@@ -520,82 +520,61 @@ AP имеет независимые состояния:
 
 Если STA credentials есть:
 
-1. установить `WIFI_AP_STA`;
-2. сразу открыть setup AP;
-3. начать асинхронное STA-подключение;
-4. не ждать результата внутри `init()`.
+1. установить `WIFI_STA`;
+2. начать STA campaign и первую асинхронную попытку;
+3. не открывать AP и не ждать результата внутри `init()`.
 
-Setup AP при запуске нужен, чтобы пользователь мог исправить credentials, даже пока STA-подключение не удалось.
+Campaign начинается при boot с credentials и после потери STA. `WifiService` выключает SDK auto-reconnect и сам владеет ручными retries; часы campaign не сбрасываются между attempts.
 
 ### Поведение `tick()`
 
-- `Connecting`: проверить успех; после timeout перейти в `RetryWait`;
-- `Connected`: при потере связи перейти в `RetryWait`;
-- `RetryWait`: после интервала начать новую ограниченную попытку;
-- при ошибке запуска AP повторять попытку с отдельным интервалом;
-- активный AP закрывать по timeout только при отсутствии подключённых клиентов;
-- при успешном STA-подключении закрыть AP;
+- `Connecting`: принять `WL_CONNECTED`, затем event текущей attempt из fast-fail policy, иначе 60-second deadline;
+- `Connected`: при потере связи начать новый campaign и перейти в `RetryWait`;
+- `RetryWait`: через 5 секунд начать следующую attempt;
+- через 60 секунд campaign без STA один раз запросить fallback `WIFI_AP_STA`, не прекращая retries;
+- fallback AP закрыть после 5 непрерывных минут без clients и не открывать снова в campaign;
+- при успехе STA завершить campaign и закрыть/cancel fallback AP;
 - не использовать блокирующий цикл ожидания `WiFi.status()`.
 
-Все интервалы должны быть именованными константами: connect timeout, reconnect interval, AP retry interval, AP inactivity timeout.
+Event callback только записывает событие current attempt; он не вызывает WiFi API и не меняет state. Service-owned disconnect закрывает event acceptance до вызова SDK.
 
-`stopAp()` должен корректно выбрать оставшийся режим:
+Все lifecycle intervals — private constants `WifiService`, не global timeouts `config.h`.
 
-- `WIFI_STA`, если сохранена STA-конфигурация;
-- выключить WiFi или выбрать проектный режим, если STA-конфигурации нет и provisioning завершён.
+`stopAp()` не трогает inactive AP; после fallback оставляет `WIFI_STA`. Пустой SSID оставляет provisioning AP доступным без idle timeout.
 
 Device ID, AP SSID и hostname формируются из build-time `DEVICE_NAME` либо стабильного chip ID. Они не должны быть случайными после каждой перезагрузки.
 
 ## `OtaService`
 
-OTA обязателен как отдельный сервис. Он не должен запускать OTA-сервер до появления STA-соединения.
+PlatformIO OTA — опциональный отдельный сервис. Он доступен только в сборках с `USE_OTA`; без флага публичные `init()` и `tick()` остаются no-op, а OTA-секция Web UI отсутствует. HTTP `/ota` библиотеки SettingsAsync не относится к этому сервису и сохраняет независимое поведение.
 
 ### Зависимость
 
 ```cpp
 class OtaService {
 public:
-  explicit OtaService(WifiService& wifi);
+  enum class State : uint8_t { Disabled, WaitingForSta, Listening, Updating };
 
-  void init();
-  void tick();
+  explicit OtaService(EepromStore& eeprom);
 
-private:
-  WifiService& wifi_;
-  bool begun_ = false;
+  void init(const char* hostname);
+  void tick(bool isStaConnected);
+
+  bool isEnabled() const;
+  State state() const;
+  const char* stateName() const;
+  void requestEnabled(bool enabled);
+  void requestRestart();
 };
 ```
 
-Дополнительные зависимости разрешены только для универсальных действий нового устройства: перевести выходы в безопасное состояние, приостановить привод, выполнить финальное сохранение. Они не должны затягивать OTA в предметную UI-логику.
+Сервис получает `EepromStore`: `init()` читает persisted policy, по умолчанию выключенную, из выделенного байта EEPROM. Меняется и сохраняется только policy; состояния listener (`WaitingForSta`, `Listening`, `Updating`) остаются runtime-данными. Callbacks start/progress/end/error можно передать для прикладных уведомлений; progress относится только к PlatformIO OTA, а обновления дисплея следует ограничивать по частоте.
 
 ### Жизненный цикл
 
-`init()` регистрирует callbacks:
+`init(hostname)` настраивает ArduinoOTA callbacks, но не запускает listener. `tick(isStaConnected)` обрабатывает отложенные запросы enable/disable/restart и запускает listener только при включённой policy и доступной STA. Вне активного PlatformIO update потеря STA завершает listener; после восстановления STA он запускается снова. Во время update сервис продолжает вызывать `ArduinoOTA.handle()` и откладывает reconciliation policy/STA до terminal callback. Запросы управления применяются из `tick()` и не прерывают активное обновление.
 
-- start;
-- end;
-- progress;
-- error.
-
-Callbacks как минимум пишут понятные сообщения в Serial. На старте можно остановить операции, несовместимые с обновлением. На ошибке устройство должно остаться в безопасном состоянии.
-
-`tick()`:
-
-```cpp
-void OtaService::tick() {
-  if (!begun_) {
-    if (!wifi_.isStaConnected()) return;
-    ArduinoOTA.begin();
-    begun_ = true;
-  }
-
-  ArduinoOTA.handle();
-}
-```
-
-Такой порядок позволяет вызвать `ota.init()` до подключения WiFi и не блокирует загрузку.
-
-Если OTA compile-time optional для некоторых сборок, класс всё равно сохраняет тот же публичный API, а при выключенном `USE_OTA` методы становятся no-op. В целевом проекте хотя бы основной environment должен собираться с `USE_OTA`.
+Web UI показывает только PlatformIO OTA: status, enable/disable и restart listener. Сборочный env с `upload_protocol = espota` задаёт способ upload, но не включает listener в runtime. Для первого использования нужно прошить устройство по USB, настроить WiFi в Web UI, включить PlatformIO OTA и дождаться STA.
 
 ## `MqttService`
 
@@ -632,7 +611,7 @@ struct MqttConfig {
 3. создать или настроить entities;
 4. привязать command callbacks;
 5. подготовить список допустимых режимов/эффектов/опций;
-6. не выполнять длительное блокирующее подключение.
+6. не вызывать подключение из `init()`; отложить controlled lifecycle в `tick()`.
 
 Callbacks переводят протокольную команду в вызов прикладного API:
 
@@ -644,19 +623,15 @@ MQTT payload -> parse/validate -> DeviceController method
 
 Протокольный код не должен напрямую переключать GPIO или писать EEPROM.
 
-### `tick()` и reconnect
+### Lifecycle, `tick()` и reconnect
 
-`tick()` отвечает за:
+Сервису нужен явный state machine: `Disabled`, `WaitingForWifi`, `DisconnectBarrier`, `RetryWait`, `ConnectPrepare`, `Connecting`, `Online`, `ConfigError`. Публичные запросы `requestApply(MqttConfig)`, `requestEnabled(bool)` и `requestRestart()` только сохраняют intent. Все операции с transport и MQTT library выполняются из `tick()`; `state()`/`stateName()` дают Web UI cached состояние.
 
-- выход, если STA недоступна;
-- неблокирующие попытки подключения с интервалом;
-- обслуживание MQTT client loop;
-- публикацию dirty entities;
-- восстановление discovery/state после reconnect.
+`HAMQTT.begin()` и регистрация entities выполняются один раз при boot. Не переинициализировать библиотеку при reconnect и не делать fork `HaMqttEntities` ради этого. Перед каждой попыткой нужен no-fork barrier: отключить MQTT client либо abort transport, выполнить один `HAMQTT.loop()` в отключённом состоянии, затем в `ConnectPrepare` выполнить свежий prepare pulse и только после этого вызвать connect.
 
-Credentials могут быть пустыми. Тогда сервис должен оставаться выключенным без постоянного потока ошибок.
+`PubSubClient`/`HaMqttEntities` connect остаётся синхронным и может блокировать около 2 секунд. Конечный автомат не делает эту библиотечную операцию асинхронной: он переносит её в контролируемый шаг `tick()`, исключает tight loop и разделяет teardown/retry. Не описывать такой MQTT как полностью неблокирующий.
 
-После изменения MQTT config через Web UI нужен явный метод вроде `reloadConfig()`, `reconnect()` или безопасная перезагрузка устройства. Нельзя продолжать использовать указатели на устаревший cache.
+MQTT ждёт STA. Потеря WiFi abort transport и переводит сервис в ожидание. Ошибки брокера повторяются с exponential backoff 5..60 секунд и не выключают сервис навсегда. Пустые или некорректные credentials ведут в `Disabled` либо `ConfigError` без постоянного потока ошибок.
 
 ### Публикация состояния
 
@@ -671,7 +646,7 @@ Credentials могут быть пустыми. Тогда сервис долж
 
 Источником истины остаётся устройство. После входящей MQTT-команды следует публиковать нормализованное фактическое значение, а не безусловно повторять payload.
 
-`updateStates()` может только менять локальные entity states/dirty flags; фактическую отправку выполняет MQTT library в `tick()`. Это уменьшает связанность и повторные публикации.
+`updateStates()` пересчитывает targets из фактического состояния контроллеров. `HaMqttEntities` отправляет из controller loop только dirty values. После reconnect нужен намеренный discovery/full state synchronization; отдельный periodic refresh может повторно пересчитывать targets (в лампе — раз в 30 секунд), но telemetry с частотой, подходящей диагностике (в лампе — раз в минуту), не следует называть полным state refresh.
 
 Если MQTT выключается флагом `USE_MQTT`, сохранить тот же публичный API и no-op реализацию. Остальной проект не должен быть заполнен `#ifdef USE_MQTT`.
 
@@ -730,9 +705,11 @@ UI-идентификаторы полей должны быть стабиль�
 1. проверить длину и формат;
 2. безопасно скопировать значения;
 3. записать весь согласованный config одним методом Store;
-4. сообщить пользователю, требуется ли reconnect/restart.
+4. для WiFi выполнить controlled ESP restart; для MQTT вызвать `requestApply(config)` только после успешного commit.
 
 Пароль нельзя случайно выводить в Serial или MQTT diagnostics. Нужно учитывать, должна ли форма показывать сохранённый пароль или пустой placeholder.
+
+WiFi baseline не поддерживает live apply: `WebService` не вызывает `WiFi.begin()`, `WiFi.mode()` или иной WiFi API напрямую. MQTT UI показывает cached status, имеет `Save and apply`, runtime `Enabled` и `Restart MQTT`; runtime enabled policy отдельно не persist. `Save and apply` не меняет runtime config при неуспешном EEPROM commit.
 
 ### Применение команд
 
@@ -754,7 +731,7 @@ WebService не должен повторять внутреннюю логик�
 
 - GPIO;
 - размеры и электрические лимиты;
-- AP IP, AP password и network timeouts;
+- AP IP и AP password;
 - MQTT/Web defaults, не содержащие секретов;
 - firmware version fallback;
 - параметры устройства, допускающие переопределение build flags.
@@ -868,7 +845,7 @@ Example должен быть полностью рабочим шаблоном
 - содержит хотя бы один base environment;
 - содержит USB и OTA варианты;
 - использует placeholder IP вроде `192.168.1.xxx`;
-- показывает обязательный `USE_OTA`;
+- при наличии PlatformIO OTA показывает `USE_OTA`;
 - содержит безопасные примерные значения лимитов и имени устройства;
 - обновляется одновременно с изменениями требований к локальному файлу.
 
@@ -977,7 +954,7 @@ pio run -e device1_ota
 
 Условная компиляция должна быть локализована внутри соответствующего сервиса. Для выключенной возможности сохраняется тот же класс и публичный API с no-op методами. Корневой `App` остаётся читаемым и не превращается в набор вложенных `#ifdef`.
 
-WiFi остаётся базовой возможностью. OTA обязателен для основной целевой конфигурации.
+WiFi остаётся базовой возможностью. PlatformIO OTA включается только там, где он нужен, через `USE_OTA`.
 
 ## Потоки данных
 
@@ -1018,11 +995,13 @@ setting changed
 ### Сетевой запуск
 
 ```text
-WifiService opens setup AP and starts STA asynchronously
-  -> loop keeps running
-  -> STA connected
-  -> setup AP closes
-  -> OtaService begins OTA server
+empty SSID -> persistent provisioning AP (`WIFI_AP`)
+
+saved SSID -> STA campaign (`WIFI_STA`)
+  -> service-owned asynchronous retries
+  -> after 60 s without STA: one fallback AP (`WIFI_AP_STA`), retries continue
+  -> STA connected: campaign ends and fallback AP closes
+  -> при включённой persisted policy OtaService запускает PlatformIO OTA listener
   -> MqttService connects and publishes discovery/state
   -> WebService remains available through STA address
 ```
@@ -1067,7 +1046,7 @@ Hardware не зависит от network. Storage не зависит от Web/
 8. Создать корневой `App`, перенести туда владение и порядок жизненного цикла.
 9. Сделать `main.cpp` тонким.
 10. Перенести `WifiService` как неблокирующий AP/STA state machine.
-11. Перенести обязательный `OtaService`, запускать его после STA connect.
+11. При необходимости перенести опциональный `OtaService`: policy в EEPROM, listener только при enabled policy и STA.
 12. Адаптировать `MqttService` к новому предметному API.
 13. Адаптировать `WebService` к тому же API.
 14. Добавить единый механизм отметки изменений состояния.
@@ -1087,8 +1066,8 @@ Hardware не зависит от network. Storage не зависит от Web/
 - зависимости передаются через конструкторы и не скрыты в глобальных объектах;
 - `setup()` имеет понятный порядок;
 - `loop()` неблокирующий и обслуживает каждый активный сервис;
-- WiFi использует AP/STA state machine, timeout и reconnect без блокирующего ожидания;
-- OTA обязателен в основном environment и начинается только после STA connect;
+- WiFi использует service-owned AP/STA state machine: persistent provisioning, attempt-scoped event handling, campaign fallback и неблокирующий retry;
+- PlatformIO OTA при включённом `USE_OTA` читает disabled-by-default policy из EEPROM и запускает listener только при enabled policy и STA;
 - MQTT и Web вызывают один прикладной API;
 - MQTT публикует фактическое состояние устройства;
 - EEPROM-адреса сосредоточены в одном versioned layout;
@@ -1552,10 +1531,9 @@ const DeviceSettings& settings() const;
 Предпочитать ранние выходы и guard clauses. Они уменьшают вложенность в `tick()`:
 
 ```cpp
-void OtaService::tick() {
-  if (!wifi_.isStaConnected()) return;
-  if (!begun_) begin();
-  ArduinoOTA.handle();
+void OtaService::tick(bool isStaConnected) {
+  if (!isEnabled() || !isStaConnected) return;
+  // Применить отложенные запросы и обслужить PlatformIO OTA listener.
 }
 ```
 
@@ -1627,365 +1605,164 @@ Compile-time проверка предпочтительнее коммента�
 
 ## Эталонные реализации
 
-Следующие приложения задают переносимый baseline. WiFi, OTA и EEPROM layout следует переносить максимально близко. MQTT и Web представлены infrastructure-каркасами: их transport lifecycle сохраняется, а entities, поля формы и команды заменяются предметными типами нового устройства.
+Следующие приложения задают переносимый baseline. WiFi и EEPROM layout следует переносить максимально близко. PlatformIO OTA описан как опциональный сервис с persisted policy; MQTT и Web представлены infrastructure-каркасами: их transport lifecycle сохраняется, а entities, поля формы и команды заменяются предметными типами нового устройства.
 
-### Приложение A. Полный `WifiService`
+### Приложение A. Эталонная state machine `WifiService`
 
-Baseline ниже рассчитан на ESP8266. Для ESP32 меняются WiFi include и отдельные platform calls, но состояния и жизненный цикл сохраняются.
+Это reference model, а не literal copy production source. Она фиксирует lifecycle contract; platform-specific event types, numeric disconnect reasons и временные Serial diagnostics остаются в адаптере ESP8266.
 
-Требуемые параметры в `config.h`:
+```text
+private constants:
+  attempt timeout       = 60 s
+  manual retry interval = 5 s
+  fallback delay        = 60 s from campaign start
+  AP start retry        = 5 s
+  fallback AP idle      = 5 min
 
-```cpp
-#pragma once
-
-#ifndef DEVICE_NAME
-#define DEVICE_NAME "EspDevice"
-#endif
-
-#define AP_SSID DEVICE_NAME
-#define AP_PASS "12345678"
-#define AP_IP   {192, 168, 4, 1}
+persistent state:
+  hasStaCredentials
+  staState = Provisioning | Connecting | Connected | RetryWait
+  apState = Inactive | Active | RetryWait
+  campaignActive, campaignStartedAt, fallbackRequested
+  nextAttemptId, activeAttemptId
+  acceptingDisconnectEvent
+  pendingDisconnect = { valid, attemptId, reason }
 ```
 
-`network/wifi_config.h`:
+```text
+init():
+  register persistent station event handlers once
+  disable SDK auto-reconnect
+  hasStaCredentials = saved SSID is not empty
 
-```cpp
-#pragma once
+  if not hasStaCredentials:
+    WiFi.mode(WIFI_AP)
+    start provisioning AP now
+    staState = Provisioning
+    return
 
-#include <Arduino.h>
+  WiFi.mode(WIFI_STA)
+  startCampaign()
+  startStaAttempt()
 
-constexpr uint8_t WIFI_SSID_LEN = 33;
-constexpr uint8_t WIFI_PASS_LEN = 65;
+startCampaign():
+  campaignActive = true
+  campaignStartedAt = millis()
+  fallbackRequested = false
 
-struct WifiConfig {
-  char ssid[WIFI_SSID_LEN];
-  char password[WIFI_PASS_LEN];
-};
+startStaAttempt():
+  require hasStaCredentials and staState != Connecting
+  clear pendingDisconnect
+  activeAttemptId = ++nextAttemptId
+  connectStartedAt = millis()
+  staState = Connecting
+  acceptingDisconnectEvent = true
+  WiFi.begin(savedSsid, savedPassword)
 
-static_assert(sizeof(WifiConfig) == WIFI_SSID_LEN + WIFI_PASS_LEN, "Unexpected WifiConfig padding");
+onStationDisconnected(event):
+  emit optional platform diagnostic
+  if staState == Connecting and acceptingDisconnectEvent and not pendingDisconnect.valid:
+    pendingDisconnect = { true, activeAttemptId, event.reason }
+  // No WiFi API, no state transition, no retry here.
+
+checkConnecting():
+  if WiFi.status() == WL_CONNECTED:
+    acceptingDisconnectEvent = false
+    clear pendingDisconnect
+    onStaConnected()
+    return
+
+  if pendingDisconnect.valid and pendingDisconnect.attemptId == activeAttemptId:
+    event = consume pendingDisconnect
+    if event is a project-selected fast-fail reason:
+      failFromDisconnectEvent(event.reason)
+      return
+
+  if millis() - connectStartedAt >= attempt timeout:
+    failFromDeadline()
+
+failFromDisconnectEvent(reason):
+  acceptingDisconnectEvent = false
+  clear pendingDisconnect
+  staState = RetryWait
+  retryStartedAt = millis()
+  notify failure
+  // SDK already reported disconnection: do not call WiFi.disconnect().
+
+failFromDeadline():
+  acceptingDisconnectEvent = false
+  clear pendingDisconnect
+  staState = RetryWait
+  retryStartedAt = millis()
+  stop current SDK STA attempt without erasing credentials or disabling STA
+  notify failure
+  // Transition precedes disconnect, so service-owned event is ignored.
 ```
 
-`network/wifi_service.h`:
+`tick()` обслуживает независимые STA и AP states без blocking wait:
 
-```cpp
-#pragma once
+```text
+Provisioning:
+  keep provisioning AP reachable; do not apply fallback idle timeout
 
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
+Connecting:
+  checkConnecting()
+  checkFallback()
 
-#include "../config.h"
+RetryWait:
+  checkFallback() first
+  if retry interval elapsed: startStaAttempt()
 
-class EepromStore;
+Connected:
+  if STA lost:
+    stop SDK STA activity
+    startCampaign()
+    staState = RetryWait
+    retryStartedAt = millis()
 
-class WifiService {
-public:
-  explicit WifiService(EepromStore& eeprom)
-    : eeprom_(eeprom),
-      deviceId_(DEVICE_NAME) {}
-
-  void init();
-  void tick();
-
-  bool isStaConnected() const { return WiFi.isConnected(); }
-  const String& getDeviceId() const { return deviceId_; }
-
-private:
-  enum class StaState : uint8_t {
-    Provisioning,
-    Connecting,
-    Connected,
-    RetryWait,
-  };
-
-  enum class ApState : uint8_t {
-    Inactive,
-    Active,
-    RetryWait,
-  };
-
-  EepromStore& eeprom_;
-  String deviceId_;
-
-  StaState staState_ = StaState::Provisioning;
-  ApState apState_ = ApState::Inactive;
-  uint32_t apStartedAt_ = 0;
-  uint32_t apRetryStartedAt_ = 0;
-  uint32_t connectStartedAt_ = 0;
-  uint32_t retryStartedAt_ = 0;
-
-  static constexpr uint32_t RECONNECT_INTERVAL_MS = 5000;
-  static constexpr uint32_t AP_RETRY_INTERVAL_MS = 5000;
-  static constexpr uint32_t AP_TIMEOUT_MS = 5UL * 60UL * 1000UL;
-  static constexpr uint32_t STA_CONNECT_TIMEOUT_MS = 10000;
-
-  bool startAp();
-  void requestAp();
-  void stopAp();
-  void startStaConnection();
-  void checkStaConnecting();
-  void checkStaRetryWait();
-  void onStaConnected();
-  void checkApRetry();
-  void checkApTimeout();
-};
+while a credential campaign is active and STA is not connected:
+  retry failed AP start if apState == RetryWait
+  check fallback AP idle timeout if apState == Active
 ```
 
-`network/wifi_service.cpp`:
+```text
+checkFallback():
+  if campaign inactive, fallback already requested, or STA connected: return
+  if millis() - campaignStartedAt < fallback delay: return
+  fallbackRequested = true
+  WiFi.mode(WIFI_AP_STA)
+  request AP start
+  // This runs before a due RetryWait STA attempt in same tick.
 
-```cpp
-#include "wifi_service.h"
+onStaConnected():
+  acceptingDisconnectEvent = false
+  clear pendingDisconnect
+  staState = Connected
+  campaignActive = false
+  cancel AP retry or stop active fallback AP
+  leave WiFi in WIFI_STA
 
-#include "../storage/eeprom_store.h"
-
-void WifiService::init() {
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
-
-  if (strlen(wifiConfig.ssid) == 0) {
-    WiFi.mode(WIFI_AP);
-    requestAp();
-    staState_ = StaState::Provisioning;
-    Serial.println(F("[WIFI] No STA config, AP open for setup"));
-    return;
-  }
-
-  WiFi.mode(WIFI_AP_STA);
-  requestAp();
-  startStaConnection();
-}
-
-void WifiService::tick() {
-  switch (staState_) {
-    case StaState::Provisioning: checkApTimeout(); break;
-
-    case StaState::Connecting: checkStaConnecting(); break;
-
-    case StaState::Connected:
-      if (!isStaConnected()) {
-        staState_ = StaState::RetryWait;
-        retryStartedAt_ = millis();
-        Serial.println(F("[WIFI] STA connection lost"));
-      }
-      break;
-
-    case StaState::RetryWait:
-      checkStaRetryWait();
-      checkApTimeout();
-      break;
-  }
-
-  if (staState_ != StaState::Connected && !isStaConnected()) {
-    checkApRetry();
-  }
-}
-
-bool WifiService::startAp() {
-  if (apState_ == ApState::Active) return true;
-
-  const uint8_t ipBytes[4] = AP_IP;
-  const IPAddress apIp(ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3]);
-
-  if (!WiFi.softAPConfig(apIp, apIp, IPAddress(255, 255, 255, 0))) {
-    Serial.println(F("[WIFI] Failed to configure AP"));
-    return false;
-  }
-
-  if (!WiFi.softAP(AP_SSID, AP_PASS)) {
-    Serial.println(F("[WIFI] Failed to start AP"));
-    return false;
-  }
-
-  apState_ = ApState::Active;
-  apStartedAt_ = millis();
-
-  Serial.print(F("[WIFI] AP IP: "));
-  Serial.println(WiFi.softAPIP());
-  return true;
-}
-
-void WifiService::requestAp() {
-  if (startAp()) return;
-
-  apState_ = ApState::RetryWait;
-  apRetryStartedAt_ = millis();
-}
-
-void WifiService::stopAp() {
-  if (apState_ == ApState::Inactive) return;
-
-  WiFi.softAPdisconnect(true);
-  apState_ = ApState::Inactive;
-
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
-  WiFi.mode(strlen(wifiConfig.ssid) == 0 ? WIFI_OFF : WIFI_STA);
-}
-
-void WifiService::startStaConnection() {
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
-  if (strlen(wifiConfig.ssid) == 0) {
-    staState_ = StaState::Provisioning;
-    return;
-  }
-
-  Serial.print(F("[WIFI] Connecting to "));
-  Serial.println(wifiConfig.ssid);
-
-  WiFi.begin(wifiConfig.ssid, wifiConfig.password);
-  connectStartedAt_ = millis();
-  staState_ = StaState::Connecting;
-}
-
-void WifiService::checkStaConnecting() {
-  if (isStaConnected()) {
-    onStaConnected();
-    return;
-  }
-
-  if (millis() - connectStartedAt_ < STA_CONNECT_TIMEOUT_MS) return;
-
-  staState_ = StaState::RetryWait;
-  retryStartedAt_ = millis();
-  Serial.println(F("[WIFI] STA connection failed, keeping AP for setup"));
-}
-
-void WifiService::checkStaRetryWait() {
-  if (isStaConnected()) {
-    onStaConnected();
-    return;
-  }
-
-  if (millis() - retryStartedAt_ < RECONNECT_INTERVAL_MS) return;
-  startStaConnection();
-}
-
-void WifiService::onStaConnected() {
-  staState_ = StaState::Connected;
-
-  Serial.print(F("[WIFI] STA IP: "));
-  Serial.println(WiFi.localIP());
-
-  stopAp();
-}
-
-void WifiService::checkApRetry() {
-  if (apState_ != ApState::RetryWait) return;
-  if (millis() - apRetryStartedAt_ < AP_RETRY_INTERVAL_MS) return;
-
-  requestAp();
-}
-
-void WifiService::checkApTimeout() {
-  if (apState_ != ApState::Active) return;
-  if (millis() - apStartedAt_ < AP_TIMEOUT_MS) return;
-
-  if (WiFi.softAPgetStationNum() > 0) {
-    apStartedAt_ = millis();
-    return;
-  }
-
-  Serial.println(F("[WIFI] AP setup timeout"));
-  stopAp();
-}
+checkApTimeout():
+  if AP is not Active: return
+  if softAP client count > 0:
+    apIdleStartedAt = millis()
+    return
+  if millis() - apIdleStartedAt >= fallback AP idle timeout:
+    stop AP
+  // fallbackRequested remains true; no reopen in this campaign.
 ```
 
-После сохранения новых WiFi credentials простой baseline предполагает controlled restart. Если нужен reconnect без перезагрузки, добавить публичный `reloadConfig()` внутри `WifiService`; WebService не должен самостоятельно вызывать `WiFi.begin()`.
+AP start failure uses only `ApState::RetryWait` and its own retry timer; it never resets campaign time or STA retry state. `stopAp()` is a no-op for an inactive AP. A provisioning AP is not a fallback AP and has no idle timeout.
 
-Для ESP32 заменить `<ESP8266WiFi.h>` на `<WiFi.h>`, проверить сигнатуры `softAPdisconnect()` и доступность `WIFI_OFF`. State machine и EEPROM API не менять.
+После Web save WiFi config записывается целиком и ESP выполняет controlled restart. Baseline не содержит `WifiService::reloadConfig()` и live apply credentials; `WebService` не вызывает WiFi API напрямую.
 
-### Приложение B. Полный `OtaService`
+Для ESP32 заменить ESP8266 include, event registration и AP calls по API выбранного core. Не переносить numeric ESP8266 disconnect reasons без явной таблицы соответствия и теста.
 
-`network/ota_service.h`:
+### Приложение B. Архитектура `OtaService`
 
-```cpp
-#pragma once
+`OtaService` сохраняет один публичный API в OTA- и non-OTA-сборках: `init(const char* hostname)` и `tick(bool isStaConnected)`. При выключенном `USE_OTA` оба метода — no-op; сервис не создаёт PlatformIO OTA listener и Web UI не показывает его секцию.
 
-class WifiService;
-
-class OtaService {
-public:
-  explicit OtaService(WifiService& wifi)
-    : wifi_(wifi) {}
-
-  void init();
-  void tick();
-
-private:
-  WifiService& wifi_;
-  bool begun_ = false;
-};
-```
-
-`network/ota_service.cpp`:
-
-```cpp
-#include "ota_service.h"
-
-#ifdef USE_OTA
-
-#include <Arduino.h>
-#include <ArduinoOTA.h>
-
-#include "wifi_service.h"
-
-void OtaService::init() {
-  ArduinoOTA.setHostname(wifi_.getDeviceId().c_str());
-
-  ArduinoOTA.onStart([]() {
-    Serial.println(F("[OTA] Start"));
-    // Перевести выходы устройства в безопасное состояние, если требуется.
-  });
-
-  ArduinoOTA.onEnd([]() {
-    Serial.println();
-    Serial.println(F("[OTA] End"));
-  });
-
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    if (total == 0) return;
-
-    const unsigned int percent = static_cast<unsigned int>(
-      static_cast<uint64_t>(progress) * 100ULL / static_cast<uint64_t>(total)
-    );
-    Serial.printf("[OTA] Progress: %u%%\r", percent);
-  });
-
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("[OTA] Error %u: ", static_cast<unsigned int>(error));
-
-    switch (error) {
-      case OTA_AUTH_ERROR: Serial.println(F("Auth failed")); break;
-      case OTA_BEGIN_ERROR: Serial.println(F("Begin failed")); break;
-      case OTA_CONNECT_ERROR: Serial.println(F("Connect failed")); break;
-      case OTA_RECEIVE_ERROR: Serial.println(F("Receive failed")); break;
-      case OTA_END_ERROR: Serial.println(F("End failed")); break;
-      default: Serial.println(F("Unknown error")); break;
-    }
-  });
-}
-
-void OtaService::tick() {
-  if (!begun_) {
-    if (!wifi_.isStaConnected()) return;
-
-    ArduinoOTA.begin();
-    begun_ = true;
-    Serial.println(F("[OTA] Ready"));
-  }
-
-  ArduinoOTA.handle();
-}
-
-#else
-
-void OtaService::init() {
-}
-
-void OtaService::tick() {
-}
-
-#endif
-```
-
-Если основной environment обязан поддерживать OTA, в его build flags должен присутствовать `-D USE_OTA`. No-op ветка остаётся полезной для специализированных USB/debug builds.
+При `USE_OTA` конструктор получает `EepromStore`. В `init()` сервис читает persisted policy, по умолчанию disabled, из reserved EEPROM byte и регистрирует callbacks ArduinoOTA. Policy сохраняется при enable/disable; listener state не записывается в EEPROM. `tick()` применяет запросы Web UI отложенно, не прерывая активный update, и обслуживает listener только при enabled policy и STA. Вне active update потеря STA завершает listener; reconnect запускает его снова. Во время PlatformIO update сервис продолжает `ArduinoOTA.handle()` и откладывает reconciliation policy/STA до terminal callback. Web UI управляет только этим PlatformIO OTA lifecycle; SettingsAsync HTTP `/ota` независим.
 
 ### Приложение C. Полный пример EEPROM layout
 
@@ -2358,9 +2135,11 @@ void SettingsRepository::markDirty() {
 
 Для нескольких независимых persisted-блоков репозиторий может иметь отдельные dirty flags. Это позволяет не перезаписывать большой блок из-за изменения одного несвязанного параметра.
 
-### Приложение E. Infrastructure-каркас `MqttService`
+### Приложение E. Упрощённый transport-каркас `MqttService`
 
-Этот пример использует обычный `PubSubClient` и одну power-команду. Если проект использует Home Assistant entity library, сохранить lifecycle, reconnect и направление данных, а entity registration заменить API выбранной библиотеки.
+Ниже минимальный пример одной power-команды, не готовый lifecycle-код. Для `PubSubClient`/`HaMqttEntities` применять state machine и deferred API из раздела «Lifecycle, `tick()` и reconnect» выше: `requestApply(MqttConfig)`, `requestEnabled(bool)`, `requestRestart()`, операции transport только из `tick()`, state/status cache для UI, disconnect barrier и prepare pulse перед каждым connect. Не переносить из примера `reloadConfig()` или непосредственный connect/disconnect из Web UI как production API.
+
+`PubSubClient::connect()` синхронный; пример не превращает его в неблокирующий вызов. В реальном сервисе ограничить timeout примерно 2 секундами, вызывать connect только в `Connecting`, а broker failures повторять с backoff 5..60 секунд. Для Home Assistant `HAMQTT.begin()` и entity registration выполняются один раз за boot; reconnect выполняет deliberate discovery/full state synchronization, а обычная отправка остаётся dirty-only.
 
 Ожидаемый предметный API:
 
@@ -2735,7 +2514,7 @@ void WebService::settingsUpdate(sets::Updater& updater) {
 
 Сигнатуры отдельных widgets зависят от закреплённой версии `SettingsAsync`. Перед переносом сверить их с локальным source tree PlatformIO dependency. Версию библиотеки закрепить в `platformio.ini`.
 
-Если проект не должен перезагружаться после изменения MQTT config, заменить restart на `mqtt_.reloadConfig()`. Для WiFi предпочтителен `WifiService::reloadConfig()`, а не прямые вызовы ESP WiFi API из WebService.
+Для MQTT без перезагрузки сохранить полный config и только после успешного commit вызвать `mqtt_.requestApply(savedConfig)`. Не переносить `reloadConfig()` из упрощённого transport-примера как production API. Для WiFi baseline сохраняет config и делает controlled restart; `WebService` не вызывает ESP WiFi API напрямую.
 
 ### Приложение G. Что переносится без изменений, что адаптируется
 
