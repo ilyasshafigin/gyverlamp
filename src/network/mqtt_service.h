@@ -23,10 +23,26 @@ class TouchButton;
 class WifiService;
 
 class MqttService {
+public:
+  enum class State : uint8_t {
+    Disabled,
+    WaitingForWifi,
+    DisconnectBarrier,
+    RetryWait,
+    ConnectPrepare,
+    Connecting,
+    Online,
+    ConfigError,
+  };
+
 private:
+  State state_ = State::Disabled;
+
 #ifdef USE_MQTT
   static constexpr uint16_t kWifiClientTimeoutMs = 2000;
   static constexpr uint16_t kMqttSocketTimeoutSeconds = 2;
+  static constexpr uint32_t kReconnectBaseMs = 5000;
+  static constexpr uint32_t kReconnectMaxMs = 60000;
 
   AudioService& audio_;
   EepromStore& eeprom_;
@@ -43,16 +59,27 @@ private:
   Timer telemetryTimer_;
   Timer stateRefreshTimer_;
 
-  char mqttHost_[kMqttHostLen];
-  char mqttUser_[kMqttUserLen];
-  char mqttPassword_[kMqttPassLen];
-  char mqttPort_[kMqttPortLen];
+  MqttConfig requestedConfig_{};
+  MqttConfig activeConfig_{};
+  MqttConfig attemptConfig_{};
 
-  bool enabled_ = true;
+  bool requestedEnabled_ = false;
+  bool bufferReady_ = true;
+  bool registered_ = false;
+  bool lifecycleStarted_ = false;
+  bool barrierPulsed_ = false;
+  bool retryPending_ = false;
+  bool resetRetryAfterBarrier_ = false;
+  bool reconnectImmediately_ = false;
+
+  uint32_t requestedGeneration_ = 0;
+  uint32_t handledGeneration_ = 0;
+  uint32_t requestedConfigGeneration_ = 0;
+  uint32_t activeConfigGeneration_ = 0;
+  uint32_t attemptGeneration_ = 0;
 
   uint32_t reconnectTiming_ = 0;
-  uint32_t reconnectTimeout_ = 5000;
-  uint8_t reconnectCount_ = 0;
+  uint32_t reconnectTimeout_ = kReconnectBaseMs;
 
   String clientId_;
   String haEffectList_;
@@ -93,17 +120,17 @@ private:
   HASensorNumeric haVcc_;
   HASensorText haResetReason_;
 
-  void setMqttHost(const char* host) { strlcpy(mqttHost_, host, kMqttHostLen); }
-  void setMqttPort(const char* port) { strlcpy(mqttPort_, port, kMqttPortLen); }
-  void setMqttUser(const char* user) { strlcpy(mqttUser_, user, kMqttUserLen); }
-  void setMqttPassword(const char* password) { strlcpy(mqttPassword_, password, kMqttPassLen); }
-
-  void reconnect();
-
+  bool isConfigValid(const MqttConfig& config, uint16_t& port) const;
+  bool isPersistedConfigEnabled(const MqttConfig& config) const;
+  bool activateRequestedConfig();
+  void setState(State state);
+  void beginDisconnectBarrier(bool disconnectClient, bool abortTransport);
+  void completeDisconnectBarrier();
+  bool handleRequestedCommands();
+  void connect();
   bool shouldReconnect(uint32_t now) const;
   void resetReconnectBackoff();
   void registerReconnectFailure(uint32_t now);
-  bool shouldDisableAfterReconnectFailures() const;
 
   void telemetryTimerCallback();
   void stateRefreshTimerCallback();
@@ -134,10 +161,20 @@ public:
   void tick();
   void updateStates();
 
+  void requestApply(const MqttConfig& config);
+  void requestEnabled(bool enabled);
+  void requestRestart();
+
+  State state() const { return state_; }
+  const char* stateName() const;
+  bool isConnected() const { return state_ == State::Online; }
+
 #ifdef USE_MQTT
   void haCallback(HAEntity* entity, char* topic, byte* payload, unsigned int length);
-  bool isMqttConnected() { return client_.connected(); }
+  bool isEnabled() const { return requestedEnabled_; }
+  bool isMqttConnected() const { return isConnected(); }
 #else
-  bool isMqttConnected() { return false; }
+  bool isEnabled() const { return false; }
+  bool isMqttConnected() const { return false; }
 #endif
 };

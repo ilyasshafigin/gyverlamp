@@ -335,13 +335,35 @@ void WebService::settingsBuilder(sets::Builder& b) {
   }
   {
     sets::Menu g(b, "MQTT");
+
+    static bool mqttEnabled = false;
+    if (b.build.isBuild()) {
+      mqttEnabled = mqtt_.isEnabled();
+    }
+
+    b.Label("Status", mqtt_.stateName());
+    if (b.Switch("Enabled", &mqttEnabled)) {
+      mqtt_.requestEnabled(mqttEnabled);
+      b.reload();
+    }
+    if (b.Button("Restart MQTT")) {
+      mqtt_.requestRestart();
+      b.reload();
+    }
     b.Input("Host", inputMqttHost_);
     b.Number("Port", inputMqttPort_);
     b.Input("User", inputMqttUser_);
     b.Pass("Password", inputMqttPass_);
-    if (b.Button("Save and restart")) {
-      eeprom_.writeMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_);
-      ESP.restart();
+    if (b.Button("Save and apply")) {
+      if (eeprom_.writeMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_)) {
+        MqttConfig savedConfig{};
+        strlcpy(savedConfig.host, inputMqttHost_, sizeof(savedConfig.host));
+        strlcpy(savedConfig.port, inputMqttPort_, sizeof(savedConfig.port));
+        strlcpy(savedConfig.user, inputMqttUser_, sizeof(savedConfig.user));
+        strlcpy(savedConfig.password, inputMqttPass_, sizeof(savedConfig.password));
+        mqtt_.requestApply(savedConfig);
+        b.reload();
+      }
     }
   }
 #ifdef USE_OTA
@@ -390,7 +412,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Max free block size", String(ESP.getMaxFreeBlockSize() / 1024) + "kb");
     b.Label("Heap fragmentaion", String(ESP.getHeapFragmentation()) + "%");
     b.Label("MQTT host", String(eeprom_.readMqttConfig().host));
-    b.Label("MQTT connection", mqtt_.isMqttConnected() ? "on" : "off");
+    b.Label("MQTT enabled", mqtt_.isEnabled() ? "on" : "off");
     b.Label("Uptime", uptime_formatter::getUptime());
     b.Label("Time", time_.getTimeStampString());
 

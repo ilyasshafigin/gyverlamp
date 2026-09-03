@@ -245,11 +245,6 @@ MqttService::MqttService(
   haAudioMode_.setState(audioModeName(audioConfig.mode));
   haAudioBand_.setState(audioBandName(audioConfig.band));
   haAudioAmount_.setState(audioConfig.amount);
-
-  mqttHost_[0] = '\0';
-  strlcpy(mqttUser_, "user", kMqttUserLen);
-  strlcpy(mqttPassword_, "pass", kMqttPassLen);
-  strlcpy(mqttPort_, "1883", kMqttPortLen);
 }
 
 void MqttService::init() {
@@ -257,21 +252,15 @@ void MqttService::init() {
   client_.setSocketTimeout(kMqttSocketTimeoutSeconds);
 
   const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
+  requestedConfig_ = mqttConfig;
+  requestedConfigGeneration_ = 1;
+  requestedEnabled_ = isPersistedConfigEnabled(requestedConfig_);
 
-  if (strlen(mqttConfig.host) > 0) {
-    setMqttHost(mqttConfig.host);
-    setMqttPort(mqttConfig.port);
-    setMqttUser(mqttConfig.user);
-    setMqttPassword(mqttConfig.password);
-  }
+  // Увеличиваем, так как payload из-за списка эффектов большой.
+  // Буфер должен быть выделен до begin(), который нельзя безопасно повторить.
+  bufferReady_ = client_.setBufferSize(HA_MAX_PAYLOAD_LENGTH);
 
-  if (strcmp(mqttHost_, "none") == 0 || strlen(mqttHost_) == 0) {
-    enabled_ = false;
-    notifications_.onMqttDisabled();
-    Serial.println(F("[MQTT] MQTT server is disabled."));
-  }
-
-  if (enabled_) {
+  if (bufferReady_) {
     haEffectList_ = "";
     for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
       if (i > 0) haEffectList_ += ',';
@@ -279,7 +268,7 @@ void MqttService::init() {
     }
     haLight_.setEffectList(haEffectList_.c_str());
 
-    // Capacity must match the number of addEntity() calls below
+    // Capacity must match the number of addEntity() calls below.
     HAMQTT.begin(client_, 34);
     HAMQTT.addEntity(haLight_);
     HAMQTT.addEntity(haRotationSwitch_);
@@ -316,27 +305,93 @@ void MqttService::init() {
     HAMQTT.addEntity(haVcc_);
     HAMQTT.addEntity(haResetReason_);
     HAMQTT.setCallback(haCallbackForward);
-
-    // Увеличиваем, так как payload из-за списка эффектов большой
-    client_.setBufferSize(HA_MAX_PAYLOAD_LENGTH);
+    registered_ = true;
   }
 
   telemetryTimer_.setOnTimer([this]() { this->telemetryTimerCallback(); });
   telemetryTimer_.start();
   stateRefreshTimer_.setOnTimer([this]() { this->stateRefreshTimerCallback(); });
   stateRefreshTimer_.start();
+
+  if (!bufferReady_) {
+    Serial.println(F("[MQTT] MQTT buffer allocation failed."));
+    setState(State::ConfigError);
+  } else if (!requestedEnabled_) {
+    Serial.println(F("[MQTT] MQTT server is disabled."));
+    setState(State::Disabled);
+  } else if (!activateRequestedConfig()) {
+    Serial.println(F("[MQTT] MQTT configuration is invalid."));
+    setState(State::ConfigError);
+  } else {
+    setState(State::ConnectPrepare);
+  }
 }
 
 void MqttService::tick() {
   LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { telemetryTimer_.update(); });
   LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { stateRefreshTimer_.update(); });
 
-  if (enabled_ && wifi_.isStaConnected() && !HAMQTT.connected()) {
-    reconnect();
-  }
+  if (!bufferReady_ || !registered_) return;
 
-  if (enabled_ && wifi_.isStaConnected()) {
-    LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { HAMQTT.loop(); });
+  if (state_ != State::DisconnectBarrier && handleRequestedCommands()) return;
+
+  switch (state_) {
+    case State::Disabled:
+    case State::ConfigError: return;
+
+    case State::DisconnectBarrier:
+      if (!barrierPulsed_) {
+        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { HAMQTT.loop(); });
+        barrierPulsed_ = true;
+        return;
+      }
+      completeDisconnectBarrier();
+      return;
+
+    case State::WaitingForWifi:
+      if (wifi_.isStaConnected()) {
+        resetReconnectBackoff();
+        reconnectTiming_ = millis();
+        reconnectImmediately_ = true;
+        setState(State::RetryWait);
+      }
+      return;
+
+    case State::RetryWait:
+      if (!wifi_.isStaConnected()) {
+        beginDisconnectBarrier(false, true);
+      } else if (shouldReconnect(millis())) {
+        reconnectImmediately_ = false;
+        setState(State::ConnectPrepare);
+      }
+      return;
+
+    case State::ConnectPrepare:
+      // Every attempt starts with a fresh disconnected controller pulse.
+      LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { HAMQTT.loop(); });
+      setState(State::Connecting);
+      return;
+
+    case State::Connecting:
+      if (!wifi_.isStaConnected()) {
+        beginDisconnectBarrier(false, true);
+      } else {
+        connect();
+      }
+      return;
+
+    case State::Online:
+      if (!wifi_.isStaConnected()) {
+        beginDisconnectBarrier(false, true);
+      } else if (!client_.connected()) {
+        registerReconnectFailure(millis());
+        retryPending_ = true;
+        notifications_.onMqttError();
+        beginDisconnectBarrier(false, false);
+      } else {
+        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { HAMQTT.loop(); });
+      }
+      return;
   }
 }
 
@@ -384,62 +439,205 @@ void MqttService::updateStates() {
   haAudioAvailable_.setState(audioFrame.available ? "yes" : "no");
 }
 
-void MqttService::reconnect() {
-  uint32_t now = millis();
-  if (!shouldReconnect(now) || !wifi_.isStaConnected()) {
+void MqttService::requestApply(const MqttConfig& config) {
+  requestedConfig_ = config;
+  requestedConfigGeneration_ += 1;
+  requestedEnabled_ = true;
+  resetRetryAfterBarrier_ = true;
+  requestedGeneration_ += 1;
+}
+
+void MqttService::requestEnabled(bool enabled) {
+  if (requestedEnabled_ == enabled) return;
+
+  requestedEnabled_ = enabled;
+  if (enabled) resetRetryAfterBarrier_ = true;
+  requestedGeneration_ += 1;
+}
+
+void MqttService::requestRestart() {
+  resetRetryAfterBarrier_ = true;
+  requestedGeneration_ += 1;
+}
+
+bool MqttService::isConfigValid(const MqttConfig& config, uint16_t& port) const {
+  if (config.host[0] == '\0' || strcmp(config.host, "none") == 0 || config.port[0] == '\0') return false;
+
+  uint32_t value = 0;
+  for (const char* p = config.port; *p != '\0'; p++) {
+    if (!isdigit(static_cast<unsigned char>(*p))) return false;
+
+    value = value * 10 + static_cast<uint32_t>(*p - '0');
+    if (value > 65535) return false;
+  }
+
+  if (value == 0) return false;
+
+  port = static_cast<uint16_t>(value);
+  return true;
+}
+
+bool MqttService::isPersistedConfigEnabled(const MqttConfig& config) const {
+  return config.host[0] != '\0' && strcmp(config.host, "none") != 0;
+}
+
+bool MqttService::activateRequestedConfig() {
+  if (activeConfigGeneration_ == requestedConfigGeneration_) {
+    uint16_t port;
+    return isConfigValid(activeConfig_, port);
+  }
+
+  activeConfig_ = requestedConfig_;
+  activeConfigGeneration_ = requestedConfigGeneration_;
+
+  uint16_t port;
+  if (!isConfigValid(activeConfig_, port)) return false;
+
+  client_.setServer(activeConfig_.host, port);
+  return true;
+}
+
+void MqttService::setState(State state) {
+  if (lifecycleStarted_ && state_ == state) return;
+
+  state_ = state;
+  lifecycleStarted_ = true;
+
+  switch (state_) {
+    case State::Disabled: notifications_.onMqttDisabled(); break;
+    case State::Connecting: notifications_.onMqttConnecting(); break;
+    case State::Online: notifications_.onMqttConnected(); break;
+    case State::ConfigError: notifications_.onMqttError(); break;
+    default: break;
+  }
+}
+
+void MqttService::beginDisconnectBarrier(bool disconnectClient, bool abortTransport) {
+  if (state_ == State::DisconnectBarrier) return;
+
+  if (abortTransport) {
+    wifiClient_.abort();
+  } else if (disconnectClient && client_.connected()) {
+    client_.disconnect();
+  }
+
+  barrierPulsed_ = false;
+  setState(State::DisconnectBarrier);
+}
+
+void MqttService::completeDisconnectBarrier() {
+  handledGeneration_ = requestedGeneration_;
+  if (resetRetryAfterBarrier_) {
+    retryPending_ = false;
+    resetRetryAfterBarrier_ = false;
+  }
+
+  if (!requestedEnabled_) {
+    setState(State::Disabled);
     return;
   }
 
-  notifications_.onMqttConnecting();
+  if (!activateRequestedConfig()) {
+    setState(State::ConfigError);
+    return;
+  }
 
-  const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
-  client_.setServer(mqttConfig.host, atoi(mqttConfig.port));
+  if (!wifi_.isStaConnected()) {
+    retryPending_ = false;
+    setState(State::WaitingForWifi);
+    return;
+  }
 
-  Serial.printf(
-    "[MQTT] Attempting MQTT connection to %s on port %s as %s ...", mqttConfig.host, mqttConfig.port, mqttConfig.user
-  );
-
-  if (HAMQTT.connect(clientId_.c_str(), mqttConfig.user, mqttConfig.password)) {
-    Serial.println(F("[MQTT] connected!"));
-
-    notifications_.onMqttConnected();
+  if (!retryPending_) {
     resetReconnectBackoff();
-    updateStates();
-  } else {
-    registerReconnectFailure(millis());
-    notifications_.onMqttError();
+    reconnectTiming_ = millis();
+    reconnectImmediately_ = true;
+  }
+  setState(State::RetryWait);
+}
 
-    if (shouldDisableAfterReconnectFailures()) {
-      Serial.println(F("[MQTT] Can not establish a connection, disabling MQTT."));
-      notifications_.onMqttDisabled();
-      enabled_ = false;
-      return;
+bool MqttService::handleRequestedCommands() {
+  if (handledGeneration_ == requestedGeneration_) return false;
+
+  if (state_ == State::Disabled) {
+    handledGeneration_ = requestedGeneration_;
+    resetRetryAfterBarrier_ = false;
+
+    if (!requestedEnabled_) return true;
+
+    if (!activateRequestedConfig()) {
+      setState(State::ConfigError);
+      return true;
     }
 
-    Serial.print(F("[MQTT] failed, rc="));
-    Serial.print(client_.state());
-    Serial.printf(" try again in %d seconds\n", reconnectTimeout_ / 1000);
+    retryPending_ = false;
+    resetReconnectBackoff();
+    reconnectTiming_ = millis();
+    reconnectImmediately_ = true;
+    setState(wifi_.isStaConnected() ? State::RetryWait : State::WaitingForWifi);
+    return true;
   }
+
+  retryPending_ = false;
+  beginDisconnectBarrier(true, false);
+  return true;
+}
+
+void MqttService::connect() {
+  attemptConfig_ = activeConfig_;
+  attemptGeneration_ = requestedGeneration_;
+
+  Serial.printf(
+    "[MQTT] Attempting MQTT connection to %s on port %s as %s ...",
+    attemptConfig_.host,
+    attemptConfig_.port,
+    attemptConfig_.user
+  );
+
+  const bool connected = HAMQTT.connect(clientId_.c_str(), attemptConfig_.user, attemptConfig_.password);
+  const bool stale = attemptGeneration_ != requestedGeneration_ || !requestedEnabled_ || !wifi_.isStaConnected();
+
+  if (stale) {
+    beginDisconnectBarrier(client_.connected(), !wifi_.isStaConnected());
+    return;
+  }
+
+  if (connected) {
+    Serial.println(F("[MQTT] connected!"));
+    retryPending_ = false;
+    resetReconnectBackoff();
+    setState(State::Online);
+    updateStates();
+    return;
+  }
+
+  registerReconnectFailure(millis());
+  retryPending_ = true;
+  notifications_.onMqttError();
+  Serial.print(F("[MQTT] failed, rc="));
+  Serial.print(client_.state());
+  Serial.printf(" try again in %d seconds\n", reconnectTimeout_ / 1000);
+  beginDisconnectBarrier(false, false);
 }
 
 bool MqttService::shouldReconnect(uint32_t now) const {
-  return enabled_ && (now - reconnectTiming_ > reconnectTimeout_);
+  return reconnectImmediately_ || now - reconnectTiming_ >= reconnectTimeout_;
 }
 
 void MqttService::resetReconnectBackoff() {
-  reconnectTimeout_ = 5000;
-  reconnectCount_ = 0;
+  reconnectTimeout_ = kReconnectBaseMs;
+  reconnectImmediately_ = false;
 }
 
 void MqttService::registerReconnectFailure(uint32_t now) {
   reconnectTiming_ = now;
-  reconnectCount_ += 1;
-  reconnectTimeout_ *= 2;
-  if (reconnectTimeout_ > 60000) reconnectTimeout_ = 60000;
-}
-
-bool MqttService::shouldDisableAfterReconnectFailures() const {
-  return reconnectCount_ >= 9;
+  reconnectImmediately_ = false;
+  if (!retryPending_ || reconnectTimeout_ < kReconnectBaseMs) {
+    reconnectTimeout_ = kReconnectBaseMs;
+  } else {
+    reconnectTimeout_ *= 2;
+    if (reconnectTimeout_ > kReconnectMaxMs) reconnectTimeout_ = kReconnectMaxMs;
+  }
 }
 
 void MqttService::telemetryTimerCallback() {
@@ -668,6 +866,7 @@ void MqttService::onColorCommand(uint8_t r, uint8_t g, uint8_t b) {
 #else
 
 MqttService::MqttService(
+  AudioService& audio,
   EepromStore& eeprom,
   EffectController& effects,
   NotificationController& notifications,
@@ -677,6 +876,7 @@ MqttService::MqttService(
   TouchButton& button,
   WifiService& wifi
 ) {
+  (void)audio;
   (void)eeprom;
   (void)effects;
   (void)notifications;
@@ -694,4 +894,30 @@ void MqttService::tick() {
 void MqttService::updateStates() {
 }
 
+void MqttService::requestApply(const MqttConfig& config) {
+  (void)config;
+}
+
+void MqttService::requestEnabled(bool enabled) {
+  (void)enabled;
+}
+
+void MqttService::requestRestart() {
+}
+
 #endif
+
+const char* MqttService::stateName() const {
+  switch (state_) {
+    case State::Disabled: return "Disabled";
+    case State::WaitingForWifi: return "Waiting for WiFi";
+    case State::DisconnectBarrier: return "Disconnecting";
+    case State::RetryWait: return "Retry waiting";
+    case State::ConnectPrepare: return "Preparing connection";
+    case State::Connecting: return "Connecting";
+    case State::Online: return "Online";
+    case State::ConfigError: return "Configuration error";
+  }
+
+  return "Unknown";
+}
