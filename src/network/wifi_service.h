@@ -3,14 +3,12 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <functional>
-
-class EepromStore;
+#include "wifi_config.h"
 
 class WifiService {
 public:
-  explicit WifiService(EepromStore& eeprom)
-    : eeprom_(eeprom),
-      deviceId_(DEVICE_NAME) {}
+  WifiService()
+    : deviceId_(DEVICE_NAME) {}
 
   using VoidCallback = std::function<void()>;
 
@@ -19,7 +17,7 @@ public:
   void setErrorHandler(VoidCallback callback) { errorHandler_ = callback; }
   void setDisabledHandler(VoidCallback callback) { disabledHandler_ = callback; }
 
-  void init();
+  void init(const WifiConfig& config);
   void tick();
 
   bool isStaConnected() const { return WiFi.isConnected(); }
@@ -50,7 +48,7 @@ private:
   static constexpr uint32_t kStaAttemptTimeoutMs = 60UL * 1000UL;
   static constexpr uint32_t kFallbackApDelayMs = 60UL * 1000UL;
 
-  EepromStore& eeprom_;
+  WifiConfig config_{};
   String deviceId_;
 
   VoidCallback connectingHandler_;

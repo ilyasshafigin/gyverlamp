@@ -6,10 +6,9 @@
 #include "../effect/controller.h"
 #include "../hardware/button.h"
 #include "../hardware/led.h"
-#include "../network/mqtt_service.h"
+#include "../network/connectivity_coordinator.h"
 #include "../network/upd_service.h"
 #include "../network/wifi_service.h"
-#include "../network/ota_service.h"
 #include "../network/web_service.h"
 #include "../notification/controller.h"
 #include "../storage/eeprom_store.h"
@@ -21,6 +20,9 @@
 #include "power_controller.h"
 #include "rotation_controller.h"
 #include "state_notifier.h"
+
+#include "../network/mqtt_service.h"
+#include "../network/ota_service.h"
 
 class Lamp {
 public:
@@ -37,26 +39,14 @@ public:
   NotificationController notifications{eeprom, power, runningText, stateNotifier, time};
   FrameRenderer frameRenderer{effects, led, notifications, power, stateNotifier};
   RotationController rotation{eeprom, effects, stateNotifier};
-  WifiService wifi{eeprom};
+  WifiService wifi;
   TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
   UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
-  OtaService ota{eeprom};
-  MqttService mqtt{audio, eeprom, effects, notifications, power, rotation, settings, button, wifi};
+  OtaService ota;
+  MqttService mqtt{audio, effects, notifications, power, rotation, settings, button, wifi};
+  ConnectivityCoordinator connectivity{eeprom, wifi, ota, mqtt};
   WebService web{
-    audio,
-    eeprom,
-    effects,
-    mqtt,
-    notifications,
-    ota,
-    power,
-    rotation,
-    webSettings,
-    settings,
-    stateNotifier,
-    time,
-    button,
-    wifi
+    audio, connectivity, effects, notifications, power, rotation, webSettings, settings, stateNotifier, time, button
   };
 
   void setup();

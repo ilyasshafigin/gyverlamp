@@ -1,8 +1,8 @@
 #include "wifi_service.h"
 #include "../config.h"
-#include "../storage/eeprom_store.h"
 
-void WifiService::init() {
+void WifiService::init(const WifiConfig& config) {
+  config_ = config;
   if (!wifiEventsRegistered_) {
     stationConnectedEventHandler_ = WiFi.onStationModeConnected([](const WiFiEventStationModeConnected& event) {
       Serial.printf(
@@ -37,8 +37,7 @@ void WifiService::init() {
 
   WiFi.setAutoReconnect(false);
 
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
-  hasStaCredentials_ = strlen(wifiConfig.ssid) > 0;
+  hasStaCredentials_ = strlen(config_.ssid) > 0;
   if (!hasStaCredentials_) {
     WiFi.mode(WIFI_AP);
     requestAp();
@@ -144,8 +143,6 @@ void WifiService::startStaConnection() {
     return;
   }
 
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
-
   if (connectingHandler_) connectingHandler_();
 
   pendingDisconnectValid_ = false;
@@ -161,7 +158,7 @@ void WifiService::startStaConnection() {
     static_cast<int>(WiFi.status()),
     WiFi.softAPgetStationNum()
   );
-  WiFi.begin(wifiConfig.ssid, wifiConfig.password);
+  WiFi.begin(config_.ssid, config_.password);
   Serial.println("[WIFI] Connecting to STA");
 }
 

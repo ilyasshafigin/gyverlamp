@@ -4,12 +4,10 @@
 
 #include <stdint.h>
 
-#include "../storage/eeprom_store.h"
-
 #include <ArduinoOTA.h>
 
-void OtaService::init(const char* hostname) {
-  enabled_ = eeprom_.readOtaEnabled();
+void OtaService::init(const char* hostname, bool enabled) {
+  enabled_ = enabled;
 
   ArduinoOTA.setHostname(hostname);
 
@@ -73,9 +71,7 @@ void OtaService::tick(bool isStaConnected) {
 
   if (enableRequestPending_) {
     enableRequestPending_ = false;
-    if (requestedEnabled_ != enabled_ && eeprom_.writeOtaEnabled(requestedEnabled_)) {
-      enabled_ = requestedEnabled_;
-    }
+    enabled_ = requestedEnabled_;
   }
 
   if (!enabled_ || !isStaConnected) {
@@ -100,6 +96,10 @@ void OtaService::tick(bool isStaConnected) {
   ArduinoOTA.handle();
 }
 
+bool OtaService::isEnabled() const {
+  return enabled_;
+}
+
 void OtaService::stopListener() {
   if (listenerActive_) ArduinoOTA.end();
 
@@ -115,16 +115,6 @@ OtaService::State OtaService::state() const {
   return State::Listening;
 }
 
-const char* OtaService::stateName() const {
-  switch (state()) {
-    case State::Disabled: return "Disabled";
-    case State::WaitingForSta: return "Waiting for STA";
-    case State::Listening: return "Listening";
-    case State::Updating: return "Updating";
-  }
-  return "Disabled";
-}
-
 void OtaService::requestEnabled(bool enabled) {
   requestedEnabled_ = enabled;
   enableRequestPending_ = true;
@@ -134,12 +124,64 @@ void OtaService::requestRestart() {
   if (enabled_) restartRequested_ = true;
 }
 
+void OtaService::setStartHandler(VoidCallback callback) {
+  startCallback_ = callback;
+}
+
+void OtaService::setProgressHandler(ProgressCallback callback) {
+  progressCallback_ = callback;
+}
+
+void OtaService::setEndHandler(VoidCallback callback) {
+  endCallback_ = callback;
+}
+
+void OtaService::setErrorHandler(VoidCallback callback) {
+  errorCallback_ = callback;
+}
+
 #else
 
-void OtaService::init(const char*) {
+void OtaService::init(const char*, bool) {
 }
 
 void OtaService::tick(bool) {
 }
 
+bool OtaService::isEnabled() const {
+  return false;
+}
+
+void OtaService::requestEnabled(bool) {
+}
+
+void OtaService::requestRestart() {
+}
+
+OtaService::State OtaService::state() const {
+  return State::Disabled;
+}
+
+void OtaService::setStartHandler(VoidCallback) {
+}
+
+void OtaService::setProgressHandler(ProgressCallback) {
+}
+
+void OtaService::setEndHandler(VoidCallback) {
+}
+
+void OtaService::setErrorHandler(VoidCallback) {
+}
+
 #endif
+
+const char* OtaService::stateName() const {
+  switch (state()) {
+    case State::Disabled: return "Disabled";
+    case State::WaitingForSta: return "Waiting for STA";
+    case State::Listening: return "Listening";
+    case State::Updating: return "Updating";
+  }
+  return "Disabled";
+}

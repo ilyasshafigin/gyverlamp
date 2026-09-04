@@ -6,84 +6,76 @@
 #include "../config.h"
 #include "../core/rotation_mode.h"
 #include "../core/rotation_presets.h"
-#include "../network/mqtt_config.h"
 #include "../network/wifi_config.h"
 #include "../effect/ids.h"
 #include "../effect/palette_ids.h"
 
+#ifdef USE_MQTT
+#include "../network/mqtt_config.h"
+#endif
+
 class AudioService;
 class EffectController;
-class EepromStore;
-class MqttService;
+class ConnectivityCoordinator;
 class NotificationController;
-class OtaService;
 class PowerController;
 class RotationController;
 class SettingsRepository;
 class StateNotifier;
 class TimeService;
 class TouchButton;
-class WifiService;
 
 class WebService {
 public:
   explicit WebService(
     AudioService& audio,
-    EepromStore& eeprom,
+    ConnectivityCoordinator& connectivity,
     EffectController& effects,
-    MqttService& mqtt,
     NotificationController& notifications,
-    OtaService& ota,
     PowerController& power,
     RotationController& rotation,
     SettingsAsync& webSettings,
     SettingsRepository& settings,
     StateNotifier& stateNotifier,
     TimeService& time,
-    TouchButton& button,
-    WifiService& wifi
+    TouchButton& button
   )
     : audio_(audio),
-      eeprom_(eeprom),
+      connectivity_(connectivity),
       effects_(effects),
-      mqtt_(mqtt),
       notifications_(notifications),
-      ota_(ota),
       power_(power),
       rotation_(rotation),
       webSettings_(webSettings),
       settings_(settings),
       stateNotifier_(stateNotifier),
       time_(time),
-      wifi_(wifi),
-      button_(button) {
-  }
+      button_(button) {}
 
   void init();
   void tick();
 
 private:
   AudioService& audio_;
-  EepromStore& eeprom_;
+  ConnectivityCoordinator& connectivity_;
   EffectController& effects_;
-  MqttService& mqtt_;
   NotificationController& notifications_;
-  OtaService& ota_;
   PowerController& power_;
   RotationController& rotation_;
   SettingsAsync& webSettings_;
   SettingsRepository& settings_;
   StateNotifier& stateNotifier_;
   TimeService& time_;
-  WifiService& wifi_;
   TouchButton& button_;
 
   char inputWifiSsid_[kWifiSsidLen];
   char inputWifiPass_[kWifiPassLen];
+#ifdef USE_MQTT
   char inputMqttHost_[kMqttHostLen];
   char inputMqttPort_[kMqttPortLen];
   char inputMqttUser_[kMqttUserLen];
   char inputMqttPass_[kMqttPassLen];
+#endif
 
   bool powerOn_ = false;
   uint8_t rotationModeIndex_ = 0;
@@ -109,7 +101,9 @@ private:
   uint8_t audioAmount_ = 128;
   String audioModeOptions_ = "Off;Brightness;Speed;Scale;Effect";
   String audioBandOptions_ = "Level;Bass;Treble";
+#ifdef USE_OTA
   bool otaEnabled_ = false;
+#endif
 
 #ifdef TEST_NOTIFICATIONS
   uint16_t notificationWarningDurationSec_ = 30;

@@ -1,15 +1,10 @@
 #pragma once
 
-#ifdef USE_OTA
 #include <stdint.h>
 #include <functional>
-#endif
-
-class EepromStore;
 
 class OtaService {
 public:
-#ifdef USE_OTA
   enum class State : uint8_t {
     Disabled,
     WaitingForSta,
@@ -17,33 +12,25 @@ public:
     Updating,
   };
 
-  explicit OtaService(EepromStore& eeprom)
-    : eeprom_(eeprom) {}
-#else
-  explicit OtaService(EepromStore&) {}
-#endif
-
-  void init(const char* hostname);
+  void init(const char* hostname, bool enabled);
   void tick(bool isStaConnected);
-
-#ifdef USE_OTA
-  using VoidCallback = std::function<void()>;
-  using ProgressCallback = std::function<void(uint8_t)>;
-
-  void setStartHandler(VoidCallback callback) { startCallback_ = callback; }
-  void setProgressHandler(ProgressCallback callback) { progressCallback_ = callback; }
-  void setEndHandler(VoidCallback callback) { endCallback_ = callback; }
-  void setErrorHandler(VoidCallback callback) { errorCallback_ = callback; }
-
-  bool isEnabled() const { return enabled_; }
-  State state() const;
+  bool isEnabled() const;
   const char* stateName() const;
-
   void requestEnabled(bool enabled);
   void requestRestart();
 
+  using VoidCallback = std::function<void()>;
+  using ProgressCallback = std::function<void(uint8_t)>;
+
+  void setStartHandler(VoidCallback callback);
+  void setProgressHandler(ProgressCallback callback);
+  void setEndHandler(VoidCallback callback);
+  void setErrorHandler(VoidCallback callback);
+
+  State state() const;
+
 private:
-  EepromStore& eeprom_;
+#ifdef USE_OTA
   bool enabled_ = false;
 
   static constexpr unsigned long kBeginRetryIntervalMs = 5000;

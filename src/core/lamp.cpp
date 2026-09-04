@@ -8,6 +8,7 @@ void Lamp::setup() {
   delay(1000);
 
   eeprom.init();
+  connectivity.load();
   settings.init();
   audio.init();
   notifications.init();
@@ -20,7 +21,6 @@ void Lamp::setup() {
   wifi.setErrorHandler([this] { notifications.onWifiError(); });
   wifi.setDisabledHandler([this] { notifications.onWifiDisabled(); });
 
-#ifdef USE_OTA
   ota.setStartHandler([this] {
     notifications.onOtaStart();
     frameRenderer.renderNow();
@@ -40,12 +40,11 @@ void Lamp::setup() {
     notifications.onOtaError();
     frameRenderer.renderNow();
   });
-#endif
 
-  wifi.init();
+  wifi.init(connectivity.wifiConfig());
   upd.init();
-  ota.init(wifi.getDeviceId().c_str());
-  mqtt.init();
+  ota.init(wifi.getDeviceId().c_str(), connectivity.otaEnabled());
+  mqtt.init(connectivity.mqttConfig());
   time.init();
   web.init();
   rotation.init();

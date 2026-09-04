@@ -12,13 +12,10 @@
 #include "../effect/controller.h"
 #include "../effect/palette_catalog.h"
 #include "../hardware/button.h"
-#include "../network/mqtt_service.h"
-#include "../network/ota_service.h"
-#include "../network/wifi_service.h"
+#include "../network/connectivity_coordinator.h"
 #include "../notification/controller.h"
 #include "../notification/quiet_hours.h"
 #include "../notification/types.h"
-#include "../storage/eeprom_store.h"
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
 #include "../util/loop_profiler.h"
@@ -56,21 +53,23 @@ namespace {
 } // namespace
 
 void WebService::init() {
-  const WifiConfig& wifiConfig = eeprom_.readWifiConfig();
+  const WifiConfig wifiConfig = connectivity_.wifiConfig();
   if (strlen(wifiConfig.ssid) > 0) {
     strlcpy(inputWifiSsid_, wifiConfig.ssid, kWifiSsidLen);
     strlcpy(inputWifiPass_, wifiConfig.password, kWifiPassLen);
   }
 
-  const MqttConfig& mqttConfig = eeprom_.readMqttConfig();
+#ifdef USE_MQTT
+  const MqttConfig mqttConfig = connectivity_.mqttConfig();
   if (strlen(mqttConfig.host) > 0) {
     strlcpy(inputMqttHost_, mqttConfig.host, kMqttHostLen);
     strlcpy(inputMqttPort_, mqttConfig.port, kMqttPortLen);
     strlcpy(inputMqttUser_, mqttConfig.user, kMqttUserLen);
     strlcpy(inputMqttPass_, mqttConfig.password, kMqttPassLen);
   }
+#endif
 
-  webSettings_.begin(true, wifi_.getDeviceId().c_str());
+  webSettings_.begin(true, connectivity_.status().deviceId.c_str());
   webSettings_.onBuild([this](sets::Builder& b) { settingsBuilder(b); });
   webSettings_.onUpdate([this](sets::Updater& upd) { settingsUpdate(upd); });
   webSettings_.setTitle(DEVICE_NAME);
@@ -329,25 +328,26 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Input("SSID", inputWifiSsid_);
     b.Pass("Password", inputWifiPass_);
     if (b.Button("Save and restart")) {
-      eeprom_.writeWifiConfig(inputWifiSsid_, inputWifiPass_);
+      connectivity_.saveWifiConfig(inputWifiSsid_, inputWifiPass_);
       ESP.restart();
     }
   }
+#ifdef USE_MQTT
   {
     sets::Menu g(b, "MQTT");
 
     static bool mqttEnabled = false;
     if (b.build.isBuild()) {
-      mqttEnabled = mqtt_.isEnabled();
+      mqttEnabled = connectivity_.isMqttEnabled();
     }
 
-    b.Label("Status", mqtt_.stateName());
+    b.Label("Status", connectivity_.mqttStateName());
     if (b.Switch("Enabled", &mqttEnabled)) {
-      mqtt_.requestEnabled(mqttEnabled);
+      connectivity_.requestMqttEnabled(mqttEnabled);
       b.reload();
     }
     if (b.Button("Restart MQTT")) {
-      mqtt_.requestRestart();
+      connectivity_.requestMqttRestart();
       b.reload();
     }
     b.Input("Host", inputMqttHost_);
@@ -355,32 +355,27 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Input("User", inputMqttUser_);
     b.Pass("Password", inputMqttPass_);
     if (b.Button("Save and apply")) {
-      if (eeprom_.writeMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_)) {
-        MqttConfig savedConfig{};
-        strlcpy(savedConfig.host, inputMqttHost_, sizeof(savedConfig.host));
-        strlcpy(savedConfig.port, inputMqttPort_, sizeof(savedConfig.port));
-        strlcpy(savedConfig.user, inputMqttUser_, sizeof(savedConfig.user));
-        strlcpy(savedConfig.password, inputMqttPass_, sizeof(savedConfig.password));
-        mqtt_.requestApply(savedConfig);
+      if (connectivity_.saveAndApplyMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_)) {
         b.reload();
       }
     }
   }
+#endif
 #ifdef USE_OTA
   {
     sets::Menu g(b, "OTA");
 
     if (b.build.isBuild()) {
-      otaEnabled_ = ota_.isEnabled();
+      otaEnabled_ = connectivity_.isOtaEnabled();
     }
 
-    b.Label("Status", ota_.stateName());
+    b.Label("Status", connectivity_.otaStateName());
     if (b.Switch("Enabled", &otaEnabled_)) {
-      ota_.requestEnabled(otaEnabled_);
+      connectivity_.requestOtaEnabled(otaEnabled_);
       b.reload();
     }
     if (b.Button("Restart OTA")) {
-      ota_.requestRestart();
+      connectivity_.requestOtaRestart();
       b.reload();
     }
   }
@@ -392,15 +387,16 @@ void WebService::settingsBuilder(sets::Builder& b) {
     bool vccAvailable = (vcc != 0 && vcc >= 2500 && vcc <= 3700);
 
     b.Label("Lamp ID", String(ESP.getChipId(), HEX));
-    b.Label("Device ID", wifi_.getDeviceId());
-    b.Label("Wi-Fi", WiFi.SSID());
-    b.Label("WiFi RSSI", String(2 * (WiFi.RSSI() + 100)) + "%");
-    b.Label("IP Local", WiFi.localIP().toString());
-    b.Label("IP Gateway", WiFi.gatewayIP().toString());
-    b.Label("MAC", WiFi.macAddress());
-    b.Label("Wi-Fi channel", String(WiFi.channel()));
-    b.Label("Wi-Fi RSSI", String(WiFi.RSSI()));
-    b.Label("Wi-Fi RSSI %", String(2 * (WiFi.RSSI() + 100)));
+    const ConnectivityStatus status = connectivity_.status();
+    b.Label("Device ID", status.deviceId);
+    b.Label("Wi-Fi", status.wifiSsid);
+    b.Label("WiFi RSSI", String(2 * (status.rssi + 100)) + "%");
+    b.Label("IP Local", status.localIp);
+    b.Label("IP Gateway", status.gateway);
+    b.Label("MAC", status.mac);
+    b.Label("Wi-Fi channel", String(status.channel));
+    b.Label("Wi-Fi RSSI", String(status.rssi));
+    b.Label("Wi-Fi RSSI %", String(2 * (status.rssi + 100)));
     if (vccAvailable) b.Label("VCC", String(static_cast<float>(ESP.getVcc()) / 1000.0f));
     b.Label("Reset reason", ESP.getResetReason());
     b.Label("Core version", ESP.getCoreVersion());
@@ -411,8 +407,10 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", String(ESP.getFreeHeap() / 1024) + "kb");
     b.Label("Max free block size", String(ESP.getMaxFreeBlockSize() / 1024) + "kb");
     b.Label("Heap fragmentaion", String(ESP.getHeapFragmentation()) + "%");
-    b.Label("MQTT host", String(eeprom_.readMqttConfig().host));
-    b.Label("MQTT enabled", mqtt_.isEnabled() ? "on" : "off");
+#ifdef USE_MQTT
+    b.Label("MQTT host", String(connectivity_.mqttConfig().host));
+    b.Label("MQTT enabled", connectivity_.isMqttEnabled() ? "on" : "off");
+#endif
     b.Label("Uptime", uptime_formatter::getUptime());
     b.Label("Time", time_.getTimeStampString());
 
