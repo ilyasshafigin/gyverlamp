@@ -1,6 +1,4 @@
 #include <EEPROM.h>
-#include <cctype>
-#include <cstdlib>
 #include <cstring>
 
 #include "../core/auto_off_config.h"
@@ -34,6 +32,44 @@ namespace {
       EEPROM.write(address + i, 0);
     }
     address += len;
+  }
+
+  uint16_t readMqttV4Port() {
+    uint32_t value = 0;
+    bool hasDigit = false;
+
+    for (int i = 0; i < kEepromMqttV4PortTextSize; ++i) {
+      const uint8_t raw = EEPROM.read(kEepromMqttV4PortAddr + i);
+      if (raw == 0) return hasDigit ? static_cast<uint16_t>(value) : 0;
+      if (raw == 0xFF || raw < '0' || raw > '9') return 0;
+
+      const uint8_t digit = raw - '0';
+      if (value > (65535U - digit) / 10U) return 0;
+      value = value * 10U + digit;
+      hasDigit = true;
+    }
+
+    return 0;
+  }
+
+  MqttConfig readMqttConfigV4() {
+    MqttConfig config = {};
+    int address = kEepromMqttV4HostAddr;
+    readFieldAt(address, config.host, MqttConfig::kMqttHostLen);
+    config.port = readMqttV4Port();
+    address = kEepromMqttV4UserAddr;
+    readFieldAt(address, config.user, MqttConfig::kMqttUserLen);
+    address = kEepromMqttV4PasswordAddr;
+    readFieldAt(address, config.password, MqttConfig::kMqttPassLen);
+    return config;
+  }
+
+  WifiConfig readWifiConfigV4() {
+    WifiConfig config = {};
+    int address = kEepromWifiConfigAddr;
+    readFieldAt(address, config.ssid, WifiConfig::kWifiSsidLen);
+    readFieldAt(address, config.password, WifiConfig::kWifiPassLen);
+    return config;
   }
 
   uint16_t clampAutoOffMinutes(uint16_t minutes) {
@@ -72,6 +108,102 @@ namespace {
     return static_cast<AudioBand>(raw);
   }
 
+  struct V4MigrationSnapshot {
+    WifiConfig wifi;
+    MqttConfig mqtt;
+    uint16_t autoOffMinutes;
+    RotationMode rotationMode;
+    uint16_t rotationIntervalSec;
+    bool buttonEnabled;
+    Palettes::Id paletteId;
+    NotificationQuietHours quietHours;
+    AudioConfig audio;
+    uint8_t currentMode;
+  };
+
+  V4MigrationSnapshot readV4MigrationSnapshot() {
+    V4MigrationSnapshot snapshot = {};
+    snapshot.wifi = readWifiConfigV4();
+    snapshot.mqtt = readMqttConfigV4();
+
+    EEPROM.get(kEepromAutoOffMinutesAddr, snapshot.autoOffMinutes);
+    if (!isValidAutoOffMinutes(snapshot.autoOffMinutes)) snapshot.autoOffMinutes = kAutoOffMinutesDefault;
+
+    const uint8_t rotationMode = EEPROM.read(kEepromRotationModeAddr);
+    snapshot.rotationMode = rotationMode > static_cast<uint8_t>(RotationMode::Random)
+                              ? RotationMode::Off
+                              : static_cast<RotationMode>(rotationMode);
+
+    EEPROM.get(kEepromRotationIntervalSecAddr, snapshot.rotationIntervalSec);
+    if (
+      snapshot.rotationIntervalSec < kRotationIntervalSecMin || snapshot.rotationIntervalSec > kRotationIntervalSecMax
+    ) {
+      snapshot.rotationIntervalSec = kRotationIntervalSecDefault;
+    }
+
+    const uint8_t buttonEnabled = EEPROM.read(kEepromButtonEnabledAddr);
+    snapshot.buttonEnabled = buttonEnabled != 0 && buttonEnabled != 1 ? true : buttonEnabled == 1;
+
+    snapshot.paletteId = Palettes::clamp(EEPROM.read(kEepromGlobalPaletteIdAddr));
+
+    snapshot.quietHours = defaultNotificationQuietHours();
+    const uint8_t quietEnabled = EEPROM.read(kEepromNotificationQuietEnabledAddr);
+    uint16_t quietStart = snapshot.quietHours.startMinutes;
+    uint16_t quietEnd = snapshot.quietHours.endMinutes;
+    EEPROM.get(kEepromNotificationQuietStartAddr, quietStart);
+    EEPROM.get(kEepromNotificationQuietEndAddr, quietEnd);
+    if ((quietEnabled == 0 || quietEnabled == 1) && isValidMinuteOfDay(quietStart) && isValidMinuteOfDay(quietEnd)) {
+      snapshot.quietHours.enabled = quietEnabled == 1;
+      snapshot.quietHours.startMinutes = quietStart;
+      snapshot.quietHours.endMinutes = quietEnd;
+    }
+
+    if (EEPROM.read(kEepromAudioMarkerAddr) == kEepromAudioMarker) {
+      snapshot.audio.mode = clampAudioMode(EEPROM.read(kEepromAudioModeAddr));
+      snapshot.audio.band = clampAudioBand(EEPROM.read(kEepromAudioBandAddr));
+      snapshot.audio.amount = EEPROM.read(kEepromAudioAmountAddr);
+    }
+
+    snapshot.currentMode = EEPROM.read(kEepromCurrentModeAddr);
+    return snapshot;
+  }
+
+  void stageLayoutVersion() {
+    EEPROM.put(kEepromLayoutMetaAddr, kEepromLayoutMagic);
+    EEPROM.put(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
+  }
+
+  void stageLayoutInitialization() {
+    for (int address = 0; address < kEepromSize; ++address) {
+      EEPROM.write(address, 0);
+    }
+
+    EEPROM.write(kEepromPowerStateAddr, 0);
+    EEPROM.write(kEepromButtonEnabledAddr, 1);
+    EEPROM.write(kEepromOtaPolicyAddr, kEepromOtaPolicyDisabled);
+    EEPROM.put(kEepromAutoOffMinutesAddr, kAutoOffMinutesDefault);
+    EEPROM.write(kEepromCurrentModeAddr, 0);
+    EEPROM.write(kEepromEffectSettingsCountAddr, 0);
+    EEPROM.write(kEepromGlobalBrightnessAddr, 255);
+    EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(RotationMode::Off));
+    EEPROM.put(kEepromRotationIntervalSecAddr, kRotationIntervalSecDefault);
+  }
+
+  void stageWifiConfig(const WifiConfig& config) {
+    int address = kEepromWifiConfigAddr;
+    writeFieldAt(address, config.ssid, WifiConfig::kWifiSsidLen);
+    writeFieldAt(address, config.password, WifiConfig::kWifiPassLen);
+  }
+
+  void stageMqttConfig(const MqttConfig& config) {
+    int address = kEepromMqttConfigAddr;
+    writeFieldAt(address, config.host, MqttConfig::kMqttHostLen);
+    EEPROM.put(address, config.port);
+    address += sizeof(config.port);
+    writeFieldAt(address, config.user, MqttConfig::kMqttUserLen);
+    writeFieldAt(address, config.password, MqttConfig::kMqttPassLen);
+  }
+
 } // namespace
 
 void EepromStore::init() {
@@ -94,38 +226,50 @@ void EepromStore::ensureLayoutVersion() {
   }
 
   if (version == kEepromLayoutVersionCurrent) return;
+  if (version == kEepromLayoutVersionV4) {
+    if (!migrateLayoutV4ToV5()) {
+      Serial.println(F("[EEPROM] Layout v4-to-v5 migration failed"));
+    }
+    return;
+  }
 
-  // Version bump: snapshot user-tunable settings, wipe layout, then restore the
-  // snapshot so the device keeps WiFi/MQTT credentials and other config across
-  // version bumps. Effect settings are intentionally NOT restored — initializeLayout
-  // clears them so fresh effect defaults (brightness=255) apply on next
-  // ensureEffectSettings. globalBrightness is left at its new default (255).
-  Serial.println(F("[EEPROM] Layout version changed, migrating user settings"));
+  Serial.println(F("[EEPROM] Unsupported layout version, initializing defaults"));
+  if (!initializeLayout()) {
+    Serial.println(F("[EEPROM] Layout initialization failed"));
+  }
+}
 
-  const WifiConfig preservedWifi = readWifiConfig();
-  const MqttConfig preservedMqtt = readMqttConfig();
-  const uint16_t preservedAutoOff = readAutoOffMinutes();
-  const RotationMode preservedRotationMode = readRotationMode();
-  const uint16_t preservedRotationInterval = readRotationIntervalSec();
-  const bool preservedButton = readButtonEnabled();
-  const Palettes::Id preservedPalette = readGlobalPaletteId();
-  const NotificationQuietHours preservedQuiet = readNotificationQuietHours();
-  const AudioConfig preservedAudio = readAudioConfig();
-  const uint8_t preservedCurrentMode = EEPROM.read(kEepromCurrentModeAddr);
+bool EepromStore::migrateLayoutV4ToV5() {
+  // Snapshot all preserved v4 values before staging any EEPROM changes.
+  // Effect settings and global brightness intentionally reset as in prior
+  // version migrations.
+  Serial.println(F("[EEPROM] Migrating layout v4 to v5"));
 
-  initializeLayout();
+  const V4MigrationSnapshot snapshot = readV4MigrationSnapshot();
 
-  writeWifiConfig(preservedWifi.ssid, preservedWifi.password);
-  writeMqttConfig(preservedMqtt.host, preservedMqtt.port, preservedMqtt.user, preservedMqtt.password);
-  writeAutoOffMinutes(preservedAutoOff);
-  writeRotationMode(preservedRotationMode);
-  writeRotationIntervalSec(preservedRotationInterval);
-  writeButtonEnabled(preservedButton);
-  writeGlobalPaletteId(preservedPalette);
-  writeNotificationQuietHours(preservedQuiet);
-  writeAudioConfig(preservedAudio);
-  EEPROM.write(kEepromCurrentModeAddr, preservedCurrentMode);
-  EEPROM.commit();
+  stageLayoutInitialization();
+  stageWifiConfig(snapshot.wifi);
+  stageMqttConfig(snapshot.mqtt);
+  EEPROM.put(kEepromAutoOffMinutesAddr, snapshot.autoOffMinutes);
+  EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(snapshot.rotationMode));
+  EEPROM.put(kEepromRotationIntervalSecAddr, snapshot.rotationIntervalSec);
+  EEPROM.write(kEepromButtonEnabledAddr, snapshot.buttonEnabled ? 1 : 0);
+  EEPROM.write(kEepromGlobalPaletteIdAddr, static_cast<uint8_t>(snapshot.paletteId));
+  EEPROM.write(kEepromNotificationQuietEnabledAddr, snapshot.quietHours.enabled ? 1 : 0);
+  EEPROM.put(kEepromNotificationQuietStartAddr, snapshot.quietHours.startMinutes);
+  EEPROM.put(kEepromNotificationQuietEndAddr, snapshot.quietHours.endMinutes);
+  EEPROM.write(kEepromAudioMarkerAddr, kEepromAudioMarker);
+  EEPROM.write(kEepromAudioModeAddr, static_cast<uint8_t>(snapshot.audio.mode));
+  EEPROM.write(kEepromAudioBandAddr, static_cast<uint8_t>(snapshot.audio.band));
+  EEPROM.write(kEepromAudioAmountAddr, snapshot.audio.amount);
+  EEPROM.write(kEepromCurrentModeAddr, snapshot.currentMode);
+  stageLayoutVersion();
+
+  if (!EEPROM.commit()) return false;
+
+  wifiConfigCache_ = snapshot.wifi;
+  mqttConfigCache_ = snapshot.mqtt;
+  return true;
 }
 
 bool EepromStore::writeLayoutVersion() {
@@ -153,19 +297,19 @@ bool EepromStore::initializeLayout() {
 
 const WifiConfig& EepromStore::readWifiConfig() {
   int eeAddress = kEepromWifiConfigAddr;
-  readFieldAt(eeAddress, wifiConfigCache_.ssid, kWifiSsidLen);
-  readFieldAt(eeAddress, wifiConfigCache_.password, kWifiPassLen);
+  readFieldAt(eeAddress, wifiConfigCache_.ssid, WifiConfig::kWifiSsidLen);
+  readFieldAt(eeAddress, wifiConfigCache_.password, WifiConfig::kWifiPassLen);
   return wifiConfigCache_;
 }
 
 bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
   WifiConfig wifiConfig = {};
-  strlcpy(wifiConfig.ssid, ssid, kWifiSsidLen);
-  strlcpy(wifiConfig.password, password, kWifiPassLen);
+  strlcpy(wifiConfig.ssid, ssid, WifiConfig::kWifiSsidLen);
+  strlcpy(wifiConfig.password, password, WifiConfig::kWifiPassLen);
 
   int eeAddress = kEepromWifiConfigAddr;
-  writeFieldAt(eeAddress, wifiConfig.ssid, kWifiSsidLen);
-  writeFieldAt(eeAddress, wifiConfig.password, kWifiPassLen);
+  writeFieldAt(eeAddress, wifiConfig.ssid, WifiConfig::kWifiSsidLen);
+  writeFieldAt(eeAddress, wifiConfig.password, WifiConfig::kWifiPassLen);
 
   const bool committed = EEPROM.commit();
   if (committed) {
@@ -176,25 +320,27 @@ bool EepromStore::writeWifiConfig(const char* ssid, const char* password) {
 
 const MqttConfig& EepromStore::readMqttConfig() {
   int eeAddress = kEepromMqttConfigAddr;
-  readFieldAt(eeAddress, mqttConfigCache_.host, kMqttHostLen);
-  readFieldAt(eeAddress, mqttConfigCache_.port, kMqttPortLen);
-  readFieldAt(eeAddress, mqttConfigCache_.user, kMqttUserLen);
-  readFieldAt(eeAddress, mqttConfigCache_.password, kMqttPassLen);
+  readFieldAt(eeAddress, mqttConfigCache_.host, MqttConfig::kMqttHostLen);
+  EEPROM.get(eeAddress, mqttConfigCache_.port);
+  eeAddress += sizeof(mqttConfigCache_.port);
+  readFieldAt(eeAddress, mqttConfigCache_.user, MqttConfig::kMqttUserLen);
+  readFieldAt(eeAddress, mqttConfigCache_.password, MqttConfig::kMqttPassLen);
   return mqttConfigCache_;
 }
 
-bool EepromStore::writeMqttConfig(const char* host, const char* port, const char* user, const char* password) {
+bool EepromStore::writeMqttConfig(const char* host, uint16_t port, const char* user, const char* password) {
   MqttConfig mqttConfig = {};
-  strlcpy(mqttConfig.host, host, kMqttHostLen);
-  strlcpy(mqttConfig.port, port, kMqttPortLen);
-  strlcpy(mqttConfig.user, user, kMqttUserLen);
-  strlcpy(mqttConfig.password, password, kMqttPassLen);
+  strlcpy(mqttConfig.host, host, MqttConfig::kMqttHostLen);
+  mqttConfig.port = port;
+  strlcpy(mqttConfig.user, user, MqttConfig::kMqttUserLen);
+  strlcpy(mqttConfig.password, password, MqttConfig::kMqttPassLen);
 
   int eeAddress = kEepromMqttConfigAddr;
-  writeFieldAt(eeAddress, mqttConfig.host, kMqttHostLen);
-  writeFieldAt(eeAddress, mqttConfig.port, kMqttPortLen);
-  writeFieldAt(eeAddress, mqttConfig.user, kMqttUserLen);
-  writeFieldAt(eeAddress, mqttConfig.password, kMqttPassLen);
+  writeFieldAt(eeAddress, mqttConfig.host, MqttConfig::kMqttHostLen);
+  EEPROM.put(eeAddress, mqttConfig.port);
+  eeAddress += sizeof(mqttConfig.port);
+  writeFieldAt(eeAddress, mqttConfig.user, MqttConfig::kMqttUserLen);
+  writeFieldAt(eeAddress, mqttConfig.password, MqttConfig::kMqttPassLen);
 
   const bool committed = EEPROM.commit();
   if (committed) {

@@ -68,13 +68,13 @@ private:
   TimeService& time_;
   TouchButton& button_;
 
-  char inputWifiSsid_[kWifiSsidLen];
-  char inputWifiPass_[kWifiPassLen];
+  char inputWifiSsid_[WifiConfig::kWifiSsidLen];
+  char inputWifiPass_[WifiConfig::kWifiPassLen];
 #ifdef USE_MQTT
-  char inputMqttHost_[kMqttHostLen];
-  char inputMqttPort_[kMqttPortLen];
-  char inputMqttUser_[kMqttUserLen];
-  char inputMqttPass_[kMqttPassLen];
+  char inputMqttHost_[MqttConfig::kMqttHostLen];
+  char inputMqttPort_[MqttConfig::kMqttPortTextLen] = {};
+  char inputMqttUser_[MqttConfig::kMqttUserLen];
+  char inputMqttPass_[MqttConfig::kMqttPassLen];
 #endif
 
   bool powerOn_ = false;

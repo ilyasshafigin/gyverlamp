@@ -2,8 +2,6 @@
 
 #ifdef USE_MQTT
 #include <HaMqttEntities.h>
-#include <cctype>
-
 #include "wifi_service.h"
 #include "../util/loop_profiler.h"
 
@@ -134,17 +132,8 @@ void MqttRuntime::dispatchCallback(HAEntity* entity, char* topic, byte* payload,
   bridge_.dispatchMessage(client_, entity, topic, payload, length);
 }
 
-bool MqttRuntime::isConfigValid(const MqttConfig& config, uint16_t& port) const {
-  if (config.host[0] == '\0' || strcmp(config.host, "none") == 0 || config.port[0] == '\0') return false;
-  uint32_t value = 0;
-  for (const char* p = config.port; *p != '\0'; p++) {
-    if (!isdigit(static_cast<unsigned char>(*p))) return false;
-    value = value * 10 + static_cast<uint32_t>(*p - '0');
-    if (value > 65535) return false;
-  }
-  if (value == 0) return false;
-  port = static_cast<uint16_t>(value);
-  return true;
+bool MqttRuntime::isConfigValid(const MqttConfig& config) const {
+  return config.host[0] != '\0' && strcmp(config.host, "none") != 0 && config.port != 0;
 }
 
 bool MqttRuntime::isPersistedConfigEnabled(const MqttConfig& config) const {
@@ -153,14 +142,12 @@ bool MqttRuntime::isPersistedConfigEnabled(const MqttConfig& config) const {
 
 bool MqttRuntime::activateRequestedConfig() {
   if (activeConfigGeneration_ == requestedConfigGeneration_) {
-    uint16_t port;
-    return isConfigValid(activeConfig_, port);
+    return isConfigValid(activeConfig_);
   }
   activeConfig_ = requestedConfig_;
   activeConfigGeneration_ = requestedConfigGeneration_;
-  uint16_t port;
-  if (!isConfigValid(activeConfig_, port)) return false;
-  client_.setServer(activeConfig_.host, port);
+  if (!isConfigValid(activeConfig_)) return false;
+  client_.setServer(activeConfig_.host, activeConfig_.port);
   return true;
 }
 
@@ -233,9 +220,9 @@ void MqttRuntime::connect() {
   attemptConfig_ = activeConfig_;
   attemptGeneration_ = requestedGeneration_;
   Serial.printf(
-    "[MQTT] Attempting MQTT connection to %s on port %s as %s ...",
+    "[MQTT] Attempting MQTT connection to %s on port %u as %s ...",
     attemptConfig_.host,
-    attemptConfig_.port,
+    static_cast<unsigned>(attemptConfig_.port),
     attemptConfig_.user
   );
   const bool connected = HAMQTT.connect(clientId_, attemptConfig_.user, attemptConfig_.password);

@@ -36,7 +36,7 @@ public:
   ConnectivityStatus status() const;
 
   bool saveWifiConfig(const char* ssid, const char* password);
-  bool saveAndApplyMqttConfig(const char* host, const char* port, const char* user, const char* password);
+  bool saveAndApplyMqttConfig(const char* host, uint16_t port, const char* user, const char* password);
   void requestMqttEnabled(bool enabled);
   void requestMqttRestart();
 

@@ -61,7 +61,7 @@ private:
   uint32_t reconnectTiming_ = 0;
   uint32_t reconnectTimeout_ = kReconnectBaseMs;
 
-  bool isConfigValid(const MqttConfig& config, uint16_t& port) const;
+  bool isConfigValid(const MqttConfig& config) const;
   bool isPersistedConfigEnabled(const MqttConfig& config) const;
   bool activateRequestedConfig();
   void setState(MqttState state);

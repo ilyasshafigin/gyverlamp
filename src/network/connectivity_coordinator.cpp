@@ -34,7 +34,7 @@ bool ConnectivityCoordinator::saveWifiConfig(const char* ssid, const char* passw
 }
 
 bool ConnectivityCoordinator::saveAndApplyMqttConfig(
-  const char* host, const char* port, const char* user, const char* password
+  const char* host, uint16_t port, const char* user, const char* password
 ) {
   if (!eeprom_.writeMqttConfig(host, port, user, password)) return false;
 

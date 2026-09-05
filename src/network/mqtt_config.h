@@ -2,14 +2,14 @@
 
 #include <Arduino.h>
 
-constexpr uint8_t kMqttHostLen = 33;
-constexpr uint8_t kMqttPortLen = 10;
-constexpr uint8_t kMqttUserLen = 33;
-constexpr uint8_t kMqttPassLen = 33;
-
 struct MqttConfig {
+  static constexpr uint8_t kMqttHostLen = 33;
+  static constexpr uint8_t kMqttUserLen = 33;
+  static constexpr uint8_t kMqttPassLen = 33;
+  static constexpr uint8_t kMqttPortTextLen = sizeof("65535");
+
   char host[kMqttHostLen];
-  char port[kMqttPortLen];
+  uint16_t port;
   char user[kMqttUserLen];
   char password[kMqttPassLen];
 };

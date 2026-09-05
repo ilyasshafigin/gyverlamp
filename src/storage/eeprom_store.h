@@ -19,7 +19,7 @@ public:
   bool writeWifiConfig(const char* ssid, const char* password);
 
   const MqttConfig& readMqttConfig();
-  bool writeMqttConfig(const char* host, const char* port, const char* user, const char* password);
+  bool writeMqttConfig(const char* host, uint16_t port, const char* user, const char* password);
 
   bool readPowerState();
   void writePowerState(bool powerOn);
@@ -62,6 +62,7 @@ private:
   MqttConfig mqttConfigCache_ = {};
 
   void ensureLayoutVersion();
+  bool migrateLayoutV4ToV5();
   bool writeLayoutVersion();
   bool initializeLayout();
 };

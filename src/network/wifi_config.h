@@ -2,10 +2,10 @@
 
 #include <Arduino.h>
 
-constexpr uint8_t kWifiSsidLen = 33;
-constexpr uint8_t kWifiPassLen = 33;
-
 struct WifiConfig {
+  static constexpr uint8_t kWifiSsidLen = 33;
+  static constexpr uint8_t kWifiPassLen = 33;
+
   char ssid[kWifiSsidLen];
   char password[kWifiPassLen];
 };

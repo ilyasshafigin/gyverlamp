@@ -32,6 +32,26 @@ namespace {
     return static_cast<uint16_t>(seconds / 60UL);
   }
 
+#ifdef USE_MQTT
+  bool parseMqttPort(const char* text, uint16_t& port) {
+    uint32_t value = 0;
+    for (uint8_t i = 0; i < MqttConfig::kMqttPortTextLen; ++i) {
+      const char c = text[i];
+      if (c == '\0') {
+        if (i == 0 || value == 0) return false;
+        port = static_cast<uint16_t>(value);
+        return true;
+      }
+      if (c < '0' || c > '9') return false;
+
+      const uint8_t digit = static_cast<uint8_t>(c - '0');
+      if (value > (65535U - digit) / 10U) return false;
+      value = value * 10U + digit;
+    }
+    return false;
+  }
+#endif
+
   String formatRemainingTime(uint32_t seconds) {
     if (seconds == 0) return "-";
 
@@ -55,17 +75,19 @@ namespace {
 void WebService::init() {
   const WifiConfig wifiConfig = connectivity_.wifiConfig();
   if (strlen(wifiConfig.ssid) > 0) {
-    strlcpy(inputWifiSsid_, wifiConfig.ssid, kWifiSsidLen);
-    strlcpy(inputWifiPass_, wifiConfig.password, kWifiPassLen);
+    strlcpy(inputWifiSsid_, wifiConfig.ssid, WifiConfig::kWifiSsidLen);
+    strlcpy(inputWifiPass_, wifiConfig.password, WifiConfig::kWifiPassLen);
   }
 
 #ifdef USE_MQTT
   const MqttConfig mqttConfig = connectivity_.mqttConfig();
   if (strlen(mqttConfig.host) > 0) {
-    strlcpy(inputMqttHost_, mqttConfig.host, kMqttHostLen);
-    strlcpy(inputMqttPort_, mqttConfig.port, kMqttPortLen);
-    strlcpy(inputMqttUser_, mqttConfig.user, kMqttUserLen);
-    strlcpy(inputMqttPass_, mqttConfig.password, kMqttPassLen);
+    strlcpy(inputMqttHost_, mqttConfig.host, MqttConfig::kMqttHostLen);
+    strlcpy(inputMqttUser_, mqttConfig.user, MqttConfig::kMqttUserLen);
+    strlcpy(inputMqttPass_, mqttConfig.password, MqttConfig::kMqttPassLen);
+  }
+  if (mqttConfig.port != 0) {
+    snprintf(inputMqttPort_, sizeof(inputMqttPort_), "%u", static_cast<unsigned>(mqttConfig.port));
   }
 #endif
 
@@ -351,11 +373,15 @@ void WebService::settingsBuilder(sets::Builder& b) {
       b.reload();
     }
     b.Input("Host", inputMqttHost_);
-    b.Number("Port", inputMqttPort_);
+    b.Input("Port", inputMqttPort_);
     b.Input("User", inputMqttUser_);
     b.Pass("Password", inputMqttPass_);
     if (b.Button("Save and apply")) {
-      if (connectivity_.saveAndApplyMqttConfig(inputMqttHost_, inputMqttPort_, inputMqttUser_, inputMqttPass_)) {
+      uint16_t port = 0;
+      if (
+        parseMqttPort(inputMqttPort_, port) &&
+        connectivity_.saveAndApplyMqttConfig(inputMqttHost_, port, inputMqttUser_, inputMqttPass_)
+      ) {
         b.reload();
       }
     }
