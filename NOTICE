@@ -2,8 +2,8 @@ GyverLamp firmware
 Copyright (C) 2026 ilyasshafigin
 SPDX-License-Identifier: GPL-3.0-or-later
 
-This firmware links against the following third-party libraries declared in
-platformio.ini (lib_deps). See each project's LICENSE file for full terms.
+This firmware links against the following third-party libraries. See each
+project's LICENSE file for full terms.
 
   FastLED
     https://github.com/FastLED/FastLED
@@ -13,7 +13,7 @@ platformio.ini (lib_deps). See each project's LICENSE file for full terms.
     https://github.com/GyverLibs/Settings
     Licensed under the GNU General Public License v3.0
 
-  paulino/HaMqttEntities
+  HaMqttEntities (vendored snapshot of paulino/ha-mqtt-entities v1.0.12)
     Copyright (c) Paulino Ruiz de Clavijo Vazquez <pruiz@us.es>
     https://github.com/paulino/ha-mqtt-entities
     Licensed under the Apache License, Version 2.0

@@ -1,8 +1,9 @@
-#include "ha_light.h"
+#include "halight.h"
 
 #ifdef USE_MQTT
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <Arduino.h>
 #include <PubSubClient.h>
@@ -89,6 +90,7 @@ HALight::HALight(const char* unique_id, const char* name, HADevice& device)
 HALight::HALight(const char* unique_id, const char* name)
   : HAEntity(unique_id, name, "light") {
   this->dirty = false;
+  this->revision = 0;
   this->state = false;
   this->brightness = 255;
   this->red = 255;
@@ -211,31 +213,33 @@ void HALight::onConnect(PubSubClient* client) {
   client->publish(topic, payload);
 }
 
-void HALight::sendState(PubSubClient* client) {
-  dirty = false;
+bool HALight::sendState(PubSubClient* client) {
   char topic[HA_MAX_TOPIC_LENGTH];
   char payload[64];
 
   getStateTopic(topic);
-  client->publish(topic, state ? "ON" : "OFF");
+  bool published = client->publish(topic, state ? "ON" : "OFF");
 
   getBrightnessStateTopic(topic);
   sprintf(payload, "%d", brightness);
-  client->publish(topic, payload);
+  published = client->publish(topic, payload) && published;
 
   if (effectList.length() > 0) {
     getEffectStateTopic(topic);
-    client->publish(topic, effect);
+    published = client->publish(topic, effect) && published;
   }
 
   getColorStateTopic(topic);
   snprintf(payload, sizeof(payload), "%d,%d,%d", red, green, blue);
-  client->publish(topic, payload);
+  published = client->publish(topic, payload) && published;
+  if (published) dirty = false;
+  return published;
 }
 
 void HALight::setState(bool state) {
   if (state == this->state) return;
   dirty = true;
+  revision++;
   this->state = state;
   this->onStateChange();
 }
@@ -243,6 +247,7 @@ void HALight::setState(bool state) {
 void HALight::setBrightness(uint8_t brightness) {
   if (brightness == this->brightness) return;
   dirty = true;
+  revision++;
   this->brightness = brightness;
   this->onStateChange();
 }
@@ -252,6 +257,11 @@ void HALight::setEffectList(const char* commaSeparatedEffects) {
   if (commaSeparatedEffects == nullptr || commaSeparatedEffects[0] == '\0') {
     return;
   }
+
+  size_t effectCount = 1;
+  for (const char* p = commaSeparatedEffects; *p; p++)
+    if (*p == ',') effectCount++;
+  effectList.reserve(strlen(commaSeparatedEffects) + effectCount * 2);
 
   const char* p = commaSeparatedEffects;
   while (true) {
@@ -296,6 +306,7 @@ void HALight::setEffect(const char* effectName) {
     return;
   }
   dirty = true;
+  revision++;
   strlcpy(effect, effectName, sizeof(effect));
   onStateChange();
 }
@@ -305,6 +316,7 @@ void HALight::setColor(uint8_t r, uint8_t g, uint8_t b) {
     return;
   }
   dirty = true;
+  revision++;
   red = r;
   green = g;
   blue = b;
@@ -323,7 +335,7 @@ void HALight::onColorCommand(void (*callback)(uint8_t r, uint8_t g, uint8_t b)) 
   this->colorCommandCallback = callback;
 }
 
-void HALight::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) {
+bool HALight::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) {
   (void)client;
 
   if (length == 2 && payload[0] == 'O' && payload[1] == 'N') {
@@ -331,24 +343,27 @@ void HALight::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int 
   } else if (length == 3 && payload[0] == 'O' && payload[1] == 'F' && payload[2] == 'F') {
     setState(false);
   } else {
-    return;
+    return false;
   }
 
   if (commandCallback != nullptr) {
     commandCallback(state, brightness);
   }
+  return true;
 }
 
-void HALight::onReceivedBrightnessTopic(PubSubClient* client, byte* payload, unsigned int length) {
+bool HALight::onReceivedBrightnessTopic(PubSubClient* client, byte* payload, unsigned int length) {
   (void)client;
 
   char buff[8];
-  if (length < 1 || length > 3) return;
+  if (length < 1 || length > 3) return false;
 
   strncpy(buff, reinterpret_cast<const char*>(payload), length);
   buff[length] = '\0';
 
-  int value = atoi(buff);
+  char* end = nullptr;
+  long value = strtol(buff, &end, 10);
+  if (end == buff || *end != '\0') return false;
   if (value < 0) value = 0;
   if (value > 255) value = 255;
   setBrightness(static_cast<uint8_t>(value));
@@ -356,15 +371,14 @@ void HALight::onReceivedBrightnessTopic(PubSubClient* client, byte* payload, uns
   if (commandCallback != nullptr) {
     commandCallback(state, brightness);
   }
+  return true;
 }
 
-void HALight::onReceivedEffectTopic(PubSubClient* client, byte* payload, unsigned int length) {
+bool HALight::onReceivedEffectTopic(PubSubClient* client, byte* payload, unsigned int length) {
   (void)client;
 
   char name[sizeof(effect)];
-  if (length >= sizeof(name)) {
-    length = sizeof(name) - 1;
-  }
+  if (length >= sizeof(name)) return false;
   strncpy(name, reinterpret_cast<const char*>(payload), length);
   name[length] = '\0';
 
@@ -373,15 +387,14 @@ void HALight::onReceivedEffectTopic(PubSubClient* client, byte* payload, unsigne
   if (effectCommandCallback != nullptr) {
     effectCommandCallback(name);
   }
+  return true;
 }
 
-void HALight::onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned int length) {
+bool HALight::onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned int length) {
   (void)client;
 
   char json[64];
-  if (length >= sizeof(json)) {
-    length = sizeof(json) - 1;
-  }
+  if (length >= sizeof(json)) return false;
   strncpy(json, reinterpret_cast<const char*>(payload), length);
   json[length] = '\0';
 
@@ -389,7 +402,7 @@ void HALight::onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned
   uint8_t g = green;
   uint8_t b = blue;
   if (!parseRgbPayload(json, r, g, b)) {
-    return;
+    return false;
   }
 
   setColor(r, g, b);
@@ -397,47 +410,138 @@ void HALight::onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned
   if (colorCommandCallback != nullptr) {
     colorCommandCallback(r, g, b);
   }
+  return true;
 }
 
 bool HALight::dispatchCommand(PubSubClient* client, const char* topic, byte* payload, unsigned int length) {
+  if (!handleCommand(client, const_cast<char*>(topic), payload, length)) {
+    return false;
+  }
+  return true;
+}
+
+bool HALight::handleCommand(PubSubClient* client, char* topic, byte* payload, size_t length) {
   char buffer[HA_MAX_TOPIC_LENGTH];
-  bool handled = false;
 
   getOnOffCommandTopic(buffer);
   if (strcmp(buffer, topic) == 0) {
-    onReceivedTopic(client, payload, length);
-    handled = true;
+    if (!((length == 2 && payload[0] == 'O' && payload[1] == 'N') ||
+          (length == 3 && payload[0] == 'O' && payload[1] == 'F' && payload[2] == 'F')))
+      return false;
+    return onReceivedTopic(client, payload, length);
   }
 
-  if (!handled) {
-    getBrightnessCommandTopic(buffer);
-    if (strcmp(buffer, topic) == 0) {
-      onReceivedBrightnessTopic(client, payload, length);
-      handled = true;
-    }
+  getBrightnessCommandTopic(buffer);
+  if (strcmp(buffer, topic) == 0) {
+    if (length < 1 || length > 3) return false;
+    return onReceivedBrightnessTopic(client, payload, length);
   }
 
-  if (!handled && effectList.length() > 0) {
+  if (effectList.length() > 0) {
     getEffectCommandTopic(buffer);
     if (strcmp(buffer, topic) == 0) {
-      onReceivedEffectTopic(client, payload, length);
-      handled = true;
+      return onReceivedEffectTopic(client, payload, length);
     }
   }
 
-  if (!handled) {
-    getColorCommandTopic(buffer);
-    if (strcmp(buffer, topic) == 0) {
-      onReceivedColorTopic(client, payload, length);
-      handled = true;
+  getColorCommandTopic(buffer);
+  if (strcmp(buffer, topic) == 0) {
+    char json[64];
+    if (length >= sizeof(json)) return false;
+    strncpy(json, reinterpret_cast<const char*>(payload), length);
+    json[length] = '\0';
+    uint8_t r = red;
+    uint8_t g = green;
+    uint8_t b = blue;
+    if (!parseRgbPayload(json, r, g, b)) return false;
+    return onReceivedColorTopic(client, payload, length);
+  }
+
+  return false;
+}
+
+uint8_t HALight::discoveryStepCount() {
+  return effectList.length() > 0 ? 5 : 4;
+}
+
+HAOperationResult HALight::discoveryStep(PubSubClient* client, uint8_t step) {
+  char topic[HA_MAX_TOPIC_LENGTH];
+  const bool hasEffects = effectList.length() > 0;
+  if (step == 0) {
+    getOnOffCommandTopic(topic);
+    if (client->subscribe(topic)) return HAOperationResult::Done;
+  } else if (step == 1) {
+    getBrightnessCommandTopic(topic);
+    if (client->subscribe(topic)) return HAOperationResult::Done;
+  } else if (hasEffects && step == 2) {
+    getEffectCommandTopic(topic);
+    if (client->subscribe(topic)) return HAOperationResult::Done;
+  } else if (step == (hasEffects ? 3 : 2)) {
+    getColorCommandTopic(topic);
+    if (client->subscribe(topic)) return HAOperationResult::Done;
+  } else if (step == (hasEffects ? 4 : 3)) {
+    char payload[HA_MAX_PAYLOAD_LENGTH];
+    getConfigTopic(topic);
+    getConfigPayload(payload, true, true);
+    size_t len = strlen(payload);
+    if (len > 0 && payload[len - 1] == '}') {
+      payload[len - 1] = '\0';
+      len--;
     }
-  }
+    snprintf(
+      payload + len,
+      sizeof(payload) - len,
+      ",\"brightness\":true,\"bri_cmd_t\":\"~/brightness/set\",\"bri_stat_t\":\"~/brightness/state\",\"bri_scl\":255"
+    );
+    len = strlen(payload);
+    if (hasEffects) {
+      snprintf(
+        payload + len,
+        sizeof(payload) - len,
+        ",\"fx_cmd_t\":\"~/effect/set\",\"fx_stat_t\":\"~/effect/state\",\"fx_list\":[%s]",
+        effectList.c_str()
+      );
+      len = strlen(payload);
+    }
+    snprintf(
+      payload + len,
+      sizeof(payload) - len,
+      ",\"supported_color_modes\":[\"rgb\"],\"rgb_cmd_t\":\"~/color/set\",\"rgb_stat_t\":\"~/color/state\"}"
+    );
+    if (client->publish(topic, payload)) return HAOperationResult::Done;
+  } else
+    return HAOperationResult::Fatal;
+  return client->connected() ? HAOperationResult::RetryLater : HAOperationResult::TransportLost;
+}
 
-  if (handled) {
-    sendState(client);
-  }
+uint8_t HALight::stateStepCount() const {
+  return effectList.length() > 0 ? 4 : 3;
+}
 
-  return handled;
+HAOperationResult HALight::stateStep(PubSubClient* client, uint8_t step, uint32_t expectedRevision) {
+  char topic[HA_MAX_TOPIC_LENGTH];
+  char payload[64];
+  const bool hasEffects = effectList.length() > 0;
+  bool published = false;
+  if (step == 0) {
+    getStateTopic(topic);
+    published = client->publish(topic, state ? "ON" : "OFF");
+  } else if (step == 1) {
+    getBrightnessStateTopic(topic);
+    snprintf(payload, sizeof(payload), "%d", brightness);
+    published = client->publish(topic, payload);
+  } else if (hasEffects && step == 2) {
+    getEffectStateTopic(topic);
+    published = client->publish(topic, effect);
+  } else if (step == (hasEffects ? 3 : 2)) {
+    getColorStateTopic(topic);
+    snprintf(payload, sizeof(payload), "%d,%d,%d", red, green, blue);
+    published = client->publish(topic, payload);
+  } else
+    return HAOperationResult::Fatal;
+  if (!published) return client->connected() ? HAOperationResult::RetryLater : HAOperationResult::TransportLost;
+  if (step + 1 == stateStepCount() && revision == expectedRevision) dirty = false;
+  return HAOperationResult::Done;
 }
 
 #endif

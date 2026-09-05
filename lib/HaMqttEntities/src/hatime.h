@@ -28,8 +28,8 @@ public:
   void onCommand(void (*callback)(const char* timeState));
 
   void onConnect(PubSubClient* client) override;
-  void onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) override;
-  void sendState(PubSubClient* client) override;
+  bool onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) override;
+  bool sendState(PubSubClient* client) override;
 
   bool dispatchCommand(PubSubClient* client, const char* topic, byte* payload, unsigned int length);
 };

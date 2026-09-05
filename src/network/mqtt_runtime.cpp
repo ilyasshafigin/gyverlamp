@@ -5,42 +5,32 @@
 #include "wifi_service.h"
 #include "../util/loop_profiler.h"
 
-namespace {
-  void haCallbackForward(HAEntity* entity, char* topic, byte* payload, unsigned int length) {
-    MqttRuntime* runtime = MqttRuntime::callbackTarget();
-    if (runtime != nullptr) runtime->dispatchCallback(entity, topic, payload, length);
-  }
-} // namespace
-
-MqttRuntime* MqttRuntime::callbackTarget_ = nullptr;
-
-MqttRuntime::MqttRuntime(MqttBridge& bridge, WifiService& wifi)
-  : bridge_(bridge),
+MqttRuntime::MqttRuntime(
+  HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiService& wifi
+)
+  : controller_(controller),
+    entityRegistry_(entityRegistry),
+    entityRegistryCapacity_(entityRegistryCapacity),
     wifi_(wifi) {
 }
 
-void MqttRuntime::activateCallbackTarget() {
-  callbackTarget_ = this;
-}
-
 void MqttRuntime::init(const MqttConfig& config, const char* clientId) {
-  activateCallbackTarget();
   clientId_ = clientId;
   wifiClient_.setTimeout(kWifiClientTimeoutMs);
   client_.setSocketTimeout(kMqttSocketTimeoutSeconds);
   requestedConfig_ = config;
   requestedConfigGeneration_ = 1;
   requestedEnabled_ = isPersistedConfigEnabled(requestedConfig_);
-  bufferReady_ = client_.setBufferSize(HA_MAX_PAYLOAD_LENGTH);
-  if (bufferReady_) {
-    HAMQTT.begin(client_, bridge_.entityCount());
-    bridge_.registerEntities();
-    HAMQTT.setCallback(haCallbackForward);
-    registered_ = true;
-  }
+  bufferReady_ = controller_.begin(client_, entityRegistry_, entityRegistryCapacity_);
+}
 
+void MqttRuntime::completeEntityRegistration(bool registered) {
+  registered_ = bufferReady_ && registered;
   if (!bufferReady_) {
     Serial.println(F("[MQTT] MQTT buffer allocation failed."));
+    setState(MqttState::ConfigError);
+  } else if (!registered_) {
+    Serial.println(F("[MQTT] MQTT entity registration failed."));
     setState(MqttState::ConfigError);
   } else if (!requestedEnabled_) {
     Serial.println(F("[MQTT] MQTT server is disabled."));
@@ -62,7 +52,7 @@ void MqttRuntime::tick() {
     case MqttState::ConfigError: return;
     case MqttState::DisconnectBarrier:
       if (!barrierPulsed_) {
-        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, []() { HAMQTT.loop(); });
+        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { controller_.tick(millis()); });
         barrierPulsed_ = true;
         return;
       }
@@ -85,13 +75,13 @@ void MqttRuntime::tick() {
       }
       return;
     case MqttState::ConnectPrepare:
-      LoopProfiler::measure(LoopProfiler::MQTT_LOOP, []() { HAMQTT.loop(); });
+      LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { controller_.tick(millis()); });
       setState(MqttState::Connecting);
       return;
     case MqttState::Connecting:
       if (!wifi_.isStaConnected()) beginDisconnectBarrier(false, true);
       else
-        connect();
+        connectBlocking();
       return;
     case MqttState::Online:
       if (!wifi_.isStaConnected()) {
@@ -99,10 +89,10 @@ void MqttRuntime::tick() {
       } else if (!client_.connected()) {
         registerReconnectFailure(millis());
         retryPending_ = true;
-        bridge_.onTransportFailure();
+        emitTransportFailure();
         beginDisconnectBarrier(false, false);
       } else {
-        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, []() { HAMQTT.loop(); });
+        LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this]() { controller_.tick(millis()); });
       }
       return;
   }
@@ -128,10 +118,6 @@ void MqttRuntime::requestRestart() {
   requestedGeneration_ += 1;
 }
 
-void MqttRuntime::dispatchCallback(HAEntity* entity, char* topic, byte* payload, unsigned int length) {
-  bridge_.dispatchMessage(client_, entity, topic, payload, length);
-}
-
 bool MqttRuntime::isConfigValid(const MqttConfig& config) const {
   return config.host[0] != '\0' && strcmp(config.host, "none") != 0 && config.port != 0;
 }
@@ -155,7 +141,23 @@ void MqttRuntime::setState(MqttState state) {
   if (lifecycleStarted_ && state_ == state) return;
   state_ = state;
   lifecycleStarted_ = true;
-  bridge_.onTransportState(state_);
+  emitEvent(Event::StateChanged);
+  if (state_ == MqttState::Online) emitEvent(Event::BecameOnline);
+}
+
+bool MqttRuntime::consumeEvent(Event event) {
+  const uint8_t mask = static_cast<uint8_t>(event);
+  if ((pendingEvents_ & mask) == 0) return false;
+  pendingEvents_ &= ~mask;
+  return true;
+}
+
+void MqttRuntime::emitEvent(Event event) {
+  pendingEvents_ |= static_cast<uint8_t>(event);
+}
+
+void MqttRuntime::emitTransportFailure() {
+  emitEvent(Event::TransportFailure);
 }
 
 void MqttRuntime::beginDisconnectBarrier(bool disconnectClient, bool abortTransport) {
@@ -216,7 +218,7 @@ bool MqttRuntime::handleRequestedCommands() {
   return true;
 }
 
-void MqttRuntime::connect() {
+void MqttRuntime::connectBlocking() {
   attemptConfig_ = activeConfig_;
   attemptGeneration_ = requestedGeneration_;
   Serial.printf(
@@ -225,7 +227,10 @@ void MqttRuntime::connect() {
     static_cast<unsigned>(attemptConfig_.port),
     attemptConfig_.user
   );
-  const bool connected = HAMQTT.connect(clientId_, attemptConfig_.user, attemptConfig_.password);
+  const uint32_t connectStartedAt = millis();
+  const bool connected = controller_.connect(clientId_, attemptConfig_.user, attemptConfig_.password);
+  const uint32_t connectDurationMs = millis() - connectStartedAt;
+  Serial.printf(" [MQTT] connect blocked for %lu ms\n", static_cast<unsigned long>(connectDurationMs));
   const bool stale = attemptGeneration_ != requestedGeneration_ || !requestedEnabled_ || !wifi_.isStaConnected();
   if (stale) {
     beginDisconnectBarrier(client_.connected(), !wifi_.isStaConnected());
@@ -236,12 +241,11 @@ void MqttRuntime::connect() {
     retryPending_ = false;
     resetReconnectBackoff();
     setState(MqttState::Online);
-    bridge_.fullRefresh();
     return;
   }
   registerReconnectFailure(millis());
   retryPending_ = true;
-  bridge_.onTransportFailure();
+  emitTransportFailure();
   Serial.print(F("[MQTT] failed, rc="));
   Serial.print(client_.state());
   Serial.printf(" try again in %d seconds\n", reconnectTimeout_ / 1000);

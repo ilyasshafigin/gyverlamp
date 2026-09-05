@@ -3,9 +3,10 @@
 #ifdef USE_MQTT
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <HaMqttEntities.h>
 #include <PubSubClient.h>
+#include <stddef.h>
 
-#include "mqtt_bridge.h"
 #include "mqtt_config.h"
 #include "mqtt_state.h"
 
@@ -13,12 +14,20 @@ class WifiService;
 
 class MqttRuntime {
 public:
-  MqttRuntime(MqttBridge& bridge, WifiService& wifi);
+  enum class Event : uint8_t {
+    StateChanged = 1 << 0,
+    BecameOnline = 1 << 1,
+    TransportFailure = 1 << 2,
+  };
+
+  MqttRuntime(
+    HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiService& wifi
+  );
   MqttRuntime(const MqttRuntime&) = delete;
   MqttRuntime& operator=(const MqttRuntime&) = delete;
 
   void init(const MqttConfig& config, const char* clientId);
-  void activateCallbackTarget();
+  void completeEntityRegistration(bool registered);
   void tick();
   void requestApply(const MqttConfig& config);
   void requestEnabled(bool enabled);
@@ -26,17 +35,19 @@ public:
 
   MqttState state() const { return state_; }
   bool isEnabled() const { return requestedEnabled_; }
-  static MqttRuntime* callbackTarget() { return callbackTarget_; }
-  void dispatchCallback(HAEntity* entity, char* topic, byte* payload, unsigned int length);
+  bool isControllerReady() const { return bufferReady_; }
+  bool consumeEvent(Event event);
+  PubSubClient& client() { return client_; }
 
 private:
   static constexpr uint16_t kWifiClientTimeoutMs = 2000;
   static constexpr uint16_t kMqttSocketTimeoutSeconds = 2;
   static constexpr uint32_t kReconnectBaseMs = 5000;
   static constexpr uint32_t kReconnectMaxMs = 60000;
-  static MqttRuntime* callbackTarget_;
 
-  MqttBridge& bridge_;
+  HAMQTTController& controller_;
+  HAEntity** entityRegistry_;
+  size_t entityRegistryCapacity_;
   WifiService& wifi_;
   const char* clientId_ = nullptr;
   WiFiClient wifiClient_;
@@ -60,15 +71,18 @@ private:
   uint32_t attemptGeneration_ = 0;
   uint32_t reconnectTiming_ = 0;
   uint32_t reconnectTimeout_ = kReconnectBaseMs;
+  uint8_t pendingEvents_ = 0;
 
   bool isConfigValid(const MqttConfig& config) const;
   bool isPersistedConfigEnabled(const MqttConfig& config) const;
   bool activateRequestedConfig();
   void setState(MqttState state);
+  void emitEvent(Event event);
+  void emitTransportFailure();
   void beginDisconnectBarrier(bool disconnectClient, bool abortTransport);
   void completeDisconnectBarrier();
   bool handleRequestedCommands();
-  void connect();
+  void connectBlocking();
   bool shouldReconnect(uint32_t now) const;
   void resetReconnectBackoff();
   void registerReconnectFailure(uint32_t now);

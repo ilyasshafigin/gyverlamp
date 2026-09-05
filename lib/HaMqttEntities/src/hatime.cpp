@@ -1,4 +1,4 @@
-#include "ha_time.h"
+#include "hatime.h"
 
 #ifdef USE_MQTT
 
@@ -122,18 +122,19 @@ void HATime::onConnect(PubSubClient* client) {
   client->publish(topic, payload);
 }
 
-void HATime::sendState(PubSubClient* client) {
-  dirty = false;
+bool HATime::sendState(PubSubClient* client) {
   char topic[HA_MAX_TOPIC_LENGTH];
   getStateTopic(topic);
-  client->publish(topic, state);
+  const bool published = client->publish(topic, state);
+  if (published) dirty = false;
+  return published;
 }
 
-void HATime::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) {
+bool HATime::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) {
   (void)client;
 
   if (length < 1 || length > 8) {
-    return;
+    return false;
   }
 
   char buffer[9];
@@ -142,7 +143,7 @@ void HATime::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int l
 
   char normalized[6];
   if (!parseTime(buffer, normalized)) {
-    return;
+    return false;
   }
 
   setState(normalized);
@@ -150,6 +151,7 @@ void HATime::onReceivedTopic(PubSubClient* client, byte* payload, unsigned int l
   if (commandCallback != nullptr) {
     commandCallback(state);
   }
+  return true;
 }
 
 bool HATime::dispatchCommand(PubSubClient* client, const char* topic, byte* payload, unsigned int length) {
@@ -159,9 +161,7 @@ bool HATime::dispatchCommand(PubSubClient* client, const char* topic, byte* payl
     return false;
   }
 
-  onReceivedTopic(client, payload, length);
-  sendState(client);
-  return true;
+  return onReceivedTopic(client, payload, length);
 }
 
 #endif

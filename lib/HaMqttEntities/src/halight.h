@@ -10,6 +10,7 @@ class HADevice;
 class HALight : public HAEntity {
 protected:
   bool dirty;
+  uint32_t revision;
   bool state;
   uint8_t brightness;
 
@@ -30,6 +31,10 @@ public:
 
   inline bool getState() { return state; }
   inline uint8_t getBrightness() { return brightness; }
+  inline const char* getEffect() { return effect; }
+  inline uint8_t getRed() { return red; }
+  inline uint8_t getGreen() { return green; }
+  inline uint8_t getBlue() { return blue; }
   inline bool isDirty() override { return dirty; }
 
   void setState(bool state);
@@ -43,11 +48,17 @@ public:
   void onColorCommand(void (*callback)(uint8_t r, uint8_t g, uint8_t b));
 
   void onConnect(PubSubClient* client) override;
-  void onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) override;
-  void onReceivedBrightnessTopic(PubSubClient* client, byte* payload, unsigned int length);
-  void onReceivedEffectTopic(PubSubClient* client, byte* payload, unsigned int length);
-  void onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned int length);
-  void sendState(PubSubClient* client) override;
+  bool handleCommand(PubSubClient* client, char* topic, byte* payload, size_t length) override;
+  uint8_t discoveryStepCount() override;
+  HAOperationResult discoveryStep(PubSubClient* client, uint8_t step) override;
+  uint8_t stateStepCount() const override;
+  uint32_t stateRevision() const override { return revision; }
+  HAOperationResult stateStep(PubSubClient* client, uint8_t step, uint32_t expectedRevision) override;
+  bool onReceivedTopic(PubSubClient* client, byte* payload, unsigned int length) override;
+  bool onReceivedBrightnessTopic(PubSubClient* client, byte* payload, unsigned int length);
+  bool onReceivedEffectTopic(PubSubClient* client, byte* payload, unsigned int length);
+  bool onReceivedColorTopic(PubSubClient* client, byte* payload, unsigned int length);
+  bool sendState(PubSubClient* client) override;
 
   char* getCommandTopic(char* buffer) override;
   char* getOnOffCommandTopic(char* buffer);
