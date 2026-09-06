@@ -1,14 +1,14 @@
 #pragma once
 
 #include <Arduino.h>
+#include <MqttController.h>
 
 #include "mqtt_config.h"
-#include "mqtt_state.h"
 
 #ifdef USE_MQTT
+#include <ESP8266WiFi.h>
 #include <HaMqttEntities.h>
-
-#include "mqtt_runtime.h"
+#include <PubSubClient.h>
 #include "../util/timer.h"
 #endif
 
@@ -23,7 +23,7 @@ class WifiController;
 
 class MqttService {
 public:
-  using State = MqttState;
+  using State = MqttController::State;
 
   explicit MqttService(
     AudioService& audio,
@@ -66,6 +66,7 @@ private:
   RotationController& rotation_;
   SettingsRepository& settings_;
   TouchButton& button_;
+  WifiController& wifi_;
 
   String clientId_;
   String haEffectList_;
@@ -110,18 +111,25 @@ private:
   HASensorText haResetReason_;
 
   HAEntity* entityRegistry_[34] = {};
+  WiFiClient wifiClient_;
+  PubSubClient client_{wifiClient_};
   HAMQTTController controller_;
-  MqttRuntime runtime_;
+  MqttController mqttController_;
 
   void initializeAdapter();
   bool registerEntities();
   void tickTimers();
   void fullRefresh();
-  void onTransportState(MqttState state);
+  MqttController::Config controllerConfig(const MqttConfig& config) const;
+  void onTransportState(State state);
   void onTransportFailure();
+  static bool staConnectedForward(void* context);
+  static void abortTransportForward(void* context);
+  static uint32_t nowForward(void* context);
+  static void mqttEventForward(void* context, const MqttController::Event& event);
   static void haCallbackForward(void* context, HAEntity& entity, char* topic, byte* payload, size_t length);
   void handleHaCommand(HAEntity& entity, char* topic, byte* payload, size_t length);
-  void consumeRuntimeEvents();
+  void consumeControllerEvents();
   void telemetryTimerCallback();
   void stateRefreshTimerCallback();
   void syncLightState();

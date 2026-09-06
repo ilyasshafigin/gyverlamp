@@ -2,6 +2,7 @@
 
 #ifdef USE_MQTT
 #include <ESP8266WiFi.h>
+#include <WifiController.h>
 #include <cctype>
 #include <uptime_formatter.h>
 
@@ -89,6 +90,7 @@ MqttService::MqttService(
     rotation_(rotation),
     settings_(settings),
     button_(button),
+    wifi_(wifi),
     clientId_("GyverLamp-" + String(ESP.getChipId(), HEX)),
     haDevice_(clientId_.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
     haLight_("_light", "Gyver Lamp", haDevice_),
@@ -127,21 +129,59 @@ MqttService::MqttService(
     haChannel_("_channel", "WiFi Channel", haDevice_, nullptr, 0),
     haVcc_("_vcc", "VCC", haDevice_, "V", 3),
     haResetReason_("_reset_reason", "Reset Reason", haDevice_, 64),
-    runtime_(controller_, entityRegistry_, sizeof(entityRegistry_) / sizeof(entityRegistry_[0]), wifi) {
+    mqttController_(
+      controller_, client_, MqttController::LinkHooks{this, staConnectedForward, abortTransportForward, nowForward}
+    ) {
 }
 
 void MqttService::init(const MqttConfig& config) {
+  wifiClient_.setTimeout(2000);
+  client_.setSocketTimeout(2);
   initializeAdapter();
-  runtime_.init(config, clientId_.c_str());
-  const bool registered = runtime_.isControllerReady() && registerEntities() && controller_.registrationComplete();
-  runtime_.completeEntityRegistration(registered);
+  const bool controllerReady =
+    controller_.begin(client_, entityRegistry_, sizeof(entityRegistry_) / sizeof(entityRegistry_[0]));
+  const bool registered = controllerReady && registerEntities() && controller_.registrationComplete();
   if (registered) controller_.setCallback(this, haCallbackForward);
+  mqttController_.begin(controllerConfig(config), registered);
 }
 
 void MqttService::tick() {
   tickTimers();
-  runtime_.tick();
-  consumeRuntimeEvents();
+  {
+    LoopProfiler::measure(LoopProfiler::MQTT_LOOP, [this] { mqttController_.tick(millis()); });
+  }
+  consumeControllerEvents();
+}
+
+MqttController::Config MqttService::controllerConfig(const MqttConfig& config) const {
+  return {
+    strcmp(config.host, "none") == 0 ? "" : config.host,
+    clientId_.c_str(),
+    config.user,
+    config.password,
+    config.port,
+  };
+}
+
+bool MqttService::staConnectedForward(void* context) {
+  return static_cast<MqttService*>(context)->wifi_.staConnected();
+}
+
+void MqttService::abortTransportForward(void* context) {
+  static_cast<MqttService*>(context)->wifiClient_.abort();
+}
+
+uint32_t MqttService::nowForward(void*) {
+  return millis();
+}
+
+void MqttService::mqttEventForward(void* context, const MqttController::Event& event) {
+  MqttService* service = static_cast<MqttService*>(context);
+  switch (event.type) {
+    case MqttController::EventType::StateChanged: service->onTransportState(event.state); break;
+    case MqttController::EventType::BecameOnline: service->fullRefresh(); break;
+    case MqttController::EventType::TransportFailure: service->onTransportFailure(); break;
+  }
 }
 
 void MqttService::haCallbackForward(void* context, HAEntity& entity, char* topic, byte* payload, size_t length) {
@@ -333,12 +373,12 @@ void MqttService::tickTimers() {
   LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { stateRefreshTimer_.update(); });
 }
 
-void MqttService::onTransportState(MqttState state) {
+void MqttService::onTransportState(State state) {
   switch (state) {
-    case MqttState::Disabled: notifications_.onMqttDisabled(); break;
-    case MqttState::Connecting: notifications_.onMqttConnecting(); break;
-    case MqttState::Online: notifications_.onMqttConnected(); break;
-    case MqttState::ConfigError: notifications_.onMqttError(); break;
+    case State::Disabled: notifications_.onMqttDisabled(); break;
+    case State::Connecting: notifications_.onMqttConnecting(); break;
+    case State::Online: notifications_.onMqttConnected(); break;
+    case State::ConfigError: notifications_.onMqttError(); break;
     default: break;
   }
 }
@@ -479,10 +519,8 @@ void MqttService::onPaletteCommand(const char* name) {
   haPalette_.setState(Palettes::getPaletteName(effects_.getSelectedPalette()));
 }
 
-void MqttService::consumeRuntimeEvents() {
-  if (runtime_.consumeEvent(MqttRuntime::Event::TransportFailure)) onTransportFailure();
-  if (runtime_.consumeEvent(MqttRuntime::Event::StateChanged)) onTransportState(runtime_.state());
-  if (runtime_.consumeEvent(MqttRuntime::Event::BecameOnline)) fullRefresh();
+void MqttService::consumeControllerEvents() {
+  mqttController_.consumeEvents(mqttEventForward, this);
 }
 
 void MqttService::updateStates() {
@@ -490,23 +528,23 @@ void MqttService::updateStates() {
 }
 
 void MqttService::requestApply(const MqttConfig& config) {
-  runtime_.requestApply(config);
+  mqttController_.requestApply(controllerConfig(config));
 }
 
 void MqttService::requestEnabled(bool enabled) {
-  runtime_.requestEnabled(enabled);
+  mqttController_.requestEnabled(enabled);
 }
 
 void MqttService::requestRestart() {
-  runtime_.requestRestart();
+  mqttController_.requestRestart();
 }
 
 MqttService::State MqttService::state() const {
-  return runtime_.state();
+  return mqttController_.state();
 }
 
 bool MqttService::isEnabled() const {
-  return runtime_.isEnabled();
+  return mqttController_.isEnabled();
 }
 
 #else
