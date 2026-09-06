@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SettingsAsync.h>
+#include <OtaController.h>
 #include "../config.h"
 #include "../audio/audio_service.h"
 #include "../effect/controller.h"
@@ -22,7 +23,6 @@
 #include "state_notifier.h"
 
 #include "../network/mqtt_service.h"
-#include "../network/ota_service.h"
 
 class Lamp {
 public:
@@ -42,7 +42,7 @@ public:
   WifiService wifi;
   TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
   UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
-  OtaService ota;
+  OtaController ota;
   MqttService mqtt{audio, effects, notifications, power, rotation, settings, button, wifi};
   ConnectivityCoordinator connectivity{eeprom, wifi, ota, mqtt};
   WebService web{
@@ -51,4 +51,7 @@ public:
 
   void setup();
   void loop();
+
+private:
+  static void onOtaEvent(const OtaEvent& event, void* context);
 };

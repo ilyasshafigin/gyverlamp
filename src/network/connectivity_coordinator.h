@@ -1,13 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
+#include <OtaController.h>
 
 #include "mqtt_config.h"
 #include "wifi_config.h"
 
 class EepromStore;
 class MqttService;
-class OtaService;
 class WifiService;
 
 struct ConnectivityStatus {
@@ -22,7 +22,7 @@ struct ConnectivityStatus {
 
 class ConnectivityCoordinator {
 public:
-  ConnectivityCoordinator(EepromStore& eeprom, WifiService& wifi, OtaService& ota, MqttService& mqtt)
+  ConnectivityCoordinator(EepromStore& eeprom, WifiService& wifi, OtaController& ota, MqttService& mqtt)
     : eeprom_(eeprom),
       wifi_(wifi),
       ota_(ota),
@@ -51,7 +51,7 @@ public:
 private:
   EepromStore& eeprom_;
   WifiService& wifi_;
-  OtaService& ota_;
+  OtaController& ota_;
   MqttService& mqtt_;
   WifiConfig wifiConfig_{};
   MqttConfig mqttConfig_{};

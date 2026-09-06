@@ -1,30 +1,54 @@
-#include "ota_service.h"
+#include "OtaController.h"
+
+#include <Arduino.h>
 
 #ifdef USE_OTA
-
-#include <stdint.h>
-
 #include <ArduinoOTA.h>
+#endif
 
-void OtaService::init(const char* hostname, bool enabled) {
-  enabled_ = enabled;
+void OtaController::copyString(char* destination, uint8_t capacity, const char* source) {
+  if (capacity == 0) return;
 
-  ArduinoOTA.setHostname(hostname);
+  uint8_t index = 0;
+  if (source) {
+    while (source[index] && index + 1 < capacity) {
+      destination[index] = source[index];
+      ++index;
+    }
+  }
+  destination[index] = '\0';
+}
+
+void OtaController::init(const OtaConfig& config, OtaEventHandler eventHandler, void* context) {
+  copyString(hostname_, sizeof(hostname_), config.hostname);
+  copyString(password_, sizeof(password_), config.password);
+  copyString(passwordHash_, sizeof(passwordHash_), config.passwordHash);
+  port_ = config.port == 0 ? 8266 : config.port;
+  enabled_ = config.enabled;
+  eventHandler_ = eventHandler;
+  eventContext_ = context;
+
+#ifdef USE_OTA
+  ArduinoOTA.setHostname(hostname_);
+  ArduinoOTA.setPort(port_);
+  if (passwordHash_[0]) {
+    ArduinoOTA.setPasswordHash(passwordHash_);
+  } else if (password_[0]) {
+    ArduinoOTA.setPassword(password_);
+  }
 
   ArduinoOTA.onStart([this]() {
     Serial.println("[OTA] OTA Start");
     updating_ = true;
     lastProgressCallbackAt_ = 0;
     lastProgressPercent_ = 0xFF;
-
-    if (startCallback_) startCallback_();
+    emit(OtaEventType::Start);
   });
 
   ArduinoOTA.onEnd([this]() {
     Serial.println("[OTA] OTA End");
     updating_ = false;
-
-    if (endCallback_) endCallback_();
+    emit(OtaEventType::End);
   });
 
   ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
@@ -39,9 +63,7 @@ void OtaService::init(const char* hostname, bool enabled) {
 
     lastProgressPercent_ = percent;
     lastProgressCallbackAt_ = now;
-
-    if (progressCallback_) progressCallback_(percent);
-
+    emit(OtaEventType::Progress, percent);
     Serial.printf("[OTA] Progress: %u%%\n\r", percent);
   });
 
@@ -58,12 +80,13 @@ void OtaService::init(const char* hostname, bool enabled) {
       Serial.println("[OTA] End Failed");
 
     updating_ = false;
-
-    if (errorCallback_) errorCallback_();
+    emit(OtaEventType::Error, 0, static_cast<uint8_t>(error));
   });
+#endif
 }
 
-void OtaService::tick(bool isStaConnected) {
+void OtaController::tick(bool staConnected) {
+#ifdef USE_OTA
   if (updating_) {
     ArduinoOTA.handle();
     if (updating_) return;
@@ -74,7 +97,7 @@ void OtaService::tick(bool isStaConnected) {
     enabled_ = requestedEnabled_;
   }
 
-  if (!enabled_ || !isStaConnected) {
+  if (!enabled_ || !staConnected) {
     stopListener();
     restartRequested_ = false;
     return;
@@ -94,89 +117,46 @@ void OtaService::tick(bool isStaConnected) {
   }
 
   ArduinoOTA.handle();
+#else
+  (void)staConnected;
+#endif
 }
 
-bool OtaService::isEnabled() const {
+void OtaController::requestEnabled(bool enabled) {
+#ifdef USE_OTA
+  requestedEnabled_ = enabled;
+  enableRequestPending_ = true;
+#else
+  (void)enabled;
+#endif
+}
+
+void OtaController::requestRestart() {
+#ifdef USE_OTA
+  if (enabled_) restartRequested_ = true;
+#endif
+}
+
+bool OtaController::isEnabled() const {
+#ifdef USE_OTA
   return enabled_;
+#else
+  return false;
+#endif
 }
 
-void OtaService::stopListener() {
-  if (listenerActive_) ArduinoOTA.end();
-
-  beginAttempted_ = false;
-  listenerActive_ = false;
-  lastBeginAttemptAt_ = 0;
-}
-
-OtaService::State OtaService::state() const {
+OtaController::State OtaController::state() const {
+#ifdef USE_OTA
   if (updating_) return State::Updating;
   if (!enabled_) return State::Disabled;
   if (!listenerActive_) return State::WaitingForSta;
   return State::Listening;
-}
-
-void OtaService::requestEnabled(bool enabled) {
-  requestedEnabled_ = enabled;
-  enableRequestPending_ = true;
-}
-
-void OtaService::requestRestart() {
-  if (enabled_) restartRequested_ = true;
-}
-
-void OtaService::setStartHandler(VoidCallback callback) {
-  startCallback_ = callback;
-}
-
-void OtaService::setProgressHandler(ProgressCallback callback) {
-  progressCallback_ = callback;
-}
-
-void OtaService::setEndHandler(VoidCallback callback) {
-  endCallback_ = callback;
-}
-
-void OtaService::setErrorHandler(VoidCallback callback) {
-  errorCallback_ = callback;
-}
-
 #else
-
-void OtaService::init(const char*, bool) {
-}
-
-void OtaService::tick(bool) {
-}
-
-bool OtaService::isEnabled() const {
-  return false;
-}
-
-void OtaService::requestEnabled(bool) {
-}
-
-void OtaService::requestRestart() {
-}
-
-OtaService::State OtaService::state() const {
   return State::Disabled;
-}
-
-void OtaService::setStartHandler(VoidCallback) {
-}
-
-void OtaService::setProgressHandler(ProgressCallback) {
-}
-
-void OtaService::setEndHandler(VoidCallback) {
-}
-
-void OtaService::setErrorHandler(VoidCallback) {
-}
-
 #endif
+}
 
-const char* OtaService::stateName() const {
+const char* OtaController::stateName() const {
   switch (state()) {
     case State::Disabled: return "Disabled";
     case State::WaitingForSta: return "Waiting for STA";
@@ -184,4 +164,17 @@ const char* OtaService::stateName() const {
     case State::Updating: return "Updating";
   }
   return "Disabled";
+}
+
+void OtaController::stopListener() {
+#ifdef USE_OTA
+  if (listenerActive_) ArduinoOTA.end();
+#endif
+  beginAttempted_ = false;
+  listenerActive_ = false;
+  lastBeginAttemptAt_ = 0;
+}
+
+void OtaController::emit(OtaEventType type, uint8_t progress, uint8_t errorCode) {
+  if (eventHandler_) eventHandler_(OtaEvent{type, progress, errorCode}, eventContext_);
 }

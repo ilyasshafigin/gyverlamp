@@ -6,7 +6,6 @@
 #include "../storage/eeprom_store.h"
 
 #include "mqtt_service.h"
-#include "ota_service.h"
 
 void ConnectivityCoordinator::load() {
   wifiConfig_ = eeprom_.readWifiConfig();

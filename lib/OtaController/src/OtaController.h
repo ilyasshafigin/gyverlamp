@@ -1,0 +1,79 @@
+#pragma once
+
+#include <stdint.h>
+
+struct OtaConfig {
+  const char* hostname;
+  uint16_t port;
+  bool enabled;
+  const char* password;
+  const char* passwordHash;
+};
+
+enum class OtaEventType : uint8_t {
+  Start,
+  Progress,
+  End,
+  Error,
+};
+
+struct OtaEvent {
+  OtaEventType type;
+  uint8_t progress;
+  uint8_t errorCode;
+};
+
+using OtaEventHandler = void (*)(const OtaEvent&, void* context);
+
+class OtaController {
+public:
+  enum class State : uint8_t {
+    Disabled,
+    WaitingForSta,
+    Listening,
+    Updating,
+  };
+
+  OtaController() = default;
+  OtaController(const OtaController&) = delete;
+  OtaController& operator=(const OtaController&) = delete;
+  OtaController(OtaController&&) = delete;
+  OtaController& operator=(OtaController&&) = delete;
+
+  // passwordHash takes precedence when both password fields are non-empty.
+  void init(const OtaConfig& config, OtaEventHandler eventHandler, void* context);
+  void tick(bool staConnected);
+  void requestEnabled(bool enabled);
+  void requestRestart();
+
+  bool isEnabled() const;
+  State state() const;
+  const char* stateName() const;
+
+private:
+  static constexpr uint8_t kHostnameCapacity = 64;
+  static constexpr uint8_t kPasswordCapacity = 65;
+  static constexpr unsigned long kBeginRetryIntervalMs = 5000;
+  static constexpr unsigned long kProgressIntervalMs = 150;
+
+  char hostname_[kHostnameCapacity]{};
+  char password_[kPasswordCapacity]{};
+  char passwordHash_[kPasswordCapacity]{};
+  uint16_t port_ = 8266;
+  bool enabled_ = false;
+  bool beginAttempted_ = false;
+  bool listenerActive_ = false;
+  bool updating_ = false;
+  bool enableRequestPending_ = false;
+  bool requestedEnabled_ = false;
+  bool restartRequested_ = false;
+  unsigned long lastBeginAttemptAt_ = 0;
+  unsigned long lastProgressCallbackAt_ = 0;
+  uint8_t lastProgressPercent_ = 0xFF;
+  OtaEventHandler eventHandler_ = nullptr;
+  void* eventContext_ = nullptr;
+
+  static void copyString(char* destination, uint8_t capacity, const char* source);
+  void stopListener();
+  void emit(OtaEventType type, uint8_t progress = 0, uint8_t errorCode = 0);
+};

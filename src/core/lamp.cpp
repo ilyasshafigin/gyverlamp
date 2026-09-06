@@ -21,29 +21,10 @@ void Lamp::setup() {
   wifi.setErrorHandler([this] { notifications.onWifiError(); });
   wifi.setDisabledHandler([this] { notifications.onWifiDisabled(); });
 
-  ota.setStartHandler([this] {
-    notifications.onOtaStart();
-    frameRenderer.renderNow();
-  });
-
-  ota.setProgressHandler([this](uint8_t percent) {
-    notifications.onOtaProgress(percent);
-    frameRenderer.render();
-  });
-
-  ota.setEndHandler([this] {
-    notifications.onOtaEnd();
-    frameRenderer.renderNow();
-  });
-
-  ota.setErrorHandler([this]() {
-    notifications.onOtaError();
-    frameRenderer.renderNow();
-  });
-
   wifi.init(connectivity.wifiConfig());
   upd.init();
-  ota.init(wifi.getDeviceId().c_str(), connectivity.otaEnabled());
+  const OtaConfig otaConfig{wifi.getDeviceId().c_str(), 8266, connectivity.otaEnabled(), nullptr, nullptr};
+  ota.init(otaConfig, onOtaEvent, this);
   mqtt.init(connectivity.mqttConfig());
   time.init();
   web.init();
@@ -73,4 +54,26 @@ void Lamp::loop() {
 
   LoopProfiler::tick();
   yield();
+}
+
+void Lamp::onOtaEvent(const OtaEvent& event, void* context) {
+  auto* lamp = static_cast<Lamp*>(context);
+  switch (event.type) {
+    case OtaEventType::Start:
+      lamp->notifications.onOtaStart();
+      lamp->frameRenderer.renderNow();
+      break;
+    case OtaEventType::Progress:
+      lamp->notifications.onOtaProgress(event.progress);
+      lamp->frameRenderer.render();
+      break;
+    case OtaEventType::End:
+      lamp->notifications.onOtaEnd();
+      lamp->frameRenderer.renderNow();
+      break;
+    case OtaEventType::Error:
+      lamp->notifications.onOtaError();
+      lamp->frameRenderer.renderNow();
+      break;
+  }
 }
