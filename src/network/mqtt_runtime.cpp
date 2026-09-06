@@ -2,11 +2,11 @@
 
 #ifdef USE_MQTT
 #include <HaMqttEntities.h>
-#include "wifi_service.h"
+#include <WifiController.h>
 #include "../util/loop_profiler.h"
 
 MqttRuntime::MqttRuntime(
-  HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiService& wifi
+  HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiController& wifi
 )
   : controller_(controller),
     entityRegistry_(entityRegistry),
@@ -59,7 +59,7 @@ void MqttRuntime::tick() {
       completeDisconnectBarrier();
       return;
     case MqttState::WaitingForWifi:
-      if (wifi_.isStaConnected()) {
+      if (wifi_.staConnected()) {
         resetReconnectBackoff();
         reconnectTiming_ = millis();
         reconnectImmediately_ = true;
@@ -67,7 +67,7 @@ void MqttRuntime::tick() {
       }
       return;
     case MqttState::RetryWait:
-      if (!wifi_.isStaConnected()) {
+      if (!wifi_.staConnected()) {
         beginDisconnectBarrier(false, true);
       } else if (shouldReconnect(millis())) {
         reconnectImmediately_ = false;
@@ -79,12 +79,12 @@ void MqttRuntime::tick() {
       setState(MqttState::Connecting);
       return;
     case MqttState::Connecting:
-      if (!wifi_.isStaConnected()) beginDisconnectBarrier(false, true);
+      if (!wifi_.staConnected()) beginDisconnectBarrier(false, true);
       else
         connectBlocking();
       return;
     case MqttState::Online:
-      if (!wifi_.isStaConnected()) {
+      if (!wifi_.staConnected()) {
         beginDisconnectBarrier(false, true);
       } else if (!client_.connected()) {
         registerReconnectFailure(millis());
@@ -183,7 +183,7 @@ void MqttRuntime::completeDisconnectBarrier() {
     setState(MqttState::ConfigError);
     return;
   }
-  if (!wifi_.isStaConnected()) {
+  if (!wifi_.staConnected()) {
     retryPending_ = false;
     setState(MqttState::WaitingForWifi);
     return;
@@ -210,7 +210,7 @@ bool MqttRuntime::handleRequestedCommands() {
     resetReconnectBackoff();
     reconnectTiming_ = millis();
     reconnectImmediately_ = true;
-    setState(wifi_.isStaConnected() ? MqttState::RetryWait : MqttState::WaitingForWifi);
+    setState(wifi_.staConnected() ? MqttState::RetryWait : MqttState::WaitingForWifi);
     return true;
   }
   retryPending_ = false;
@@ -231,9 +231,9 @@ void MqttRuntime::connectBlocking() {
   const bool connected = controller_.connect(clientId_, attemptConfig_.user, attemptConfig_.password);
   const uint32_t connectDurationMs = millis() - connectStartedAt;
   Serial.printf(" [MQTT] connect blocked for %lu ms\n", static_cast<unsigned long>(connectDurationMs));
-  const bool stale = attemptGeneration_ != requestedGeneration_ || !requestedEnabled_ || !wifi_.isStaConnected();
+  const bool stale = attemptGeneration_ != requestedGeneration_ || !requestedEnabled_ || !wifi_.staConnected();
   if (stale) {
-    beginDisconnectBarrier(client_.connected(), !wifi_.isStaConnected());
+    beginDisconnectBarrier(client_.connected(), !wifi_.staConnected());
     return;
   }
   if (connected) {

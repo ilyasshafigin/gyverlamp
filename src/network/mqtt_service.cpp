@@ -80,7 +80,7 @@ MqttService::MqttService(
   RotationController& rotation,
   SettingsRepository& settings,
   TouchButton& button,
-  WifiService& wifi
+  WifiController& wifi
 )
   : audio_(audio),
     effects_(effects),
@@ -519,7 +519,7 @@ MqttService::MqttService(
   RotationController& rotation,
   SettingsRepository& settings,
   TouchButton& button,
-  WifiService& wifi
+  WifiController& wifi
 ) {
   (void)audio;
   (void)effects;

@@ -19,7 +19,7 @@ class PowerController;
 class RotationController;
 class SettingsRepository;
 class TouchButton;
-class WifiService;
+class WifiController;
 
 class MqttService {
 public:
@@ -33,7 +33,7 @@ public:
     RotationController& rotation,
     SettingsRepository& settings,
     TouchButton& button,
-    WifiService& wifi
+    WifiController& wifi
   );
 
   MqttService(const MqttService&) = delete;

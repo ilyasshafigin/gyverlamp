@@ -19,7 +19,7 @@ void OtaController::copyString(char* destination, uint8_t capacity, const char* 
   destination[index] = '\0';
 }
 
-void OtaController::init(const OtaConfig& config, OtaEventHandler eventHandler, void* context) {
+void OtaController::begin(const Config& config, EventHandler eventHandler, void* context) {
   copyString(hostname_, sizeof(hostname_), config.hostname);
   copyString(password_, sizeof(password_), config.password);
   copyString(passwordHash_, sizeof(passwordHash_), config.passwordHash);
@@ -42,13 +42,13 @@ void OtaController::init(const OtaConfig& config, OtaEventHandler eventHandler, 
     updating_ = true;
     lastProgressCallbackAt_ = 0;
     lastProgressPercent_ = 0xFF;
-    emit(OtaEventType::Start);
+    emit(EventType::Start);
   });
 
   ArduinoOTA.onEnd([this]() {
     Serial.println("[OTA] OTA End");
     updating_ = false;
-    emit(OtaEventType::End);
+    emit(EventType::End);
   });
 
   ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
@@ -63,7 +63,7 @@ void OtaController::init(const OtaConfig& config, OtaEventHandler eventHandler, 
 
     lastProgressPercent_ = percent;
     lastProgressCallbackAt_ = now;
-    emit(OtaEventType::Progress, percent);
+    emit(EventType::Progress, percent);
     Serial.printf("[OTA] Progress: %u%%\n\r", percent);
   });
 
@@ -80,7 +80,7 @@ void OtaController::init(const OtaConfig& config, OtaEventHandler eventHandler, 
       Serial.println("[OTA] End Failed");
 
     updating_ = false;
-    emit(OtaEventType::Error, 0, static_cast<uint8_t>(error));
+    emit(EventType::Error, 0, static_cast<uint8_t>(error));
   });
 #endif
 }
@@ -175,6 +175,6 @@ void OtaController::stopListener() {
   lastBeginAttemptAt_ = 0;
 }
 
-void OtaController::emit(OtaEventType type, uint8_t progress, uint8_t errorCode) {
-  if (eventHandler_) eventHandler_(OtaEvent{type, progress, errorCode}, eventContext_);
+void OtaController::emit(EventType type, uint8_t progress, uint8_t errorCode) {
+  if (eventHandler_) eventHandler_(Event{type, progress, errorCode}, eventContext_);
 }

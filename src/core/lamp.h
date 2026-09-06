@@ -2,6 +2,7 @@
 
 #include <SettingsAsync.h>
 #include <OtaController.h>
+#include <WifiController.h>
 #include "../config.h"
 #include "../audio/audio_service.h"
 #include "../effect/controller.h"
@@ -9,7 +10,6 @@
 #include "../hardware/led.h"
 #include "../network/connectivity_coordinator.h"
 #include "../network/upd_service.h"
-#include "../network/wifi_service.h"
 #include "../network/web_service.h"
 #include "../notification/controller.h"
 #include "../storage/eeprom_store.h"
@@ -39,7 +39,7 @@ public:
   NotificationController notifications{eeprom, power, runningText, stateNotifier, time};
   FrameRenderer frameRenderer{effects, led, notifications, power, stateNotifier};
   RotationController rotation{eeprom, effects, stateNotifier};
-  WifiService wifi;
+  WifiController wifi;
   TouchButton button{eeprom, effects, notifications, power, rotation, settings, stateNotifier, BTN_PIN};
   UpdService upd{effects, power, settings, stateNotifier, time, button, UDP_PORT};
   OtaController ota;
@@ -53,5 +53,6 @@ public:
   void loop();
 
 private:
-  static void onOtaEvent(const OtaEvent& event, void* context);
+  static void onWifiEvent(const WifiController::Event& event, void* context);
+  static void onOtaEvent(const OtaController::Event& event, void* context);
 };

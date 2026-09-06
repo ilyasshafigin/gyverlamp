@@ -2,13 +2,13 @@
 
 #include <Arduino.h>
 #include <OtaController.h>
+#include <WifiController.h>
 
 #include "mqtt_config.h"
 #include "wifi_config.h"
 
 class EepromStore;
 class MqttService;
-class WifiService;
 
 struct ConnectivityStatus {
   String deviceId;
@@ -22,7 +22,7 @@ struct ConnectivityStatus {
 
 class ConnectivityCoordinator {
 public:
-  ConnectivityCoordinator(EepromStore& eeprom, WifiService& wifi, OtaController& ota, MqttService& mqtt)
+  ConnectivityCoordinator(EepromStore& eeprom, WifiController& wifi, OtaController& ota, MqttService& mqtt)
     : eeprom_(eeprom),
       wifi_(wifi),
       ota_(ota),
@@ -31,6 +31,7 @@ public:
   void load();
 
   WifiConfig wifiConfig() const { return wifiConfig_; }
+  WifiController::Config wifiRuntimeConfig() const;
   MqttConfig mqttConfig() const { return mqttConfig_; }
   bool otaEnabled() const { return otaEnabled_; }
   ConnectivityStatus status() const;
@@ -50,7 +51,7 @@ public:
 
 private:
   EepromStore& eeprom_;
-  WifiService& wifi_;
+  WifiController& wifi_;
   OtaController& ota_;
   MqttService& mqtt_;
   WifiConfig wifiConfig_{};

@@ -2,31 +2,31 @@
 
 #include <stdint.h>
 
-struct OtaConfig {
-  const char* hostname;
-  uint16_t port;
-  bool enabled;
-  const char* password;
-  const char* passwordHash;
-};
-
-enum class OtaEventType : uint8_t {
-  Start,
-  Progress,
-  End,
-  Error,
-};
-
-struct OtaEvent {
-  OtaEventType type;
-  uint8_t progress;
-  uint8_t errorCode;
-};
-
-using OtaEventHandler = void (*)(const OtaEvent&, void* context);
-
 class OtaController {
 public:
+  struct Config {
+    const char* hostname;
+    uint16_t port;
+    bool enabled;
+    const char* password;
+    const char* passwordHash;
+  };
+
+  enum class EventType : uint8_t {
+    Start,
+    Progress,
+    End,
+    Error,
+  };
+
+  struct Event {
+    EventType type;
+    uint8_t progress;
+    uint8_t errorCode;
+  };
+
+  using EventHandler = void (*)(const Event&, void* context);
+
   enum class State : uint8_t {
     Disabled,
     WaitingForSta,
@@ -41,7 +41,7 @@ public:
   OtaController& operator=(OtaController&&) = delete;
 
   // passwordHash takes precedence when both password fields are non-empty.
-  void init(const OtaConfig& config, OtaEventHandler eventHandler, void* context);
+  void begin(const Config& config, EventHandler eventHandler, void* context);
   void tick(bool staConnected);
   void requestEnabled(bool enabled);
   void requestRestart();
@@ -70,10 +70,10 @@ private:
   unsigned long lastBeginAttemptAt_ = 0;
   unsigned long lastProgressCallbackAt_ = 0;
   uint8_t lastProgressPercent_ = 0xFF;
-  OtaEventHandler eventHandler_ = nullptr;
+  EventHandler eventHandler_ = nullptr;
   void* eventContext_ = nullptr;
 
   static void copyString(char* destination, uint8_t capacity, const char* source);
   void stopListener();
-  void emit(OtaEventType type, uint8_t progress = 0, uint8_t errorCode = 0);
+  void emit(EventType type, uint8_t progress = 0, uint8_t errorCode = 0);
 };

@@ -10,7 +10,7 @@
 #include "mqtt_config.h"
 #include "mqtt_state.h"
 
-class WifiService;
+class WifiController;
 
 class MqttRuntime {
 public:
@@ -21,7 +21,7 @@ public:
   };
 
   MqttRuntime(
-    HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiService& wifi
+    HAMQTTController& controller, HAEntity** entityRegistry, size_t entityRegistryCapacity, WifiController& wifi
   );
   MqttRuntime(const MqttRuntime&) = delete;
   MqttRuntime& operator=(const MqttRuntime&) = delete;
@@ -48,7 +48,7 @@ private:
   HAMQTTController& controller_;
   HAEntity** entityRegistry_;
   size_t entityRegistryCapacity_;
-  WifiService& wifi_;
+  WifiController& wifi_;
   const char* clientId_ = nullptr;
   WiFiClient wifiClient_;
   PubSubClient client_{wifiClient_};
