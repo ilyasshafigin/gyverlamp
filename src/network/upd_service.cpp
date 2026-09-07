@@ -118,12 +118,12 @@ void UpdService::sendReply(const char* reply) {
 }
 
 void UpdService::writeTime(char* buffer, size_t bufferSize) const {
-  snprintf(buffer, bufferSize, "%02u:%02u", time_.getHours(), time_.getMinutes());
+  snprintf(buffer, bufferSize, "%02u:%02u", time_.hours(), time_.minutes());
 }
 
 void UpdService::writeCurrentState(char* reply, size_t replySize) const {
-  const Effects::Id effectId = effects_.getSelectedEffectId();
-  const EffectSettings& settings = settings_.getEffectSettings(effectId);
+  const Effects::Id effectId = effects_.selectedEffectId();
+  const EffectSettings& settings = settings_.effectSettings(effectId);
   char time[6];
   writeTime(time, sizeof(time));
 

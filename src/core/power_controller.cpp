@@ -78,7 +78,7 @@ bool PowerController::setAutoOffMinutes(int minutes) {
   return true;
 }
 
-uint32_t PowerController::getAutoOffRemainingSeconds() const {
+uint32_t PowerController::autoOffRemainingSeconds() const {
   if (!on_ || autoOffMinutes_ == 0) return 0;
 
   const uint32_t timeoutMs = static_cast<uint32_t>(autoOffMinutes_) * 60000UL;

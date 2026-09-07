@@ -16,14 +16,14 @@ public:
 
   void init();
 
-  uint16_t getAutoOffMinutes() const { return autoOffMinutes_; }
+  uint16_t autoOffMinutes() const { return autoOffMinutes_; }
   bool setAutoOffMinutes(int minutes);
-  uint32_t getAutoOffRemainingSeconds() const;
+  uint32_t autoOffRemainingSeconds() const;
 
   bool isOn() const { return on_; }
   bool isEffectVisible() const { return effectOpacity_.value() > 0; }
   bool isFullyOff() const { return !on_ && effectOpacity_.value() == 0; }
-  uint8_t getEffectOpacity() const { return effectOpacity_.value(); }
+  uint8_t effectOpacity() const { return effectOpacity_.value(); }
   bool isFading() const { return effectOpacity_.isRunning(); }
 
   void on();

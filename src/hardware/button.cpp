@@ -97,12 +97,12 @@ void TouchButton::tick() {
 
     if (button_.hold()) {
       brightDirection_ = !brightDirection_;
-      const EffectSettings& s = settings_.getEffectSettings(effects_.getSelectedEffectId());
+      const EffectSettings& s = settings_.effectSettings(effects_.selectedEffectId());
       notifications_.onButtonBrightness(s.brightness, brightDirection_);
     }
 
     if (button_.step()) {
-      const EffectSettings& effectSettings = settings_.getEffectSettings(effects_.getSelectedEffectId());
+      const EffectSettings& effectSettings = settings_.effectSettings(effects_.selectedEffectId());
       uint8_t newBrightness = effectSettings.brightness;
       if (brightDirection_) {
         if (effectSettings.brightness < 10U) newBrightness = effectSettings.brightness + 1U;

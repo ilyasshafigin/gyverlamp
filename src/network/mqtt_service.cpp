@@ -209,24 +209,24 @@ void MqttService::handleHaCommand(HAEntity& entity, char* topic, byte* payload, 
     rotation_.setIntervalSec(
       rotationPresetSecondsForIndex(rotationPresetIndexForLabel(haRotationInterval_.getState()))
     );
-    haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.getIntervalSec()));
+    haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.intervalSec()));
   } else if (&entity == &haButtonSwitch_) {
     button_.setEnabled(haButtonSwitch_.getState());
     haButtonSwitch_.setState(button_.isEnabled());
   } else if (&entity == &haEffectScale_) {
     effects_.setEffectScale(haEffectScale_.getState());
-    haEffectScale_.setState(settings_.getEffectSettings(effects_.getSelectedEffectId()).scale);
+    haEffectScale_.setState(settings_.effectSettings(effects_.selectedEffectId()).scale);
   } else if (&entity == &haEffectSpeed_) {
     effects_.setEffectSpeed(haEffectSpeed_.getState());
-    haEffectSpeed_.setState(settings_.getEffectSettings(effects_.getSelectedEffectId()).speed);
+    haEffectSpeed_.setState(settings_.effectSettings(effects_.selectedEffectId()).speed);
   } else if (&entity == &haEffectBrightness_) {
     effects_.setEffectBrightness(haEffectBrightness_.getState());
-    haEffectBrightness_.setState(settings_.getEffectSettings(effects_.getSelectedEffectId()).brightness);
+    haEffectBrightness_.setState(settings_.effectSettings(effects_.selectedEffectId()).brightness);
   } else if (&entity == &haPalette_)
     onPaletteCommand(haPalette_.getState());
   else if (&entity == &haAutoOff_) {
     power_.setAutoOffMinutes(haAutoOff_.getState());
-    haAutoOff_.setState(power_.getAutoOffMinutes());
+    haAutoOff_.setState(power_.autoOffMinutes());
   } else if (&entity == &haAudioMode_) {
     audio_.setMode(parseAudioMode(haAudioMode_.getState()));
     haAudioMode_.setState(audioModeName(audio_.config().mode));
@@ -285,7 +285,7 @@ void MqttService::handleHaCommand(HAEntity& entity, char* topic, byte* payload, 
     &entity == &haNotificationQuietHours_ || &entity == &haNotificationQuietStart_ ||
     &entity == &haNotificationQuietEnd_
   ) {
-    NotificationQuietHours q = notifications_.getQuietHours();
+    NotificationQuietHours q = notifications_.quietHours();
     q.enabled = haNotificationQuietHours_.getState();
     uint16_t start = q.startMinutes, end = q.endMinutes;
     if (parseHaTime(haNotificationQuietStart_.getState(), start)) q.startMinutes = start;
@@ -298,13 +298,13 @@ void MqttService::handleHaCommand(HAEntity& entity, char* topic, byte* payload, 
 void MqttService::initializeAdapter() {
   haUserNotification_.setState(kUserNotificationOff);
   haUserNotificationDuration_.setState(0);
-  haPalette_.setState(Palettes::getPaletteName(Palettes::Id::Auto));
-  haPalette_.addOption(Palettes::getPaletteName(Palettes::Id::Auto));
+  haPalette_.setState(Palettes::paletteName(Palettes::Id::Auto));
+  haPalette_.addOption(Palettes::paletteName(Palettes::Id::Auto));
   for (uint8_t i = 0; i < Palettes::kSelectableCount; i++)
-    haPalette_.addOption(Palettes::getPaletteName(Palettes::kSelectableOrder[i]));
+    haPalette_.addOption(Palettes::paletteName(Palettes::kSelectableOrder[i]));
   for (uint8_t i = 0; i < kRotationPresetCount; i++)
     haRotationInterval_.addOption(kRotationPresetLabels[i]);
-  haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.getIntervalSec()));
+  haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.intervalSec()));
   const AudioConfig& config = audio_.config();
   haAudioMode_.setState(audioModeName(config.mode));
   haAudioBand_.setState(audioBandName(config.band));
@@ -318,14 +318,14 @@ void MqttService::initializeAdapter() {
 bool MqttService::registerEntities() {
   size_t effectListCapacity = 0;
   for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
-    effectListCapacity += strlen(Effects::getEffectName(Effects::kDisplayOrder[i]));
+    effectListCapacity += strlen(Effects::effectName(Effects::kDisplayOrder[i]));
     if (i) effectListCapacity++;
   }
   if (!haEffectList_.reserve(effectListCapacity)) return false;
   haEffectList_ = "";
   for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
     if (i) haEffectList_ += ',';
-    haEffectList_ += Effects::getEffectName(Effects::kDisplayOrder[i]);
+    haEffectList_ += Effects::effectName(Effects::kDisplayOrder[i]);
   }
   haLight_.setEffectList(haEffectList_.c_str());
   HAEntity* const entities[] = {
@@ -393,23 +393,23 @@ void MqttService::onTransportFailure() {
 }
 
 void MqttService::fullRefresh() {
-  const Effects::Id id = effects_.getSelectedEffectId();
-  const EffectSettings& s = settings_.getEffectSettings(id);
-  const NotificationQuietHours& q = notifications_.getQuietHours();
+  const Effects::Id id = effects_.selectedEffectId();
+  const EffectSettings& s = settings_.effectSettings(id);
+  const NotificationQuietHours& q = notifications_.quietHours();
   haLight_.setState(power_.isOn());
-  haLight_.setBrightness(settings_.getGlobalBrightness());
-  haLight_.setEffect(Effects::getEffectName(id));
-  haLight_.setColor(effects_.getRed(), effects_.getGreen(), effects_.getBlue());
-  haPalette_.setState(Palettes::getPaletteName(effects_.getSelectedPalette()));
+  haLight_.setBrightness(settings_.globalBrightness());
+  haLight_.setEffect(Effects::effectName(id));
+  haLight_.setColor(effects_.red(), effects_.green(), effects_.blue());
+  haPalette_.setState(Palettes::paletteName(effects_.selectedPalette()));
   haRotationSwitch_.setState(rotation_.isActive());
-  haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.getIntervalSec()));
+  haRotationInterval_.setState(rotationPresetLabelForSeconds(rotation_.intervalSec()));
   haButtonSwitch_.setState(button_.isEnabled());
   haEffectScale_.setState(s.scale);
   haEffectSpeed_.setState(s.speed);
   haEffectBrightness_.setState(s.brightness);
-  haAutoOff_.setState(power_.getAutoOffMinutes());
-  haAutoOffRemaining_.setState(power_.getAutoOffRemainingSeconds());
-  haUserNotificationRemaining_.setState(notifications_.getUserNotificationRemainingSeconds());
+  haAutoOff_.setState(power_.autoOffMinutes());
+  haAutoOffRemaining_.setState(power_.autoOffRemainingSeconds());
+  haUserNotificationRemaining_.setState(notifications_.userNotificationRemainingSeconds());
   haNotificationQuietHours_.setState(q.enabled);
   char quietStart[6];
   char quietEnd[6];
@@ -452,20 +452,20 @@ void MqttService::stateRefreshTimerCallback() {
 
 void MqttService::syncLightState() {
   haLight_.setState(power_.isOn());
-  haLight_.setBrightness(settings_.getGlobalBrightness());
+  haLight_.setBrightness(settings_.globalBrightness());
 }
 
 void MqttService::syncSelectedEffectState() {
-  const Effects::Id id = effects_.getSelectedEffectId();
-  const EffectSettings& s = settings_.getEffectSettings(id);
-  haLight_.setEffect(Effects::getEffectName(id));
+  const Effects::Id id = effects_.selectedEffectId();
+  const EffectSettings& s = settings_.effectSettings(id);
+  haLight_.setEffect(Effects::effectName(id));
   haEffectScale_.setState(s.scale);
   haEffectSpeed_.setState(s.speed);
   haEffectBrightness_.setState(s.brightness);
 }
 
 void MqttService::syncQuietHoursState() {
-  const NotificationQuietHours& q = notifications_.getQuietHours();
+  const NotificationQuietHours& q = notifications_.quietHours();
   haNotificationQuietHours_.setState(q.enabled);
   char quietStart[6];
   char quietEnd[6];
@@ -477,14 +477,14 @@ void MqttService::syncQuietHoursState() {
 }
 
 void MqttService::syncUserNotificationState() {
-  const UserNotificationType type = notifications_.getUserNotificationType();
+  const UserNotificationType type = notifications_.userNotificationType();
   haUserNotification_.setState(
     type == UserNotificationType::Alarm     ? kUserNotificationAlarm
     : type == UserNotificationType::Warning ? kUserNotificationWarning
     : type == UserNotificationType::Text    ? kUserNotificationText
                                             : kUserNotificationOff
   );
-  haUserNotificationRemaining_.setState(notifications_.getUserNotificationRemainingSeconds());
+  haUserNotificationRemaining_.setState(notifications_.userNotificationRemainingSeconds());
 }
 
 void MqttService::onLightCommand(bool on, uint8_t brightness) {
@@ -496,7 +496,7 @@ void MqttService::onLightCommand(bool on, uint8_t brightness) {
 void MqttService::onEffectCommand(const char* name) {
   Serial.print(F("[MQTT] Command arrived: effect set to "));
   Serial.println(name);
-  Effects::Id id = Effects::getEffectId(name);
+  Effects::Id id = Effects::effectId(name);
   if (id == Effects::Id::INVALID) return;
   rotation_.disable();
   effects_.setEffect(id);
@@ -511,7 +511,7 @@ void MqttService::onColorCommand(uint8_t r, uint8_t g, uint8_t b) {
   effects_.setColor(r, g, b);
   effects_.setEffect(Effects::fallback());
   haRotationSwitch_.setState(rotation_.isActive());
-  haLight_.setColor(effects_.getRed(), effects_.getGreen(), effects_.getBlue());
+  haLight_.setColor(effects_.red(), effects_.green(), effects_.blue());
   syncSelectedEffectState();
 }
 
@@ -527,7 +527,7 @@ void MqttService::onPaletteCommand(const char* name) {
   Serial.print(F("[MQTT] Command arrived: palette set to "));
   Serial.println(name);
   effects_.setPalette(Palettes::parsePaletteName(name));
-  haPalette_.setState(Palettes::getPaletteName(effects_.getSelectedPalette()));
+  haPalette_.setState(Palettes::paletteName(effects_.selectedPalette()));
 }
 
 void MqttService::consumeControllerEvents() {

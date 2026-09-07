@@ -43,7 +43,7 @@ public:
     end(section);
   }
 
-  static const Sample& get(Section section) { return samples_[section]; }
+  static const Sample& sample(Section section) { return samples_[section]; }
 
 private:
   static Sample samples_[Section::SECTION_COUNT];

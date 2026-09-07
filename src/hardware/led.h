@@ -68,15 +68,15 @@ public:
 
   void init();
 
-  CRGB* getLeds() { return leds_; }
-  CRGB* getLedsBuff() { return ledsbuff_; }
-  const CRGB* getLeds() const { return leds_; }
-  const CRGB* getLedsBuff() const { return ledsbuff_; }
+  CRGB* leds() { return leds_; }
+  CRGB* ledsBuff() { return ledsbuff_; }
+  const CRGB* leds() const { return leds_; }
+  const CRGB* ledsBuff() const { return ledsbuff_; }
 
-  CRGB& getLed(size_t index) { return leds_[index]; }
-  CRGB& getLedBuff(size_t index) { return ledsbuff_[index]; }
-  const CRGB& getLed(size_t index) const { return leds_[index]; }
-  const CRGB& getLedBuff(size_t index) const { return ledsbuff_[index]; }
+  CRGB& led(size_t index) { return leds_[index]; }
+  CRGB& ledBuff(size_t index) { return ledsbuff_[index]; }
+  const CRGB& led(size_t index) const { return leds_[index]; }
+  const CRGB& ledBuff(size_t index) const { return ledsbuff_[index]; }
 
   void setLed(size_t index, const CRGB& color) { leds_[index] = color; }
   void setLedBuff(size_t index, const CRGB& color) { ledsbuff_[index] = color; }
@@ -92,47 +92,47 @@ public:
   void clearLedsBuff();
   void copyLedsBuffToLeds();
 
-  uint32_t getPixelColor(int x, int y) const {
+  uint32_t pixelColor(int x, int y) const {
     if (!isValidXY(x, y)) return 0;
-    return packColor(leds_[getPixelNumber(x, y)]);
+    return packColor(leds_[pixelNumber(x, y)]);
   }
-  uint32_t getPixelColorBuff(int x, int y) const {
+  uint32_t pixelColorBuff(int x, int y) const {
     if (!isValidXY(x, y)) return 0;
-    return packColor(ledsbuff_[getPixelNumber(x, y)]);
+    return packColor(ledsbuff_[pixelNumber(x, y)]);
   }
-  uint32_t getPixelColor(uint16_t pixelNum) const {
+  uint32_t pixelColor(uint16_t pixelNum) const {
     if (pixelNum >= NUM_LEDS) return 0;
     return packColor(leds_[pixelNum]);
   }
-  uint32_t getPixelColorBuff(uint16_t pixelNum) const {
+  uint32_t pixelColorBuff(uint16_t pixelNum) const {
     if (pixelNum >= NUM_LEDS) return 0;
     return packColor(ledsbuff_[pixelNum]);
   }
-  uint32_t getPixelColor(const CRGB& pixel) const { return packColor(pixel); }
+  uint32_t pixelColor(const CRGB& pixel) const { return packColor(pixel); }
 
-  uint16_t getPixelNumber(int x, int y) const {
+  uint16_t pixelNumber(int x, int y) const {
     if (THIS_Y % 2 == 0) {
       return (THIS_Y * _WIDTH + THIS_X);
     }
     return (THIS_Y * _WIDTH + _WIDTH - THIS_X - 1);
   }
 
-  CRGB& getPixelSafe(int x, int y) {
+  CRGB& pixelSafe(int x, int y) {
     if (!isValidXY(x, y)) return dummyLed_;
-    return leds_[getPixelNumber(x, y)];
+    return leds_[pixelNumber(x, y)];
   }
-  const CRGB& getPixelSafe(int x, int y) const {
+  const CRGB& pixelSafe(int x, int y) const {
     if (!isValidXY(x, y)) return dummyLed_;
-    return leds_[getPixelNumber(x, y)];
+    return leds_[pixelNumber(x, y)];
   }
 
-  CRGB& getPixel(uint8_t x, uint8_t y) { return leds_[getPixelNumber(x, y)]; }
-  const CRGB& getPixel(uint8_t x, uint8_t y) const { return leds_[getPixelNumber(x, y)]; }
-  CRGB& getPixelBuff(uint8_t x, uint8_t y) { return ledsbuff_[getPixelNumber(x, y)]; }
-  const CRGB& getPixelBuff(uint8_t x, uint8_t y) const { return ledsbuff_[getPixelNumber(x, y)]; }
+  CRGB& pixel(uint8_t x, uint8_t y) { return leds_[pixelNumber(x, y)]; }
+  const CRGB& pixel(uint8_t x, uint8_t y) const { return leds_[pixelNumber(x, y)]; }
+  CRGB& pixelBuff(uint8_t x, uint8_t y) { return ledsbuff_[pixelNumber(x, y)]; }
+  const CRGB& pixelBuff(uint8_t x, uint8_t y) const { return ledsbuff_[pixelNumber(x, y)]; }
 
-  void drawPixel(uint8_t x, uint8_t y, const CRGB& color) { leds_[getPixelNumber(x, y)] = color; }
-  void drawPixelBuff(uint8_t x, uint8_t y, const CRGB& color) { ledsbuff_[getPixelNumber(x, y)] = color; }
+  void drawPixel(uint8_t x, uint8_t y, const CRGB& color) { leds_[pixelNumber(x, y)] = color; }
+  void drawPixelBuff(uint8_t x, uint8_t y, const CRGB& color) { ledsbuff_[pixelNumber(x, y)] = color; }
   void drawPixelSafe(int x, int y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
   void drawPixelSafeBuff(int x, int y, const CRGB& color) { drawPixelSafe(ledsbuff_, x, y, color); }
   void drawPixelSafe(float x, float y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
@@ -196,14 +196,14 @@ private:
            static_cast<uint32_t>(pixel.b);
   }
 
-  uint32_t getPixelColor(CRGB* buff, int x, int y) const {
+  uint32_t pixelColor(CRGB* buff, int x, int y) const {
     if (!isValidXY(x, y)) return 0;
-    return packColor(buff[getPixelNumber(x, y)]);
+    return packColor(buff[pixelNumber(x, y)]);
   }
 
   void drawPixelSafe(CRGB* buff, int x, int y, const CRGB& color) {
     if (!isValidXY(x, y)) return;
-    buff[getPixelNumber(x, y)] = color;
+    buff[pixelNumber(x, y)] = color;
   }
   void drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color);
 

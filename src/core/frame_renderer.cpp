@@ -40,7 +40,7 @@ void FrameRenderer::render(bool forceShow) {
   if (power_.isEffectVisible()) {
     LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { frameChanged = effects_.render(forceEffectRender); });
 
-    const uint8_t combinedOpacity = scale8(power_.getEffectOpacity(), effects_.getTransitionOpacity());
+    const uint8_t combinedOpacity = scale8(power_.effectOpacity(), effects_.transitionOpacity());
     if (combinedOpacity < 255) {
       if (combinedOpacity == 0) {
         led_.clearLeds();
@@ -73,7 +73,7 @@ void FrameRenderer::render(bool forceShow) {
 void FrameRenderer::showOrBlackout(bool forceShow, bool frameChanged, bool visible) {
   if (visible) {
     if (forceShow || frameChanged) {
-      LoopProfiler::measure(LoopProfiler::LEDS_SHOW, [this]() { led_.showLeds(effects_.getOutputBrightness()); });
+      LoopProfiler::measure(LoopProfiler::LEDS_SHOW, [this]() { led_.showLeds(effects_.outputBrightness()); });
       offFrameCleared_ = false;
     }
     return;

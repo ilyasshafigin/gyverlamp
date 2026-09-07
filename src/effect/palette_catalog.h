@@ -57,15 +57,15 @@ namespace Palettes {
     return clamp(toIndex(id));
   }
 
-  inline Id getPaletteIdByIndex(uint8_t index) {
+  inline Id paletteIdByIndex(uint8_t index) {
     return index >= kSelectableCount ? Id::Auto : kSelectableOrder[index];
   }
 
-  const char* getPaletteName(Id id);
+  const char* paletteName(Id id);
   Id parsePaletteName(const char* name);
 
-  const CRGBPalette16* getPalette(Id id);
-  const CRGBPalette16* getPaletteByScale(uint8_t scale);
+  const CRGBPalette16* palette(Id id);
+  const CRGBPalette16* paletteByScale(uint8_t scale);
   const CRGBPalette16* resolvePalette(Id selected, const CRGBPalette16* autoPalette);
 
 } // namespace Palettes

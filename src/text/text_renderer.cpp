@@ -46,9 +46,9 @@ void TextRenderer::drawCharTo(Target& target, int16_t x, int16_t y, uint8_t lett
   for (uint8_t i = start_pos; i < finish_pos; i++) {
     int thisByte;
     if (MIRR_V) {
-      thisByte = getFont(static_cast<uint8_t>(letter), kLetterWidth - 1 - i);
+      thisByte = font(static_cast<uint8_t>(letter), kLetterWidth - 1 - i);
     } else {
-      thisByte = getFont(static_cast<uint8_t>(letter), i);
+      thisByte = font(static_cast<uint8_t>(letter), i);
     }
 
     for (uint8_t j = 0; j < kLetHeight; j++) {
@@ -119,7 +119,7 @@ void TextRenderer::drawString(
 }
 
 // интерпретатор кода символа в массиве fontHEX
-uint8_t TextRenderer::getFont(uint8_t letter, uint8_t row) {
+uint8_t TextRenderer::font(uint8_t letter, uint8_t row) {
   uint8_t code = letter - '0' + 16; // перевод код символа из таблицы ASCII в номер согласно нумерации массива
   if (code <= 90) {
     return pgm_read_byte(&(font5x8[code][row]));

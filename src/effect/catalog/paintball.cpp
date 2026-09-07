@@ -55,12 +55,12 @@ void EffectPaintball::render(EffectContext& ctx) {
 
   // The color of each point shifts over time, each at a different speed.
   uint32_t ms = ctx.nowMs / (ctx.scale / 4 + 1);
-  ctx.led.getPixelSafe(highByte(i * paintWidth) + BORDERTHICKNESS, highByte(j * paintHeight) + BORDERTHICKNESS) +=
+  ctx.led.pixelSafe(highByte(i * paintWidth) + BORDERTHICKNESS, highByte(j * paintHeight) + BORDERTHICKNESS) +=
     ColorFromPalette(palette, ms / 29);
-  ctx.led.getPixelSafe(highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS) +=
+  ctx.led.pixelSafe(highByte(j * paintWidth) + BORDERTHICKNESS, highByte(k * paintHeight) + BORDERTHICKNESS) +=
     ColorFromPalette(palette, ms / 41);
-  ctx.led.getPixelSafe(highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS) +=
+  ctx.led.pixelSafe(highByte(k * paintWidth) + BORDERTHICKNESS, highByte(m * paintHeight) + BORDERTHICKNESS) +=
     ColorFromPalette(palette, ms / 37);
-  ctx.led.getPixelSafe(highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS) +=
+  ctx.led.pixelSafe(highByte(m * paintWidth) + BORDERTHICKNESS, highByte(i * paintHeight) + BORDERTHICKNESS) +=
     ColorFromPalette(palette, ms / 53);
 }

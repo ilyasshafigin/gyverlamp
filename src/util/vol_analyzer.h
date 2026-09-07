@@ -35,12 +35,12 @@ public:
   void setVolMax(int32_t scale) { volMax_ = scale; }
   void setTrsh(int32_t trsh) { trsh_ = trsh; }
 
-  int32_t getRaw() { return raw_; }
-  int32_t getRawMax() { return rawMax_; }
-  int32_t getVol() { return volF_.getFil(); }
-  int32_t getMin() { return minF_.getFil(); }
-  int32_t getMax() { return maxF_.getFil(); }
-  bool getPulse() {
+  int32_t raw() { return raw_; }
+  int32_t rawMax() { return rawMax_; }
+  int32_t vol() { return volF_.fil(); }
+  int32_t minimum() { return minF_.fil(); }
+  int32_t maximum() { return maxF_.fil(); }
+  bool pulse() {
     if (pulse_) {
       pulse_ = false;
       return true;
@@ -94,8 +94,8 @@ public:
           rawMax_ = maxs_;
           // проверка выше максимума
           maxF_.checkPass(max_);
-          const int32_t minValue = minF_.getFil();
-          const int32_t maxValue = maxF_.getFil();
+          const int32_t minValue = minF_.fil();
+          const int32_t maxValue = maxF_.fil();
           const int32_t range = maxValue > minValue ? maxValue - minValue : 0;
           // если окно громкости меньше порого то 0
           if (range < trsh_) {

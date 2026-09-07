@@ -67,11 +67,11 @@ namespace Effects {
 
   Effect* createEffect(Id id, void* buffer);
 
-  EffectSettingsSpec getEffectSettingsSpec(Id id);
+  EffectSettingsSpec effectSettingsSpec(Id id);
 
-  const char* getEffectName(Id id);
-  Id getEffectId(const String& effect);
-  Id getEffectId(const char* effect);
+  const char* effectName(Id id);
+  Id effectId(const String& effect);
+  Id effectId(const char* effect);
 
   Id fallback();
   bool isValid(Id id);

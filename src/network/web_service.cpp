@@ -101,13 +101,13 @@ void WebService::init() {
   effectOptions_ = "";
   for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
     if (i > 0) effectOptions_ += ';';
-    effectOptions_ += Effects::getEffectName(Effects::kDisplayOrder[i]);
+    effectOptions_ += Effects::effectName(Effects::kDisplayOrder[i]);
   }
 
-  paletteOptions_ = Palettes::getPaletteName(Palettes::Id::Auto);
+  paletteOptions_ = Palettes::paletteName(Palettes::Id::Auto);
   for (uint8_t i = 0; i < Palettes::kSelectableCount; i++) {
     paletteOptions_ += ';';
-    paletteOptions_ += Palettes::getPaletteName(Palettes::kSelectableOrder[i]);
+    paletteOptions_ += Palettes::paletteName(Palettes::kSelectableOrder[i]);
   }
 
   rotationModeOptions_ = "Off;Sequential;Random";
@@ -143,10 +143,10 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
     if (b.build.isBuild()) {
       powerOn_ = power_.isOn();
-      selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
-      selectedPaletteIndex_ = paletteDisplayIndex(effects_.getSelectedPalette());
+      selectedEffectIndex_ = effectDisplayIndex(effects_.selectedEffectId());
+      selectedPaletteIndex_ = paletteDisplayIndex(effects_.selectedPalette());
       buttonEnabled_ = button_.isEnabled();
-      globalBrightness_ = settings_.getGlobalBrightness();
+      globalBrightness_ = settings_.globalBrightness();
     }
 
     if (b.Switch("Power", &powerOn_)) {
@@ -177,7 +177,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
         effects_.setPreviousEffect();
         notifications_.onEffectPrevious();
         rotation_.onManualRotation();
-        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        selectedEffectIndex_ = effectDisplayIndex(effects_.selectedEffectId());
         stateNotifier_.stateChanged();
         b.reload();
       }
@@ -186,7 +186,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
         effects_.setNextEffect();
         notifications_.onEffectNext();
         rotation_.onManualRotation();
-        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        selectedEffectIndex_ = effectDisplayIndex(effects_.selectedEffectId());
         stateNotifier_.stateChanged();
         b.reload();
       }
@@ -195,7 +195,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
         effects_.setRandomEffect();
         notifications_.onEffectNext();
         rotation_.onManualRotation();
-        selectedEffectIndex_ = effectDisplayIndex(effects_.getSelectedEffectId());
+        selectedEffectIndex_ = effectDisplayIndex(effects_.selectedEffectId());
         stateNotifier_.stateChanged();
         b.reload();
       }
@@ -220,11 +220,11 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Group g(b, "Effect");
 
     if (b.build.isBuild()) {
-      const EffectSettings& settings = settings_.getEffectSettings(effects_.getSelectedEffectId());
+      const EffectSettings& settings = settings_.effectSettings(effects_.selectedEffectId());
       brightness_ = settings.brightness;
       speed_ = settings.speed;
       scale_ = settings.scale;
-      color_ = ((uint32_t)effects_.getRed() << 16) | ((uint32_t)effects_.getGreen() << 8) | effects_.getBlue();
+      color_ = ((uint32_t)effects_.red() << 16) | ((uint32_t)effects_.green() << 8) | effects_.blue();
     }
 
     if (b.Slider("Brightness", 0, 255, 1, "", &brightness_)) {
@@ -264,8 +264,8 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Group g(b, "Rotation");
 
     if (b.build.isBuild()) {
-      rotationModeIndex_ = static_cast<uint8_t>(rotation_.getMode());
-      rotationIntervalPresetIndex_ = rotationPresetIndexForSeconds(rotation_.getIntervalSec());
+      rotationModeIndex_ = static_cast<uint8_t>(rotation_.mode());
+      rotationIntervalPresetIndex_ = rotationPresetIndexForSeconds(rotation_.intervalSec());
     }
 
     if (b.Select("Rotation", rotationModeOptions_, &rotationModeIndex_)) {
@@ -288,14 +288,14 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Group g(b, "Auto off");
 
     if (b.build.isBuild()) {
-      autoOffMinutes_ = power_.getAutoOffMinutes();
+      autoOffMinutes_ = power_.autoOffMinutes();
     }
 
     if (b.Number("Auto-off, min", &autoOffMinutes_, kAutoOffMinutesMin, kAutoOffMinutesMax)) {
       power_.setAutoOffMinutes(autoOffMinutes_);
       stateNotifier_.stateChanged();
     }
-    b.Label("Auto-off remaining", formatRemainingTime(power_.getAutoOffRemainingSeconds()));
+    b.Label("Auto-off remaining", formatRemainingTime(power_.autoOffRemainingSeconds()));
   }
   {
     sets::Group g(b, "Quiet mode");
@@ -314,7 +314,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
       saveNotificationQuietHoursFromUi();
     }
     b.Label("Muted now", notifications_.isMutedNow() ? "yes" : "no");
-    b.Label("Notification remaining", formatRemainingTime(notifications_.getUserNotificationRemainingSeconds()));
+    b.Label("Notification remaining", formatRemainingTime(notifications_.userNotificationRemainingSeconds()));
   }
   {
     sets::Group g(b, "Audio");
@@ -448,7 +448,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("MQTT enabled", connectivity_.isMqttEnabled() ? "on" : "off");
 #endif
     b.Label("Uptime", uptime_formatter::getUptime());
-    b.Label("Time", time_.getTimeStampString());
+    b.Label("Time", time_.timeStampString());
 
     if (b.Button("Restart")) {
       webSettings_.reload();
@@ -620,7 +620,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
     for (uint8_t i = 0; i < LoopProfiler::SECTION_COUNT; i++) {
       LoopProfiler::Section section = static_cast<LoopProfiler::Section>(i);
-      const LoopProfiler::Sample& sample = LoopProfiler::get(section);
+      const LoopProfiler::Sample& sample = LoopProfiler::sample(section);
       b.Label(String(LoopProfiler::sectionName(section)), String(sample.lastUs) + " / " + String(sample.maxUs));
     }
   }
@@ -631,7 +631,7 @@ void WebService::settingsUpdate(sets::Updater& u) {
 }
 
 void WebService::loadNotificationQuietHoursForUi() {
-  const NotificationQuietHours& q = notifications_.getQuietHours();
+  const NotificationQuietHours& q = notifications_.quietHours();
   notificationQuietEnabled_ = q.enabled;
   notificationQuietStartSeconds_ = minutesToSeconds(q.startMinutes);
   notificationQuietEndSeconds_ = minutesToSeconds(q.endMinutes);

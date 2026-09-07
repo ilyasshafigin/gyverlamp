@@ -74,7 +74,7 @@ void EffectFire::setup(EffectContext& ctx) {
   // заполняем массив изображения из массива leds обратным преобразованием, которое нихрена не работает
   for (i = 0; i < WIDTH; i++) {
     for (j = 0; j < HEIGHT; j++) {
-      CHSV tHSV = rgb2hsv_approximate(ctx.led.getPixel(i, j));
+      CHSV tHSV = rgb2hsv_approximate(ctx.led.pixel(i, j));
       noise3d[0][i][j] = tHSV.hue;
       // такая защита от пересвета более-менее достаточна
       if (tHSV.val > 100U) {
@@ -163,9 +163,9 @@ void EffectFire::render(EffectContext& ctx) {
     for (j = 0; j < HEIGHT; j++) {
       //hsv2rgb_spectrum(CHSV(noise3d[0][i][j], shiftValue[j], noise3d[1][i][j] * 1.033), leds[XY(i,j)]); // 1.033 - это коэффициент нормализации яркости (чтобы чутка увеличить яркость эффекта в целом)
       if (ctx.palette) {
-        ctx.led.getPixel(i, j) = ColorFromPalette(*ctx.palette, noise3d[0][i][j], noise3d[1][i][j]);
+        ctx.led.pixel(i, j) = ColorFromPalette(*ctx.palette, noise3d[0][i][j], noise3d[1][i][j]);
       } else {
-        hsv2rgb_spectrum(CHSV(noise3d[0][i][j], shiftValue[j], noise3d[1][i][j]), ctx.led.getPixel(i, j));
+        hsv2rgb_spectrum(CHSV(noise3d[0][i][j], shiftValue[j], noise3d[1][i][j]), ctx.led.pixel(i, j));
       }
     }
   }

@@ -39,7 +39,7 @@ void EffectSpiral::setup(EffectContext& ctx) {
 }
 
 void EffectSpiral::render(EffectContext& ctx) {
-  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
+  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::paletteByScale(ctx.scale);
 
   ctx.led.scale(250);
 
@@ -53,7 +53,7 @@ void EffectSpiral::render(EffectContext& ctx) {
     uint8_t y2 = mapcos8(spirotheta2 + i * spirooffset, y - spiroradiusy, y + spiroradiusy);
 
     CRGB color = ColorFromPalette(palette, (spirohueoffset + i * spirooffset), 128U);
-    ctx.led.getPixelSafe(x2, y2) += color;
+    ctx.led.pixelSafe(x2, y2) += color;
 
     if ((x2 == spirocenterX && y2 == spirocenterY) || (x2 == spirocenterX && y2 == spirocenterY)) {
       change = true;

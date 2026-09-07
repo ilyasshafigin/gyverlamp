@@ -50,6 +50,6 @@ void EffectShadows::render(EffectContext& ctx) {
     uint8_t pixelnumber = i;
     pixelnumber = (NUM_LEDS - 1) - pixelnumber;
 
-    nblend(ctx.led.getLed(pixelnumber), newcolor, 64);
+    nblend(ctx.led.led(pixelnumber), newcolor, 64);
   }
 }

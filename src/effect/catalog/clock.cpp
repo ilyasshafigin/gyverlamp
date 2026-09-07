@@ -33,8 +33,8 @@ void EffectClock::setup(EffectContext& ctx) {
 }
 
 void EffectClock::render(EffectContext& ctx) {
-  const uint8_t mins = ctx.time.getMinutes();
-  const uint8_t secs = ctx.time.getSeconds();
+  const uint8_t mins = ctx.time.minutes();
+  const uint8_t secs = ctx.time.seconds();
 
   if (mins != lastMinute_ || secs != lastSecond_) {
     separatorVisible_ = !separatorVisible_;
@@ -70,7 +70,7 @@ void EffectClock::render(EffectContext& ctx) {
 }
 
 void EffectClock::rebuildText(EffectContext& ctx) {
-  const uint8_t hrs = ctx.time.getHours();
-  const uint8_t mins = ctx.time.getMinutes();
+  const uint8_t hrs = ctx.time.hours();
+  const uint8_t mins = ctx.time.minutes();
   text_ = formatClock(hrs, mins, separatorVisible_);
 }

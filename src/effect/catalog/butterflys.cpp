@@ -156,7 +156,7 @@ void EffectButterflys::render(EffectContext& ctx) {
   }
 
   for (uint16_t i = 0U; i < NUM_LEDS; i++) {
-    const uint8_t value = 255U - ctx.led.getLed(i).r;
+    const uint8_t value = 255U - ctx.led.led(i).r;
     if (ctx.palette) {
       ctx.led.setLed(i, ColorFromPalette(*ctx.palette, hue + ctx.scale, value));
     } else {

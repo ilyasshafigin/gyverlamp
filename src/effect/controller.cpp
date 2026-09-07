@@ -14,7 +14,7 @@
 #include "palette_catalog.h"
 
 void EffectController::init() {
-  globalBrightness_.snapTo(settings_.getGlobalBrightness());
+  globalBrightness_.snapTo(settings_.globalBrightness());
 
   if (!setEffectImmediate(eeprom_.readCurrentEffectId())) {
     setEffectImmediate(Effects::fallback());
@@ -46,12 +46,12 @@ bool EffectController::render(bool force) {
   if (deltaMs > 100U) deltaMs = 100U;
   lastRenderMs_ = nowMs;
 
-  const RuntimeEffectSettings appliedSettings = getAppliedSettings();
-  const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
+  const RuntimeEffectSettings applied = appliedSettings();
+  const CRGBPalette16* palette = Palettes::palette(settings_.selectedPalette());
   const AudioFrame& audio = audio_.frame();
   const AudioConfig& audioConfig = audio_.config();
 
-  RuntimeEffectSettings runtimeSettings = AudioModulation::applyModulation(appliedSettings, audio, audioConfig);
+  RuntimeEffectSettings runtimeSettings = AudioModulation::applyModulation(applied, audio, audioConfig);
 
   runtimeBrightness_ = runtimeSettings.brightness;
   runtimeBrightnessValid_ = true;
@@ -81,7 +81,7 @@ bool EffectController::render(bool force) {
   return force;
 }
 
-RuntimeEffectSettings EffectController::getAppliedSettings() const {
+RuntimeEffectSettings EffectController::appliedSettings() const {
   return {
     effectBrightness_.value(),
     effectSpeed_.value(),
@@ -90,14 +90,14 @@ RuntimeEffectSettings EffectController::getAppliedSettings() const {
 }
 
 void EffectController::snapActiveEffectSettings(uint32_t now) {
-  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  const EffectSettings& settings = settings_.effectSettings(currentEffectId_);
   effectBrightness_.snapTo(settings.brightness, now);
   effectSpeed_.snapTo(settings.speed, now);
   effectScale_.snapTo(settings.scale, now);
 }
 
 void EffectController::retargetActiveEffectSettings(uint32_t now) {
-  const EffectSettings& settings = settings_.getEffectSettings(currentEffectId_);
+  const EffectSettings& settings = settings_.effectSettings(currentEffectId_);
   effectBrightness_.setTarget(settings.brightness, kBrightnessRatePerSecond, kParameterSnapThreshold, now);
   effectSpeed_.setTarget(settings.speed, kSpeedScaleRatePerSecond, kParameterSnapThreshold, now);
   effectScale_.setTarget(settings.scale, kSpeedScaleRatePerSecond, kParameterSnapThreshold, now);
@@ -110,8 +110,8 @@ void EffectController::setupCurrentEffect() {
   const uint32_t nowMs = millis();
   const uint32_t deltaMs = 0;
 
-  const RuntimeEffectSettings runtimeSettings = getAppliedSettings();
-  const CRGBPalette16* palette = Palettes::getPalette(settings_.getSelectedPalette());
+  const RuntimeEffectSettings runtimeSettings = appliedSettings();
+  const CRGBPalette16* palette = Palettes::palette(settings_.selectedPalette());
   const AudioFrame& audio = audio_.frame();
   const AudioConfig& audioConfig = audio_.config();
 
@@ -210,7 +210,7 @@ bool EffectController::updateTransition(uint32_t nowMs) {
 bool EffectController::resetEffectSettingsToDefaults() {
   EffectSettings defaults[Effects::kCount];
   for (uint8_t i = 0; i < Effects::kCount; i++) {
-    defaults[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
+    defaults[i] = EffectSettings::fromSpec(Effects::effectSettingsSpec(Effects::toId(i)));
   }
 
   const bool saved = settings_.resetEffectSettingsToDefaults(defaults);
@@ -224,8 +224,8 @@ bool EffectController::resetEffectSettingsToDefaults() {
 }
 
 void EffectController::resetCurrentEffectSettingsToDefaults() {
-  const Effects::Id effectId = getSelectedEffectId();
-  const EffectSettings defaults = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(effectId));
+  const Effects::Id effectId = selectedEffectId();
+  const EffectSettings defaults = EffectSettings::fromSpec(Effects::effectSettingsSpec(effectId));
   settings_.resetEffectSettingsToDefaults(effectId, defaults);
 
   if (currentEffectId_ == effectId) {
@@ -238,7 +238,7 @@ void EffectController::resetCurrentEffectSettingsToDefaults() {
 }
 
 void EffectController::setNextEffect() {
-  const Effects::Id current = getSelectedEffectId();
+  const Effects::Id current = selectedEffectId();
   for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
     if (Effects::kDisplayOrder[i] != current) continue;
 
@@ -251,7 +251,7 @@ void EffectController::setNextEffect() {
 }
 
 void EffectController::setPreviousEffect() {
-  const Effects::Id current = getSelectedEffectId();
+  const Effects::Id current = selectedEffectId();
   for (uint8_t i = 0; i < Effects::kDisplayCount; i++) {
     if (Effects::kDisplayOrder[i] != current) continue;
 
@@ -268,11 +268,11 @@ void EffectController::setRandomEffect() {
   setEffect(effectId);
 }
 
-uint8_t EffectController::getEffectBrightness() const {
-  return settings_.getEffectSettings(getSelectedEffectId()).brightness;
+uint8_t EffectController::effectBrightness() const {
+  return settings_.effectSettings(selectedEffectId()).brightness;
 }
 
-uint8_t EffectController::getOutputBrightness() const {
+uint8_t EffectController::outputBrightness() const {
   const uint8_t globalBrightness = globalBrightness_.value();
   if (runtimeBrightnessValid_) {
     return scale8(runtimeBrightness_, globalBrightness);
@@ -303,8 +303,8 @@ void EffectController::setEffectScale(uint8_t value) {
 }
 
 void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t value) {
-  const Effects::Id effectId = getSelectedEffectId();
-  EffectSettings& effectSettings = settings_.getEffectSettings(effectId);
+  const Effects::Id effectId = selectedEffectId();
+  EffectSettings& effectSettings = settings_.effectSettings(effectId);
   if (effectSettings.*field == value) return;
   effectSettings.*field = value;
 
@@ -322,12 +322,12 @@ void EffectController::setEffectParam(uint8_t EffectSettings::* field, uint8_t v
   settings_.markEffectSettingsChanged();
 }
 
-Palettes::Id EffectController::getSelectedPalette() const {
-  return settings_.getSelectedPalette();
+Palettes::Id EffectController::selectedPalette() const {
+  return settings_.selectedPalette();
 }
 
 void EffectController::setPalette(Palettes::Id paletteId) {
-  const Effects::Id effectId = getSelectedEffectId();
+  const Effects::Id effectId = selectedEffectId();
   settings_.setPalette(paletteId);
   if (currentEffectId_ == effectId) {
     setupCurrentEffect();

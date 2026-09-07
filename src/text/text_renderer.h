@@ -28,7 +28,7 @@ public:
   static uint8_t readFontByte(const String& text, uint16_t& index);
 
 private:
-  static uint8_t getFont(uint8_t letter, uint8_t row);
+  static uint8_t font(uint8_t letter, uint8_t row);
   static uint8_t normalizeCp1251Byte(uint8_t value);
 
   template <typename Target>

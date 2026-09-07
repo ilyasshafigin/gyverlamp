@@ -8,7 +8,7 @@ void SettingsRepository::init() {
   globalBrightness_ = eeprom_.readGlobalBrightness();
 
   for (uint8_t i = 0; i < Effects::kCount; i++) {
-    effects_[i] = EffectSettings::fromSpec(Effects::getEffectSettingsSpec(Effects::toId(i)));
+    effects_[i] = EffectSettings::fromSpec(Effects::effectSettingsSpec(Effects::toId(i)));
   }
 
   eeprom_.ensureEffectSettings(effects_);
@@ -23,7 +23,7 @@ void SettingsRepository::tick(const Effects::Id currentEffectId) {
   const uint32_t now = millis();
   bool saved = false;
   if (shouldPersistEffectSettings(now)) {
-    eeprom_.writeEffectSettings(currentEffectId, getEffectSettings(currentEffectId));
+    eeprom_.writeEffectSettings(currentEffectId, effectSettings(currentEffectId));
     saved = true;
   }
   if (shouldPersistPalette(now)) {
@@ -39,19 +39,19 @@ void SettingsRepository::tick(const Effects::Id currentEffectId) {
   }
 }
 
-EffectSettings& SettingsRepository::getEffectSettings(Effects::Id effectId) {
+EffectSettings& SettingsRepository::effectSettings(Effects::Id effectId) {
   return effects_[Effects::toIndex(Effects::clamp(effectId))];
 }
 
-EffectSettings& SettingsRepository::getEffectSettingsByIndex(uint8_t index) {
+EffectSettings& SettingsRepository::effectSettingsByIndex(uint8_t index) {
   return effects_[Effects::toIndex(Effects::clamp(Effects::toId(index)))];
 }
 
-const EffectSettings& SettingsRepository::getEffectSettings(Effects::Id effectId) const {
+const EffectSettings& SettingsRepository::effectSettings(Effects::Id effectId) const {
   return effects_[Effects::toIndex(Effects::clamp(effectId))];
 }
 
-const EffectSettings& SettingsRepository::getEffectSettingsByIndex(uint8_t index) const {
+const EffectSettings& SettingsRepository::effectSettingsByIndex(uint8_t index) const {
   return effects_[Effects::toIndex(Effects::clamp(Effects::toId(index)))];
 }
 

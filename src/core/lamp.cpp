@@ -45,7 +45,7 @@ void Lamp::loop() {
   const bool audioReadEnabled = power.isOn() && audio.config().mode != AudioMode::Off;
   LoopProfiler::measure(LoopProfiler::AUDIO, [this, audioReadEnabled]() { audio.tick(audioReadEnabled); });
   LoopProfiler::measure(LoopProfiler::RENDER, [this]() { frameRenderer.render(); });
-  LoopProfiler::measure(LoopProfiler::SETTINGS, [this]() { settings.tick(effects.getActiveEffectId()); });
+  LoopProfiler::measure(LoopProfiler::SETTINGS, [this]() { settings.tick(effects.activeEffectId()); });
   LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });
   LoopProfiler::measure(LoopProfiler::BUTTON, [this]() { button.tick(); });
   LoopProfiler::measure(LoopProfiler::WIFI, [this]() { wifi.tick(); });

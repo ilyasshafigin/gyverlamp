@@ -17,21 +17,21 @@ namespace Effects {
     }
   }
 
-  EffectSettingsSpec getEffectSettingsSpec(Id id) {
+  EffectSettingsSpec effectSettingsSpec(Id id) {
 #define EFFECT_SETTINGS_SPEC(T) \
   case T::kId: return T::kSettings;
     switch (id) { EFFECT_REGISTRY(EFFECT_SETTINGS_SPEC) default : return {180, 30, 40}; }
 #undef EFFECT_SETTINGS_SPEC
   }
 
-  const char* getEffectName(Id id) {
+  const char* effectName(Id id) {
 #define EFFECT_NAME(T) \
   case T::kId: return T::kName;
     switch (id) { EFFECT_REGISTRY(EFFECT_NAME) default : return ""; }
 #undef EFFECT_NAME
   }
 
-  Id getEffectId(const String& effect) {
+  Id effectId(const String& effect) {
 #define EFFECT_COMPARE(T) \
   if (effect.equals(T::kName)) return T::kId;
     EFFECT_REGISTRY(EFFECT_COMPARE)
@@ -39,7 +39,7 @@ namespace Effects {
     return Id::INVALID;
   }
 
-  Id getEffectId(const char* effect) {
+  Id effectId(const char* effect) {
     if (effect == nullptr) return Id::INVALID;
 #define EFFECT_COMPARE(T) \
   if (strcmp(effect, T::kName) == 0) return T::kId;

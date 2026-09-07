@@ -15,7 +15,7 @@
 void EffectTwinkles::setup(EffectContext& ctx) {
   hue = 0U;
   for (uint32_t idx = 0; idx < NUM_LEDS; idx++) {
-    CRGB& led = ctx.led.getLedBuff(idx);
+    CRGB& led = ctx.led.ledBuff(idx);
     if (random8(ctx.scale % 11U) == 0) {
       led.r = random8();                           // оттенок пикселя
       led.g = random8(1, TWINKLES_SPEEDS * 2 + 1); // скорость и направление (нарастает 1-4 или угасает 5-8)
@@ -28,7 +28,7 @@ void EffectTwinkles::setup(EffectContext& ctx) {
 
 static void stepTwinkles(Led& led, uint8_t scale) {
   for (uint32_t idx = 0; idx < NUM_LEDS; idx++) {
-    CRGB& pixel = led.getLedBuff(idx);
+    CRGB& pixel = led.ledBuff(idx);
     if (pixel.b == 0) {
       if (random8(scale % 11U) == 0 && hue > 0) {  // если пиксель ещё не горит, зажигаем каждый ХЗй
         pixel.r = random8();                       // оттенок пикселя
@@ -56,7 +56,7 @@ static void stepTwinkles(Led& led, uint8_t scale) {
 
 static void drawTwinkles(Led& led, const CRGBPalette16& palette) {
   for (uint32_t idx = 0; idx < NUM_LEDS; idx++) {
-    CRGB& pixel = led.getLedBuff(idx);
+    CRGB& pixel = led.ledBuff(idx);
     if (pixel.b == 0) {
       led.setLed(idx, CRGB::Black);
     } else {
@@ -70,7 +70,7 @@ void EffectTwinkles::render(EffectContext& ctx) {
     stepTwinkles(ctx.led, ctx.scale);
   }
 
-  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::getPaletteByScale(ctx.scale);
+  const CRGBPalette16& palette = ctx.palette ? *ctx.palette : *Palettes::paletteByScale(ctx.scale);
 
   drawTwinkles(ctx.led, palette);
 }

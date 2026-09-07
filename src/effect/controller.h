@@ -29,17 +29,17 @@ public:
   bool tick();
   bool render(bool force = false);
 
-  Effects::Id getActiveEffectId() const { return currentEffectId_; }
-  Effects::Id getSelectedEffectId() const {
+  Effects::Id activeEffectId() const { return currentEffectId_; }
+  Effects::Id selectedEffectId() const {
     return pendingEffectId_ != Effects::Id::INVALID ? pendingEffectId_ : currentEffectId_;
   }
-  uint8_t getRed() const { return red_; }
-  uint8_t getGreen() const { return green_; }
-  uint8_t getBlue() const { return blue_; }
-  EffectSettingsSpec getActiveSettingsSpec() const { return Effects::getEffectSettingsSpec(currentEffectId_); }
-  EffectSettingsSpec getSelectedSettingsSpec() const { return Effects::getEffectSettingsSpec(getSelectedEffectId()); }
+  uint8_t red() const { return red_; }
+  uint8_t green() const { return green_; }
+  uint8_t blue() const { return blue_; }
+  EffectSettingsSpec activeSettingsSpec() const { return Effects::effectSettingsSpec(currentEffectId_); }
+  EffectSettingsSpec selectedSettingsSpec() const { return Effects::effectSettingsSpec(selectedEffectId()); }
 
-  Palettes::Id getSelectedPalette() const;
+  Palettes::Id selectedPalette() const;
   void setPalette(Palettes::Id paletteId);
 
   bool setEffect(Effects::Id effectId);
@@ -47,8 +47,8 @@ public:
   void setNextEffect();
   void setPreviousEffect();
   void setRandomEffect();
-  uint8_t getEffectBrightness() const;
-  uint8_t getOutputBrightness() const;
+  uint8_t effectBrightness() const;
+  uint8_t outputBrightness() const;
   void setGlobalBrightness(uint8_t value);
   void setEffectBrightness(uint8_t value);
   void setEffectSpeed(uint8_t value);
@@ -64,7 +64,7 @@ public:
 
   bool isTransitioning() const { return transitionPhase_ != TransitionPhase::Idle; }
   bool isParameterTransitioning() const;
-  uint8_t getTransitionOpacity() const { return transitionOpacity_.value(); }
+  uint8_t transitionOpacity() const { return transitionOpacity_.value(); }
 
 private:
   AudioService& audio_;
@@ -90,7 +90,7 @@ private:
   uint8_t runtimeBrightness_ = 0;
   bool runtimeBrightnessValid_ = false;
 
-  RuntimeEffectSettings getAppliedSettings() const;
+  RuntimeEffectSettings appliedSettings() const;
   void snapActiveEffectSettings(uint32_t now = millis());
   void retargetActiveEffectSettings(uint32_t now = millis());
   void setupCurrentEffect();

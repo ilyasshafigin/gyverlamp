@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-String getDelimitedValue(const String& data, char separator, int index) {
+String delimitedValue(const String& data, char separator, int index) {
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length() - 1;

@@ -19,9 +19,9 @@ public:
   void init();
   void tick(bool powerOn);
 
-  RotationMode getMode() const { return mode_; }
+  RotationMode mode() const { return mode_; }
   bool isActive() const { return mode_ != RotationMode::Off; }
-  uint16_t getIntervalSec() const { return intervalSec_; }
+  uint16_t intervalSec() const { return intervalSec_; }
 
   void setMode(RotationMode mode);
   void setIntervalSec(uint16_t seconds);

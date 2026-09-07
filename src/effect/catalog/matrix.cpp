@@ -14,7 +14,7 @@ void EffectMatrix::setup(EffectContext& ctx) {
 static void stepMatrix(Led& led, uint8_t scale, const CRGBPalette16* palette) {
   for (uint8_t x = 0; x < WIDTH; x++) {
     // заполняем случайно верхнюю строку
-    CRGB& pixel = led.getPixelBuff(x, HEIGHT - 1);
+    CRGB& pixel = led.pixelBuff(x, HEIGHT - 1);
     if (palette) {
       if (pixel.getAverageLight() < 4) {
         pixel = (random(0, scale) == 0) ? ColorFromPalette(*palette, random(0, 240), 255U) : CRGB::Black;
@@ -35,7 +35,7 @@ static void stepMatrix(Led& led, uint8_t scale, const CRGBPalette16* palette) {
   // сдвигаем всё вниз
   for (uint8_t x = 0; x < WIDTH; x++) {
     for (uint8_t y = 0; y < HEIGHT - 1; y++) {
-      led.getPixelBuff(x, y) = led.getPixelBuff(x, y + 1);
+      led.pixelBuff(x, y) = led.pixelBuff(x, y + 1);
     }
   }
 }

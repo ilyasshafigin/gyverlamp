@@ -14,19 +14,19 @@ public:
   void init();
   void tick(Effects::Id currentEffectId);
 
-  EffectSettings& getEffectSettings(Effects::Id effectId);
-  EffectSettings& getEffectSettingsByIndex(uint8_t index);
-  const EffectSettings& getEffectSettings(Effects::Id effectId) const;
-  const EffectSettings& getEffectSettingsByIndex(uint8_t index) const;
+  EffectSettings& effectSettings(Effects::Id effectId);
+  EffectSettings& effectSettingsByIndex(uint8_t index);
+  const EffectSettings& effectSettings(Effects::Id effectId) const;
+  const EffectSettings& effectSettingsByIndex(uint8_t index) const;
 
   void markEffectSettingsChanged();
   bool resetEffectSettingsToDefaults(const EffectSettings* defaults);
   void resetEffectSettingsToDefaults(Effects::Id effectId, const EffectSettings& defaults);
 
-  Palettes::Id getSelectedPalette() const { return selectedPalette_; }
+  Palettes::Id selectedPalette() const { return selectedPalette_; }
   void setPalette(Palettes::Id paletteId);
 
-  uint8_t getGlobalBrightness() const { return globalBrightness_; }
+  uint8_t globalBrightness() const { return globalBrightness_; }
   void setGlobalBrightness(uint8_t value);
 
 private:

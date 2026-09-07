@@ -90,11 +90,11 @@ bool NotificationController::isActive() const {
   return resolveCurrentNotification(millis()).isActive();
 }
 
-uint32_t NotificationController::getUserNotificationRemainingSeconds() const {
+uint32_t NotificationController::userNotificationRemainingSeconds() const {
   if (!userState_.isActive() || !userState_.isTimed()) return 0;
 
-  const uint32_t durationMs = userState_.getDurationMs();
-  const uint32_t elapsedMs = millis() - userState_.getStartedMs();
+  const uint32_t durationMs = userState_.durationMs();
+  const uint32_t elapsedMs = millis() - userState_.startedMs();
   if (elapsedMs >= durationMs) return 0;
 
   return (durationMs - elapsedMs + 999UL) / 1000UL;
@@ -110,7 +110,7 @@ bool NotificationController::isMutedNow() const {
   if (power_.isOn()) return false;
   if (!time_.isSynced()) return false;
 
-  return quietHours_.isInQuietHours(time_.getMinutesOfDay());
+  return quietHours_.isInQuietHours(time_.minutesOfDay());
 }
 
 void NotificationController::startUserNotification(UserNotificationType type, uint32_t durationMs) {
@@ -119,7 +119,7 @@ void NotificationController::startUserNotification(UserNotificationType type, ui
     return;
   }
 
-  if (getUserNotificationPriority(type) < getUserNotificationPriority(userState_.getType())) {
+  if (userNotificationPriority(type) < userNotificationPriority(userState_.type())) {
     return;
   }
 
@@ -139,7 +139,7 @@ void NotificationController::startUserTextNotification(const String& text, const
     return;
   }
 
-  if (getUserNotificationPriority(UserNotificationType::Text) < getUserNotificationPriority(userState_.getType())) {
+  if (userNotificationPriority(UserNotificationType::Text) < userNotificationPriority(userState_.type())) {
     return;
   }
 
@@ -309,9 +309,9 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
 
   if (userState_.isAlertActive()) {
     snaphot.source = NotificationSource::User;
-    snaphot.userType = userState_.getType();
-    snaphot.startedMs = userState_.getStartedMs();
-    snaphot.durationMs = userState_.getDurationMs();
+    snaphot.userType = userState_.type();
+    snaphot.startedMs = userState_.startedMs();
+    snaphot.durationMs = userState_.durationMs();
     snaphot.targetDim = kUserAlertDim;
     return filterMuted(snaphot);
   }
@@ -319,17 +319,17 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
   if (userState_.isTextActive()) {
     snaphot.source = NotificationSource::User;
     snaphot.userType = UserNotificationType::Text;
-    snaphot.startedMs = userState_.getStartedMs();
-    snaphot.durationMs = userState_.getDurationMs();
+    snaphot.startedMs = userState_.startedMs();
+    snaphot.durationMs = userState_.durationMs();
     snaphot.targetDim = kUserNotifyDim;
-    snaphot.text = &userState_.getText();
-    snaphot.color = userState_.getColor();
+    snaphot.text = &userState_.text();
+    snaphot.color = userState_.color();
     return filterMuted(snaphot);
   }
 
   const bool hasPressEcho =
     buttonPressCount_ > 0 && (buttonPressing_ || isRecently(lastButtonPressMs_, kButtonPressEchoMs));
-  const uint32_t buttonDurationMs = getIndicatorDuration(indicatorType_);
+  const uint32_t buttonDurationMs = indicatorDuration(indicatorType_);
   const bool hasButtonAction = indicatorType_ != IndicatorType::None && buttonDurationMs > 0 &&
                                isRecently(lastIndicatorChangeMs_, buttonDurationMs);
 
@@ -376,8 +376,8 @@ NotificationSnapshot NotificationController::resolveCurrentNotification(uint32_t
   if (userState_.isNotifyActive()) {
     snaphot.source = NotificationSource::User;
     snaphot.userType = UserNotificationType::Notify;
-    snaphot.startedMs = userState_.getStartedMs();
-    snaphot.durationMs = userState_.getDurationMs();
+    snaphot.startedMs = userState_.startedMs();
+    snaphot.durationMs = userState_.durationMs();
     snaphot.targetDim = kUserNotifyDim;
     return filterMuted(snaphot);
   }
@@ -425,7 +425,7 @@ bool NotificationController::sameNotification(const NotificationSnapshot& a, con
   return a.userType == b.userType && a.connectionState == b.connectionState && a.otaState == b.otaState;
 }
 
-uint8_t NotificationController::getUserNotificationPriority(UserNotificationType type) {
+uint8_t NotificationController::userNotificationPriority(UserNotificationType type) {
   switch (type) {
     case UserNotificationType::Alarm: return 4;
     case UserNotificationType::Warning: return 3;
@@ -458,7 +458,7 @@ bool NotificationController::canBypassMute(const NotificationSnapshot& snaphot) 
          (snaphot.userType == UserNotificationType::Alarm || snaphot.userType == UserNotificationType::Warning);
 }
 
-uint32_t NotificationController::getIndicatorDuration(IndicatorType type) {
+uint32_t NotificationController::indicatorDuration(IndicatorType type) {
   switch (type) {
     case IndicatorType::PowerOn: return 700;
     case IndicatorType::Dismiss: return 450;

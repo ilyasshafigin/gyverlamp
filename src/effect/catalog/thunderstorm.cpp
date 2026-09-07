@@ -45,7 +45,7 @@ static void rain(
   ff_y = random16();
   ff_z = random16();
 
-  nscale8(led.getLedsBuff(), NUM_LEDS, tailLength);
+  nscale8(led.ledsBuff(), NUM_LEDS, tailLength);
 
   // Loop for each column individually
   for (uint8_t x = 0; x < WIDTH; x++) {
@@ -65,7 +65,7 @@ static void rain(
     // Step 3. Map from tempMatrix cells to LED colors
     for (uint8_t y = 0; y < HEIGHT; y++) {
       if (noise3d[0][x][y] >= backgroundDepth) { // Don't write out empty cells
-        led.setLedBuff(led.getPixelNumber(x, y), ColorFromPalette(rainPalette, noise3d[0][x][y]));
+        led.setLedBuff(led.pixelNumber(x, y), ColorFromPalette(rainPalette, noise3d[0][x][y]));
       }
     }
 
@@ -76,14 +76,14 @@ static void rain(
       uint8_t v = noise3d[0][x][0];
 
       if (j >= backgroundDepth) {
-        led.setLedBuff(led.getPixelNumber(wrapX(x - 2), 0), ColorFromPalette(rainPalette, j / 3));
-        led.setLedBuff(led.getPixelNumber(wrapX(x + 2), 0), ColorFromPalette(rainPalette, j / 3));
+        led.setLedBuff(led.pixelNumber(wrapX(x - 2), 0), ColorFromPalette(rainPalette, j / 3));
+        led.setLedBuff(led.pixelNumber(wrapX(x + 2), 0), ColorFromPalette(rainPalette, j / 3));
         line[x] = 0; // Reset splash
       }
 
       if (v >= backgroundDepth) {
-        led.setLedBuff(led.getPixelNumber(wrapX(x - 1), 1), ColorFromPalette(rainPalette, v / 2));
-        led.setLedBuff(led.getPixelNumber(wrapX(x + 1), 1), ColorFromPalette(rainPalette, v / 2));
+        led.setLedBuff(led.pixelNumber(wrapX(x - 1), 1), ColorFromPalette(rainPalette, v / 2));
+        led.setLedBuff(led.pixelNumber(wrapX(x + 1), 1), ColorFromPalette(rainPalette, v / 2));
         line[x] = v; // Prep splash for next frame
       }
     }
@@ -102,23 +102,23 @@ static void rain(
               uint8_t dir = random8(4);
               switch (dir) {
                 case 0:
-                  led.setLedBuff(led.getPixelNumber(lx + 1, ly - 1), lightningColor);
+                  led.setLedBuff(led.pixelNumber(lx + 1, ly - 1), lightningColor);
                   lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // move down and right
                   break;
                 case 1:
                   led.setLedBuff(
-                    led.getPixelNumber(lx, ly - 1), CRGB(128, 128, 128)
+                    led.pixelNumber(lx, ly - 1), CRGB(128, 128, 128)
                   ); // я без понятия, почему у верхней молнии один оттенок, а у остальных - другой
                   lightning[lx + (ly - 1) * WIDTH] = 255; // move down
                   break;
                 case 2:
-                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  led.setLedBuff(led.pixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
                   lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // move down and left
                   break;
                 case 3:
-                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  led.setLedBuff(led.pixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
                   lightning[(lx - 1) + (ly - 1) * WIDTH] = 255; // fork down and left
-                  led.setLedBuff(led.getPixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
+                  led.setLedBuff(led.pixelNumber(lx - 1, ly - 1), CRGB(128, 128, 128));
                   lightning[(lx + 1) + (ly - 1) * WIDTH] = 255; // fork down and right
                   break;
               }
@@ -142,7 +142,7 @@ static void rain(
         const uint16_t noiseIndex = x * kCloudHeight + z;
         cloudNoise[noiseIndex] = scale8(cloudNoise[noiseIndex], dataSmoothing) + scale8(noiseData, 256 - dataSmoothing);
         nblend(
-          led.getLedBuff(led.getPixelNumber(x, HEIGHT - z - 1)),
+          led.ledBuff(led.pixelNumber(x, HEIGHT - z - 1)),
           ColorFromPalette(cloudsPalette, cloudNoise[noiseIndex]),
           (kCloudHeight - z) * (250 / kCloudHeight)
         );

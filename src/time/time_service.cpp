@@ -72,7 +72,7 @@ void TimeService::tick() {
   }
 }
 
-String TimeService::getTimeStampString() const {
+String TimeService::timeStampString() const {
   if (!timeSynced_) {
     return String();
   }

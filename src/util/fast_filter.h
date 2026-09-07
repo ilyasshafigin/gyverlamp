@@ -23,8 +23,8 @@ public:
   void setPass(uint8_t pass) { pass_ = pass; }
   void setRaw(int32_t raw) { raw_ = raw; }
   void setFil(int32_t fil) { rawF_ = fil; }
-  int32_t getRaw() { return raw_; }
-  int32_t getFil() { return rawF_; }
+  int32_t raw() { return raw_; }
+  int32_t fil() { return rawF_; }
 
   bool checkPass(int32_t val) {
     const bool passed = (pass_ == FF_PASS_MAX && val > rawF_) || (pass_ == FF_PASS_MIN && val < rawF_);

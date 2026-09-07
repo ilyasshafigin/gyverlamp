@@ -7,7 +7,7 @@ static constexpr uint8_t kTopY = HEIGHT - 1;
 void NotificationOverlay::drawPixel(uint8_t x, uint8_t y, CRGB color) {
   color.nscale8(opacity_);
 
-  CRGB& bg = led_.getPixel(x, y);
+  CRGB& bg = led_.pixel(x, y);
   bg.fadeToBlackBy(holeDim_);
   bg += color;
 }
@@ -15,7 +15,7 @@ void NotificationOverlay::drawPixel(uint8_t x, uint8_t y, CRGB color) {
 void NotificationOverlay::drawPixelSafe(int x, int y, CRGB color) {
   color.nscale8(opacity_);
 
-  CRGB& bg = led_.getPixelSafe(x, y);
+  CRGB& bg = led_.pixelSafe(x, y);
   bg.fadeToBlackBy(holeDim_);
   bg += color;
 }

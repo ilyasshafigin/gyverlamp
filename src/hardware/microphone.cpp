@@ -138,15 +138,15 @@ void Microphone::tick() {
   const uint8_t newBass = scaleSimAudioValue(lowRaw, simLowPeak, 1);
   const uint8_t newTreble = scaleSimAudioValue(highRaw, simHighPeak, 1);
 #else
-  const uint8_t newLevel = constrain(vol_.getVol(), 0, 255);
-  const uint8_t newBass = constrain(low_.getVol(), 0, 255);
-  const uint8_t newTreble = constrain(high_.getVol(), 0, 255);
+  const uint8_t newLevel = constrain(vol_.vol(), 0, 255);
+  const uint8_t newBass = constrain(low_.vol(), 0, 255);
+  const uint8_t newTreble = constrain(high_.vol(), 0, 255);
 #endif
 
   frame_.level = smoothAudio(frame_.level, newLevel);
   frame_.bass = smoothAudio(frame_.bass, newBass);
   frame_.treble = smoothAudio(frame_.treble, newTreble);
-  frame_.beat = vol_.getPulse();
+  frame_.beat = vol_.pulse();
   frame_.available = true;
 }
 

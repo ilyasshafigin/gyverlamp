@@ -10,15 +10,15 @@ public:
 
   void init();
   void tick();
-  String getTimeStampString() const;
+  String timeStampString() const;
 
-  uint8_t getHours() const { return hrs_; }
-  uint8_t getMinutes() const { return mins_; }
-  uint8_t getSeconds() const { return secs_; }
-  uint8_t getDays() const { return days_; }
+  uint8_t hours() const { return hrs_; }
+  uint8_t minutes() const { return mins_; }
+  uint8_t seconds() const { return secs_; }
+  uint8_t days() const { return days_; }
 
   bool isSynced() const { return timeSynced_; }
-  uint16_t getMinutesOfDay() const { return hrs_ * 60 + mins_; }
+  uint16_t minutesOfDay() const { return hrs_ * 60 + mins_; }
 
 private:
   PeriodicTimer timeTimer_;

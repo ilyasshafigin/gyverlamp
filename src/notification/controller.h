@@ -47,10 +47,10 @@ public:
 
   bool isActive() const;
   bool isUserNotificationActive() const { return userState_.isActive(); }
-  UserNotificationType getUserNotificationType() const { return userState_.getType(); }
-  uint32_t getUserNotificationRemainingSeconds() const;
+  UserNotificationType userNotificationType() const { return userState_.type(); }
+  uint32_t userNotificationRemainingSeconds() const;
 
-  const NotificationQuietHours& getQuietHours() const { return quietHours_; }
+  const NotificationQuietHours& quietHours() const { return quietHours_; }
   bool setQuietHours(const NotificationQuietHours& settings);
   bool isMutedNow() const;
 
@@ -137,12 +137,12 @@ private:
 
   bool isRecently(uint32_t sinceMs, uint32_t durationMs) const;
   bool sameNotification(const NotificationSnapshot& a, const NotificationSnapshot& b) const;
-  static uint8_t getUserNotificationPriority(UserNotificationType type);
+  static uint8_t userNotificationPriority(UserNotificationType type);
 
   bool shouldPreFadeOut(const NotificationSnapshot& n, uint32_t now) const;
   bool shouldMuteNotification(const NotificationSnapshot& n) const;
   bool canBypassMute(const NotificationSnapshot& n) const;
 
   void startIndicator(IndicatorType type, uint8_t value = 0, bool direction = true);
-  static uint32_t getIndicatorDuration(IndicatorType type);
+  static uint32_t indicatorDuration(IndicatorType type);
 };

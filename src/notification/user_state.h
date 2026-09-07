@@ -23,11 +23,11 @@ public:
   bool isTextActive() const { return type_ == UserNotificationType::Text; }
   bool isAlertActive() const { return isWarningActive() || isAlarmActive(); }
 
-  UserNotificationType getType() const { return type_; }
-  uint32_t getStartedMs() const { return startedMs_; }
-  uint32_t getDurationMs() const { return durationMs_; }
-  const String& getText() const { return text_; }
-  const CRGB& getColor() const { return color_; }
+  UserNotificationType type() const { return type_; }
+  uint32_t startedMs() const { return startedMs_; }
+  uint32_t durationMs() const { return durationMs_; }
+  const String& text() const { return text_; }
+  const CRGB& color() const { return color_; }
   bool isTimed() const { return durationMs_ > 0; }
 
 private:

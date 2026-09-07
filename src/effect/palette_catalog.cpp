@@ -4,7 +4,7 @@
 
 namespace Palettes {
 
-  const char* getPaletteName(Id id) {
+  const char* paletteName(Id id) {
     switch (id) {
 #define PALETTE_NAME(ID, NAME, PTR) \
   case ID: return NAME;
@@ -23,7 +23,7 @@ namespace Palettes {
     return Id::Auto;
   }
 
-  const CRGBPalette16* getPalette(Id id) {
+  const CRGBPalette16* palette(Id id) {
     if (id == Id::Auto) return nullptr;
     switch (id) {
 #define PALETTE_PTR(ID, NAME, SRC)           \
@@ -37,14 +37,14 @@ namespace Palettes {
     }
   }
 
-  const CRGBPalette16* getPaletteByScale(uint8_t scale) {
+  const CRGBPalette16* paletteByScale(uint8_t scale) {
     uint8_t index = static_cast<uint8_t>(map(scale, 0U, 255U, 0U, kSelectableCount - 1));
-    return Palettes::getPalette(Palettes::getPaletteIdByIndex(index));
+    return Palettes::palette(Palettes::paletteIdByIndex(index));
   }
 
   const CRGBPalette16* resolvePalette(Id selected, const CRGBPalette16* autoPalette) {
     if (selected == Id::Auto) return autoPalette;
-    return getPalette(selected);
+    return palette(selected);
   }
 
 } // namespace Palettes
