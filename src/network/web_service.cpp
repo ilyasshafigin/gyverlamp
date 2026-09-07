@@ -92,7 +92,7 @@ void WebService::init() {
   }
 #endif
 
-  webSettings_.begin(true, connectivity_.status().deviceId.c_str());
+  webSettings_.begin(false, nullptr);
   webSettings_.onBuild([this](sets::Builder& b) { settingsBuilder(b); });
   webSettings_.onUpdate([this](sets::Updater& upd) { settingsUpdate(upd); });
   webSettings_.setTitle(DEVICE_NAME);

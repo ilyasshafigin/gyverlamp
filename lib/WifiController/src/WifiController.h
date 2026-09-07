@@ -127,6 +127,7 @@ private:
   bool deliveringEvents_ = false;
 
   static bool copyString(char* destination, uint8_t capacity, const char* source);
+  static bool isValidHostname(const char* hostname);
   static bool isFastFailDisconnectReason(uint16_t reason);
   bool copyConfig(const Config& runtimeConfig);
   void processPlatformEvents();

@@ -29,10 +29,13 @@ namespace wifi_controller {
     void platformInitialize();
     void platformSetAutoReconnect(bool enabled);
     void platformSetMode(Mode mode);
-    void platformBeginSta(const char* ssid, const char* password);
+    bool platformSetStaHostname(const char* hostname);
+    bool platformBeginSta(const char* ssid, const char* password, const char* hostname);
     void platformDisconnectSta();
     StaLinkStatus platformStaLinkStatus();
+    void platformTickNetworkServices(const char* hostname);
     bool platformStartAp(const char* ssid, const char* password, const WifiController::Ipv4Address& ipAddress);
+    bool platformSetApHostname(const char* hostname);
     void platformStopAp();
     uint8_t platformApClientCount();
     void platformSnapshot(WifiController::Snapshot& snapshot);

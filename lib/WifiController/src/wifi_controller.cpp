@@ -2,6 +2,10 @@
 
 #include "detail/wifi_platform.h"
 
+#ifdef DEBUG
+#include <Arduino.h>
+#endif
+
 namespace {
   using wifi_controller::detail::Mode;
   using wifi_controller::detail::PlatformEvent;
@@ -10,6 +14,37 @@ namespace {
   bool elapsed(uint32_t now, uint32_t startedAt, uint32_t intervalMs) {
     return now - startedAt >= intervalMs;
   }
+
+#ifdef DEBUG
+  void logText(const __FlashStringHelper* text) {
+    Serial.print(F("[WIFI] "));
+    Serial.println(text);
+  }
+
+  void logHostname(const __FlashStringHelper* label, const char* hostname) {
+    Serial.print(F("[WIFI] "));
+    Serial.print(label);
+    if (hostname == nullptr) {
+      Serial.println(F("(null)"));
+    } else {
+      Serial.println(hostname);
+    }
+  }
+
+  void logHostnameOutcome(const __FlashStringHelper* label, bool applied) {
+    Serial.print(F("[WIFI] "));
+    Serial.print(label);
+    Serial.println(applied ? F(" ok") : F(" failed"));
+  }
+
+  void logRetry(const __FlashStringHelper* label, uint32_t intervalMs) {
+    Serial.print(F("[WIFI] "));
+    Serial.print(label);
+    Serial.print(F(" retry in "));
+    Serial.print(intervalMs);
+    Serial.println(F(" ms"));
+  }
+#endif
 } // namespace
 
 bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandler, void* eventContext) {
@@ -25,13 +60,24 @@ bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandle
   fallbackApRequested_ = false;
 
   if (!copyConfig(runtimeConfig)) {
+#ifdef DEBUG
+    logHostname(F("config rejected hostname="), runtimeConfig.deviceId);
+#endif
     emit(EventType::Error);
     deliverEvents();
     return false;
   }
 
+#ifdef DEBUG
+  logHostname(F("config accepted hostname="), config_.deviceId);
+#endif
   wifi_controller::detail::platformInitialize();
   wifi_controller::detail::platformSetAutoReconnect(false);
+
+  const bool staHostnameApplied = wifi_controller::detail::platformSetStaHostname(config_.deviceId);
+#ifdef DEBUG
+  logHostnameOutcome(F("STA hostname setup"), staHostnameApplied);
+#endif
 
   PlatformEvent ignoredEvent{};
   while (wifi_controller::detail::platformNextEvent(ignoredEvent)) {
@@ -69,6 +115,10 @@ void WifiController::tick() {
         startStaCampaign();
         staState_ = State::RetryWait;
         retryStartedAt_ = wifi_controller::detail::platformMillis();
+#ifdef DEBUG
+        logText(F("STA link lost"));
+        logRetry(F("STA"), config_.staReconnectIntervalMs);
+#endif
       }
       break;
 
@@ -81,6 +131,7 @@ void WifiController::tick() {
   if (staState_ != State::Connected && !staConnected()) checkApRetry();
   if (hasStaCredentials_ && staCampaignActive_ && !staConnected()) checkApTimeout();
 
+  wifi_controller::detail::platformTickNetworkServices(config_.deviceId);
   deliverEvents();
 }
 
@@ -111,6 +162,29 @@ bool WifiController::copyString(char* destination, uint8_t capacity, const char*
   return true;
 }
 
+bool WifiController::isValidHostname(const char* hostname) {
+  if (hostname == nullptr) return false;
+
+  uint8_t length = 0;
+  while (hostname[length] != '\0') {
+    const char character = hostname[length];
+    const bool isAlphanumeric = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                                (character >= '0' && character <= '9');
+    if (!isAlphanumeric && character != '-') {
+      return false;
+    }
+    ++length;
+    if (length > 24) return false;
+  }
+
+  if (length == 0) return false;
+
+  const char first = hostname[0];
+  const char last = hostname[length - 1];
+  return ((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || (first >= '0' && first <= '9')) &&
+         ((last >= 'a' && last <= 'z') || (last >= 'A' && last <= 'Z') || (last >= '0' && last <= '9'));
+}
+
 bool WifiController::copyConfig(const Config& runtimeConfig) {
   OwnedConfig candidate{};
   if (
@@ -122,7 +196,7 @@ bool WifiController::copyConfig(const Config& runtimeConfig) {
   ) {
     return false;
   }
-  if (candidate.deviceId[0] == '\0' || candidate.apSsid[0] == '\0') return false;
+  if (candidate.apSsid[0] == '\0' || !isValidHostname(candidate.deviceId)) return false;
   if (
     runtimeConfig.staReconnectIntervalMs == 0 || runtimeConfig.apRetryIntervalMs == 0 ||
     runtimeConfig.fallbackApIdleTimeoutMs == 0 || runtimeConfig.staAttemptTimeoutMs == 0 ||
@@ -149,6 +223,10 @@ bool WifiController::isFastFailDisconnectReason(uint16_t reason) {
 void WifiController::processPlatformEvents() {
   PlatformEvent event{};
   while (wifi_controller::detail::platformNextEvent(event)) {
+#ifdef DEBUG
+    Serial.print(F("[WIFI] STA disconnect reason="));
+    Serial.println(event.disconnectReason);
+#endif
     if (staState_ == State::Connecting && acceptingStaDisconnectEvents_ && !pendingDisconnectValid_) {
       pendingDisconnectValid_ = true;
       pendingDisconnectAttemptId_ = activeAttemptId_;
@@ -180,6 +258,11 @@ bool WifiController::startAp() {
   if (apState_ == ApState::Active) return true;
   if (!wifi_controller::detail::platformStartAp(config_.apSsid, config_.apPassword, config_.apIp)) return false;
 
+  const bool apHostnameApplied = wifi_controller::detail::platformSetApHostname(config_.deviceId);
+#ifdef DEBUG
+  logHostnameOutcome(F("AP hostname setup"), apHostnameApplied);
+#endif
+
   apState_ = ApState::Active;
   apStartedAt_ = wifi_controller::detail::platformMillis();
   return true;
@@ -190,6 +273,9 @@ void WifiController::requestAp() {
 
   apState_ = ApState::RetryWait;
   apRetryStartedAt_ = wifi_controller::detail::platformMillis();
+#ifdef DEBUG
+  logRetry(F("AP start failed;"), config_.apRetryIntervalMs);
+#endif
 }
 
 void WifiController::stopAp() {
@@ -202,6 +288,9 @@ void WifiController::stopAp() {
   }
 
   apState_ = ApState::Inactive;
+#ifdef DEBUG
+  logText(F("AP stop"));
+#endif
   wifi_controller::detail::platformStopAp();
   wifi_controller::detail::platformSetMode(hasStaCredentials_ ? Mode::Sta : Mode::Off);
 }
@@ -223,7 +312,15 @@ void WifiController::startStaConnection() {
   staState_ = State::Connecting;
   acceptingStaDisconnectEvents_ = true;
   emit(EventType::Connecting);
-  wifi_controller::detail::platformBeginSta(config_.staSsid, config_.staPassword);
+#ifdef DEBUG
+  Serial.print(F("[WIFI] STA attempt #"));
+  Serial.println(activeAttemptId_);
+#endif
+  const bool staHostnameApplied =
+    wifi_controller::detail::platformBeginSta(config_.staSsid, config_.staPassword, config_.deviceId);
+#ifdef DEBUG
+  logHostnameOutcome(F("STA hostname attempt"), staHostnameApplied);
+#endif
 }
 
 void WifiController::stopStaConnection() {
@@ -259,6 +356,15 @@ void WifiController::failStaConnection(StaFailureCause cause, uint16_t reason) {
   staState_ = State::RetryWait;
   retryStartedAt_ = wifi_controller::detail::platformMillis();
   if (cause == StaFailureCause::Deadline) stopStaConnection();
+#ifdef DEBUG
+  if (cause == StaFailureCause::Deadline) {
+    logText(F("STA attempt timeout"));
+  } else {
+    Serial.print(F("[WIFI] STA attempt failed reason="));
+    Serial.println(reason);
+  }
+  logRetry(F("STA"), config_.staReconnectIntervalMs);
+#endif
   emit(EventType::Error);
 }
 
@@ -300,6 +406,28 @@ void WifiController::onStaConnected() {
   pendingDisconnectValid_ = false;
   staState_ = State::Connected;
   endStaCampaign();
+#ifdef DEBUG
+  Snapshot snapshot{};
+  wifi_controller::detail::platformSnapshot(snapshot);
+  Serial.print(F("[WIFI] STA connected IP="));
+  Serial.print(snapshot.localIp.octets[0]);
+  Serial.print('.');
+  Serial.print(snapshot.localIp.octets[1]);
+  Serial.print('.');
+  Serial.print(snapshot.localIp.octets[2]);
+  Serial.print('.');
+  Serial.print(snapshot.localIp.octets[3]);
+  Serial.print(F(" gateway="));
+  Serial.print(snapshot.gateway.octets[0]);
+  Serial.print('.');
+  Serial.print(snapshot.gateway.octets[1]);
+  Serial.print('.');
+  Serial.print(snapshot.gateway.octets[2]);
+  Serial.print('.');
+  Serial.print(snapshot.gateway.octets[3]);
+  Serial.print(F(" RSSI="));
+  Serial.println(snapshot.rssi);
+#endif
   emit(EventType::Connected);
   nextAttemptId_ = 0;
   activeAttemptId_ = 0;
@@ -309,6 +437,9 @@ void WifiController::checkApRetry() {
   if (apState_ != ApState::RetryWait) return;
   const uint32_t now = wifi_controller::detail::platformMillis();
   if (!elapsed(now, apRetryStartedAt_, config_.apRetryIntervalMs)) return;
+#ifdef DEBUG
+  logText(F("AP retry"));
+#endif
   requestAp();
 }
 

@@ -1,5 +1,7 @@
 #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
 
+#include <DNSServer.h>
+#include <ESPmDNS.h>
 #include <WiFi.h>
 
 #include <atomic>
@@ -11,11 +13,21 @@
 
 namespace {
   constexpr UBaseType_t kEventQueueDepth = 8;
+  constexpr uint32_t kServiceRetryIntervalMs = 5000;
 
   QueueHandle_t eventQueue = nullptr;
   std::atomic<bool> resyncPending{false};
   std::atomic<uint16_t> latestDisconnectReason{0};
   bool initialized = false;
+  bool apRunning = false;
+  bool mdnsRunning = false;
+  bool mdnsAttempted = false;
+  bool captiveDnsRunning = false;
+  bool captiveDnsAttempted = false;
+  uint32_t mdnsLastAttemptAt = 0;
+  uint32_t captiveDnsLastAttemptAt = 0;
+  IPAddress captiveDnsIp;
+  DNSServer captiveDns;
 
   WiFiMode_t toEspMode(wifi_controller::detail::Mode mode) {
     switch (mode) {
@@ -33,6 +45,124 @@ namespace {
 
   WifiController::Ipv4Address fromIpAddress(const IPAddress& address) {
     return WifiController::Ipv4Address(address[0], address[1], address[2], address[3]);
+  }
+
+  bool isZeroIpAddress(const IPAddress& address) {
+    return address[0] == 0 && address[1] == 0 && address[2] == 0 && address[3] == 0;
+  }
+
+  bool sameIpAddress(const IPAddress& first, const IPAddress& second) {
+    return first[0] == second[0] && first[1] == second[1] && first[2] == second[2] && first[3] == second[3];
+  }
+
+  bool retryDue(bool attempted, uint32_t now, uint32_t lastAttemptAt) {
+    return !attempted || now - lastAttemptAt >= kServiceRetryIntervalMs;
+  }
+
+#ifdef DEBUG
+  const __FlashStringHelper* modeName(wifi_controller::detail::Mode mode) {
+    switch (mode) {
+      case wifi_controller::detail::Mode::Off: return F("OFF");
+      case wifi_controller::detail::Mode::Sta: return F("STA");
+      case wifi_controller::detail::Mode::Ap: return F("AP");
+      case wifi_controller::detail::Mode::ApSta: return F("AP+STA");
+    }
+    return F("unknown");
+  }
+
+  void logIp(const __FlashStringHelper* label, const IPAddress& address) {
+    Serial.print(F("[WIFI] "));
+    Serial.print(label);
+    Serial.print(address[0]);
+    Serial.print('.');
+    Serial.print(address[1]);
+    Serial.print('.');
+    Serial.print(address[2]);
+    Serial.print('.');
+    Serial.println(address[3]);
+  }
+#endif
+
+  void stopCaptiveDns() {
+    if (captiveDnsRunning) {
+#ifdef DEBUG
+      Serial.println(F("[WIFI] captive DNS stop"));
+#endif
+      captiveDns.stop();
+    }
+    captiveDnsRunning = false;
+    captiveDnsAttempted = false;
+  }
+
+  void tickCaptiveDns() {
+    if (!apRunning) return;
+
+    const IPAddress apIp = WiFi.softAPIP();
+    if (isZeroIpAddress(apIp)) {
+      if (captiveDnsRunning) stopCaptiveDns();
+      return;
+    }
+
+    if (captiveDnsRunning && sameIpAddress(captiveDnsIp, apIp)) {
+      captiveDns.processNextRequest();
+      return;
+    }
+
+    if (captiveDnsRunning) {
+#ifdef DEBUG
+      Serial.println(F("[WIFI] captive DNS rebind"));
+#endif
+      stopCaptiveDns();
+    }
+
+    const uint32_t now = millis();
+    if (!retryDue(captiveDnsAttempted, now, captiveDnsLastAttemptAt)) return;
+
+#ifdef DEBUG
+    if (captiveDnsAttempted) Serial.println(F("[WIFI] captive DNS retry"));
+#endif
+    captiveDnsAttempted = true;
+    captiveDnsLastAttemptAt = now;
+    if (!captiveDns.start(53, "*", apIp)) {
+      captiveDns.stop();
+#ifdef DEBUG
+      Serial.println(F("[WIFI] captive DNS start failed"));
+#endif
+      return;
+    }
+
+    captiveDnsIp = apIp;
+    captiveDnsRunning = true;
+#ifdef DEBUG
+    logIp(F("captive DNS started IP="), apIp);
+#endif
+  }
+
+  void tickMdns(const char* hostname) {
+    if (hostname == nullptr || hostname[0] == '\0' || mdnsRunning) return;
+
+    const IPAddress staIp = WiFi.localIP();
+    const IPAddress apIp = WiFi.softAPIP();
+    const bool staReady = WiFi.status() == WL_CONNECTED && !isZeroIpAddress(staIp);
+    const bool apReady = apRunning && !isZeroIpAddress(apIp);
+    if (!staReady && !apReady) return;
+
+    const uint32_t now = millis();
+    if (!retryDue(mdnsAttempted, now, mdnsLastAttemptAt)) return;
+
+#ifdef DEBUG
+    if (mdnsAttempted) Serial.println(F("[WIFI] mDNS retry"));
+    logIp(staReady ? F("mDNS start STA IP=") : F("mDNS start AP IP="), staReady ? staIp : apIp);
+#endif
+    mdnsAttempted = true;
+    mdnsLastAttemptAt = now;
+    mdnsRunning = MDNS.begin(hostname);
+    if (!mdnsRunning) {
+      MDNS.end();
+#ifdef DEBUG
+      Serial.println(F("[WIFI] mDNS start failed"));
+#endif
+    }
   }
 
   void queueEvent(const wifi_controller::detail::PlatformEvent& event) {
@@ -71,11 +201,21 @@ namespace wifi_controller {
     }
 
     void platformSetMode(Mode mode) {
+#ifdef DEBUG
+      Serial.print(F("[WIFI] mode "));
+      Serial.println(modeName(mode));
+#endif
       WiFi.mode(toEspMode(mode));
     }
 
-    void platformBeginSta(const char* ssid, const char* password) {
+    bool platformSetStaHostname(const char* hostname) {
+      return hostname == nullptr || hostname[0] == '\0' || WiFi.setHostname(hostname);
+    }
+
+    bool platformBeginSta(const char* ssid, const char* password, const char* hostname) {
+      (void)hostname;
       WiFi.begin(ssid, password);
+      return true;
     }
 
     void platformDisconnectSta() {
@@ -88,14 +228,38 @@ namespace wifi_controller {
       return StaLinkStatus::Disconnected;
     }
 
+    void platformTickNetworkServices(const char* hostname) {
+      tickCaptiveDns();
+      tickMdns(hostname);
+    }
+
     bool platformStartAp(const char* ssid, const char* password, const WifiController::Ipv4Address& ipAddress) {
       const IPAddress address = toIpAddress(ipAddress);
-      if (!WiFi.softAPConfig(address, address, IPAddress(255, 255, 255, 0))) return false;
-      return WiFi.softAP(ssid, password);
+      if (!WiFi.softAPConfig(address, address, IPAddress(255, 255, 255, 0))) {
+#ifdef DEBUG
+        Serial.println(F("[WIFI] AP config failed"));
+#endif
+        return false;
+      }
+      apRunning = WiFi.softAP(ssid, password);
+#ifdef DEBUG
+      if (apRunning) {
+        logIp(F("AP started IP="), WiFi.softAPIP());
+      } else {
+        Serial.println(F("[WIFI] AP start failed"));
+      }
+#endif
+      return apRunning;
     }
 
     void platformStopAp() {
+      stopCaptiveDns();
       WiFi.softAPdisconnect(true);
+      apRunning = false;
+    }
+
+    bool platformSetApHostname(const char* hostname) {
+      return hostname == nullptr || hostname[0] == '\0' || WiFi.softAPsetHostname(hostname);
     }
 
     uint8_t platformApClientCount() {
