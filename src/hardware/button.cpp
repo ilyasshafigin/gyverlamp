@@ -1,7 +1,7 @@
 #include "button.h"
 
 #ifdef USE_BUTTON
-#include <ESP8266WiFi.h>
+#include "../platform/wifi_headers.h"
 
 #include "../core/power_controller.h"
 #include "../core/rotation_controller.h"

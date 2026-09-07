@@ -4,6 +4,8 @@
 
 class WifiController {
 public:
+  // Single-instance process-lifetime controller. Platform event callbacks stay
+  // registered for the process lifetime; no asynchronous teardown is provided.
   static constexpr uint8_t kDeviceIdCapacity = 64;
   static constexpr uint8_t kSsidCapacity = 33;
   static constexpr uint8_t kPasswordCapacity = 65;
@@ -11,6 +13,10 @@ public:
 
   struct Ipv4Address {
     uint8_t octets[4]{};
+
+    Ipv4Address() = default;
+    Ipv4Address(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth)
+      : octets{first, second, third, fourth} {}
   };
 
   struct Config {
@@ -58,7 +64,7 @@ public:
   using EventHandler = void (*)(const Event&, void* context);
 
   WifiController() = default;
-  ~WifiController();
+  ~WifiController() = default;
   WifiController(const WifiController&) = delete;
   WifiController& operator=(const WifiController&) = delete;
   WifiController(WifiController&&) = delete;

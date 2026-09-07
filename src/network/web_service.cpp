@@ -16,6 +16,7 @@
 #include "../notification/controller.h"
 #include "../notification/quiet_hours.h"
 #include "../notification/types.h"
+#include "../platform/device.h"
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
 #include "../util/loop_profiler.h"
@@ -349,9 +350,15 @@ void WebService::settingsBuilder(sets::Builder& b) {
     sets::Menu g(b, "WiFi");
     b.Input("SSID", inputWifiSsid_);
     b.Pass("Password", inputWifiPass_);
+    if (wifiSaveFailed_) b.Label("Save", "EEPROM commit failed");
     if (b.Button("Save and restart")) {
-      connectivity_.saveWifiConfig(inputWifiSsid_, inputWifiPass_);
-      ESP.restart();
+      if (connectivity_.saveWifiConfig(inputWifiSsid_, inputWifiPass_)) {
+        wifiSaveFailed_ = false;
+        Device::restart();
+      } else {
+        wifiSaveFailed_ = true;
+        b.reload();
+      }
     }
   }
 #ifdef USE_MQTT
@@ -409,10 +416,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
   {
     sets::Menu g(b, "Information");
 
-    uint16_t vcc = ESP.getVcc();
-    bool vccAvailable = (vcc != 0 && vcc >= 2500 && vcc <= 3700);
+    const Device::Diagnostics diagnostics = Device::diagnostics();
 
-    b.Label("Lamp ID", String(ESP.getChipId(), HEX));
+    b.Label("Lamp ID", diagnostics.chipId);
     const ConnectivityStatus status = connectivity_.status();
     b.Label("Device ID", status.deviceId);
     b.Label("Wi-Fi", status.wifiSsid);
@@ -423,16 +429,20 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Wi-Fi channel", String(status.channel));
     b.Label("Wi-Fi RSSI", String(status.rssi));
     b.Label("Wi-Fi RSSI %", String(2 * (status.rssi + 100)));
-    if (vccAvailable) b.Label("VCC", String(static_cast<float>(ESP.getVcc()) / 1000.0f));
-    b.Label("Reset reason", ESP.getResetReason());
-    b.Label("Core version", ESP.getCoreVersion());
-    b.Label("CPU freq", String(ESP.getCpuFreqMHz()) + " MHz");
-    b.Label("Sketch size", String(ESP.getSketchSize() / 1024) + " kb");
-    b.Label("Flash size", String(ESP.getFlashChipSize() / 1024 / 8) + " kb");
-    b.Label("Free sketch space", String(ESP.getFreeSketchSpace() / 1024 / 8) + " kb");
-    b.Label("Free heap", String(ESP.getFreeHeap() / 1024) + "kb");
-    b.Label("Max free block size", String(ESP.getMaxFreeBlockSize() / 1024) + "kb");
-    b.Label("Heap fragmentaion", String(ESP.getHeapFragmentation()) + "%");
+    b.Label(
+      "VCC",
+      diagnostics.vccMillivolts.available ? String(static_cast<float>(diagnostics.vccMillivolts.value) / 1000.0f)
+                                          : Device::kUnavailable
+    );
+    b.Label("Reset reason", diagnostics.resetReason);
+    b.Label("Core version", diagnostics.coreVersion);
+    b.Label("CPU freq", Device::metricText(diagnostics.cpuFrequencyMhz) + " MHz");
+    b.Label("Sketch size", Device::metricText(diagnostics.sketchSizeBytes) + " bytes");
+    b.Label("Flash size", Device::metricText(diagnostics.flashSizeBytes) + " bytes");
+    b.Label("Free sketch space", Device::metricText(diagnostics.freeSketchSpaceBytes) + " bytes");
+    b.Label("Free heap", Device::metricText(diagnostics.freeHeapBytes) + " bytes");
+    b.Label("Max free block size", Device::metricText(diagnostics.maxFreeBlockBytes) + " bytes");
+    b.Label("Heap fragmentation", Device::metricText(diagnostics.heapFragmentationPercent) + "%");
 #ifdef USE_MQTT
     b.Label("MQTT host", String(connectivity_.mqttConfig().host));
     b.Label("MQTT enabled", connectivity_.isMqttEnabled() ? "on" : "off");
@@ -443,7 +453,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     if (b.Button("Restart")) {
       webSettings_.reload();
       delay(2000);
-      ESP.restart();
+      Device::restart();
     }
   }
 

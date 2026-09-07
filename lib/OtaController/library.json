@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "description": "Deferred ArduinoOTA listener controller",
   "frameworks": "arduino",
-  "platforms": "espressif8266"
+  "platforms": ["espressif8266", "espressif32"]
 }

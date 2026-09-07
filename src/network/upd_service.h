@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #ifdef USE_UDP
-#include <ESP8266WiFi.h>
+#include "../platform/wifi_headers.h"
 #include <WiFiUdp.h>
 #endif
 

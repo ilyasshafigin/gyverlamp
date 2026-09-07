@@ -37,6 +37,11 @@ namespace {
 } // namespace
 
 void Microphone::init() {
+#if defined(ARDUINO_ARCH_ESP32)
+  analogReadResolution(10);
+  analogSetPinAttenuation(MIC_PIN, ADC_11db);
+#endif
+
   vol_.setDt(0);
   vol_.setPeriod(5);
   vol_.setWindow(4);
@@ -83,12 +88,12 @@ void Microphone::tick() {
 
   int32_t raw[FFT_SIZE];
   uint32_t spectr[FFT_SIZE];
-  int32_t rawMin = 1023;
-  int32_t rawMax = 0;
+  int32_t rawMin = PLATFORM_ADC_INPUT_MAX;
+  int32_t rawMax = PLATFORM_ADC_INPUT_MIN;
   int32_t rawSum = 0;
 
   for (uint16_t i = 0; i < FFT_SIZE; i++) {
-    const int32_t sample = analogRead(A0);
+    const int32_t sample = analogRead(MIC_PIN);
     raw[i] = sample;
     rawSum += sample;
 

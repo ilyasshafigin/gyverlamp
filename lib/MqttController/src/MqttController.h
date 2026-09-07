@@ -8,6 +8,13 @@ class PubSubClient;
 
 class MqttController {
 public:
+  // Single-instance process-lifetime controller. begin() must be called once;
+  // HAMQTTController and PubSubClient remain owned by their caller.
+  static constexpr uint8_t kHostCapacity = 33;
+  static constexpr uint8_t kClientIdCapacity = 64;
+  static constexpr uint8_t kUserCapacity = 33;
+  static constexpr uint8_t kPasswordCapacity = 33;
+
   enum class State : uint8_t {
     Disabled,
     WaitingForWifi,
@@ -36,6 +43,20 @@ public:
     const char* user = nullptr;
     const char* password = nullptr;
     uint16_t port = 0;
+
+    Config() = default;
+    Config(
+      const char* hostValue,
+      const char* clientIdValue,
+      const char* userValue,
+      const char* passwordValue,
+      uint16_t portValue
+    )
+      : host(hostValue),
+        clientId(clientIdValue),
+        user(userValue),
+        password(passwordValue),
+        port(portValue) {}
   };
 
   struct LinkHooks {
@@ -43,9 +64,21 @@ public:
     bool (*staConnected)(void* context) = nullptr;
     void (*abortTransport)(void* context) = nullptr;
     uint32_t (*now)(void* context) = nullptr;
+
+    LinkHooks() = default;
+    LinkHooks(
+      void* contextValue,
+      bool (*staConnectedValue)(void* context),
+      void (*abortTransportValue)(void* context),
+      uint32_t (*nowValue)(void* context)
+    )
+      : context(contextValue),
+        staConnected(staConnectedValue),
+        abortTransport(abortTransportValue),
+        now(nowValue) {}
   };
 
-  using EventHandler = void (*)(void*, const Event&);
+  using EventHandler = void (*)(const Event&, void* context);
 
   MqttController(HAMQTTController& controller, PubSubClient& client, LinkHooks hooks);
   ~MqttController() = default;
@@ -70,10 +103,10 @@ private:
   static constexpr uint16_t kReconnectMaxMs = 60000;
 
   struct OwnedConfig {
-    char host[256]{};
-    char clientId[128]{};
-    char user[128]{};
-    char password[128]{};
+    char host[kHostCapacity]{};
+    char clientId[kClientIdCapacity]{};
+    char user[kUserCapacity]{};
+    char password[kPasswordCapacity]{};
     uint16_t port = 0;
   };
 

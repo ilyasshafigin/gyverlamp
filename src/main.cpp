@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include "core/lamp.h"
 
-#ifndef USE_ADC
+#if defined(ARDUINO_ARCH_ESP8266) && !defined(USE_ADC)
 ADC_MODE(ADC_VCC);
 #endif
 

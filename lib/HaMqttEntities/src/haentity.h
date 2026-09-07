@@ -10,7 +10,7 @@
 #define HA_MAX_TOPIC_LENGTH 128
 #endif
 #ifndef HA_MAX_PAYLOAD_LENGTH
-#define HA_MAX_PAYLOAD_LENGTH 512
+#define HA_MAX_PAYLOAD_LENGTH 1536
 #endif
 
 class PubSubClient;

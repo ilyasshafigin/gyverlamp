@@ -6,7 +6,7 @@ class EffectNoise : public Effect {
 public:
   static constexpr Effects::Id kId = Effects::Id::Noise;
   static constexpr const char* kName = "Noise";
-  static constexpr EffectSettingsSpec kSettings = {
+  static inline constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     15,  // speed
     40,  // scale

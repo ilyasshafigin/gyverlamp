@@ -6,7 +6,7 @@ class EffectShadows : public Effect {
 public:
   static constexpr Effects::Id kId = Effects::Id::Shadows;
   static constexpr const char* kName = "Shadows";
-  static constexpr EffectSettingsSpec kSettings = {
+  static inline constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     200, // speed
     200, // scale

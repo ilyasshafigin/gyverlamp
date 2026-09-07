@@ -38,7 +38,7 @@ WifiController::Config ConnectivityCoordinator::wifiRuntimeConfig() const {
   config.staPassword = wifiConfig_.password;
   config.apSsid = AP_SSID;
   config.apPassword = AP_PASS;
-  config.apIp = WifiController::Ipv4Address{{apIp[0], apIp[1], apIp[2], apIp[3]}};
+  config.apIp = WifiController::Ipv4Address(apIp[0], apIp[1], apIp[2], apIp[3]);
   return config;
 }
 

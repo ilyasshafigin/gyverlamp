@@ -1,7 +1,6 @@
 #include "mqtt_service.h"
 
 #ifdef USE_MQTT
-#include <ESP8266WiFi.h>
 #include <WifiController.h>
 #include <cctype>
 #include <uptime_formatter.h>
@@ -17,6 +16,7 @@
 #include "../hardware/button.h"
 #include "../notification/controller.h"
 #include "../notification/quiet_hours.h"
+#include "../platform/device.h"
 #include "../storage/settings_repository.h"
 #include "../util/loop_profiler.h"
 
@@ -91,7 +91,7 @@ MqttService::MqttService(
     settings_(settings),
     button_(button),
     wifi_(wifi),
-    clientId_("GyverLamp-" + String(ESP.getChipId(), HEX)),
+    clientId_("GyverLamp-" + Device::diagnostics().chipId),
     haDevice_(clientId_.c_str(), DEVICE_NAME, FIRMWARE_VERSION, FIRMWARE_MANUFACTURER, "Gyver Lamp"),
     haLight_("_light", "Gyver Lamp", haDevice_),
     haRotationSwitch_("_rotation", "Rotation", haDevice_),
@@ -127,10 +127,14 @@ MqttService::MqttService(
     haRssi_("_rssi", "RSSI", haDevice_, "dBm", 0),
     haRssiPct_("_rssi_pct", "RSSI %", haDevice_, "%", 0),
     haChannel_("_channel", "WiFi Channel", haDevice_, nullptr, 0),
+#if defined(ARDUINO_ARCH_ESP32)
+    haVcc_("_vcc", "VCC", haDevice_, 16),
+#else
     haVcc_("_vcc", "VCC", haDevice_, "V", 3),
+#endif
     haResetReason_("_reset_reason", "Reset Reason", haDevice_, 64),
     mqttController_(
-      controller_, client_, MqttController::LinkHooks{this, staConnectedForward, abortTransportForward, nowForward}
+      controller_, client_, MqttController::LinkHooks(this, staConnectedForward, abortTransportForward, nowForward)
     ) {
 }
 
@@ -154,13 +158,9 @@ void MqttService::tick() {
 }
 
 MqttController::Config MqttService::controllerConfig(const MqttConfig& config) const {
-  return {
-    strcmp(config.host, "none") == 0 ? "" : config.host,
-    clientId_.c_str(),
-    config.user,
-    config.password,
-    config.port,
-  };
+  return MqttController::Config(
+    strcmp(config.host, "none") == 0 ? "" : config.host, clientId_.c_str(), config.user, config.password, config.port
+  );
 }
 
 bool MqttService::staConnectedForward(void* context) {
@@ -168,14 +168,19 @@ bool MqttService::staConnectedForward(void* context) {
 }
 
 void MqttService::abortTransportForward(void* context) {
-  static_cast<MqttService*>(context)->wifiClient_.abort();
+  WiFiClient& client = static_cast<MqttService*>(context)->wifiClient_;
+#if defined(ARDUINO_ARCH_ESP32)
+  client.stop();
+#else
+  client.abort();
+#endif
 }
 
 uint32_t MqttService::nowForward(void*) {
   return millis();
 }
 
-void MqttService::mqttEventForward(void* context, const MqttController::Event& event) {
+void MqttService::mqttEventForward(const MqttController::Event& event, void* context) {
   MqttService* service = static_cast<MqttService*>(context);
   switch (event.type) {
     case MqttController::EventType::StateChanged: service->onTransportState(event.state); break;
@@ -428,10 +433,16 @@ void MqttService::telemetryTimerCallback() {
   haRssiPct_.setState(2 * (WiFi.RSSI() + 100));
   haChannel_.setState(WiFi.channel());
   haNotificationMuteState_.setState(notifications_.isMutedNow() ? "muted" : "active");
-  uint16_t vcc = ESP.getVcc();
-  haVcc_.setState(vcc != 0 && vcc >= 2500 && vcc <= 3700 ? static_cast<float>(vcc) / 1000.0f : 0);
+  const Device::Diagnostics diagnostics = Device::diagnostics();
+  const Device::Metric& vcc = diagnostics.vccMillivolts;
+#if defined(ARDUINO_ARCH_ESP32)
+  const String vccText = vcc.available ? String(static_cast<float>(vcc.value) / 1000.0f) : Device::kUnavailable;
+  haVcc_.setState(vccText.c_str());
+#else
+  haVcc_.setState(vcc.available ? static_cast<float>(vcc.value) / 1000.0f : 0);
+#endif
   char reason[64];
-  ESP.getResetReason().toCharArray(reason, sizeof(reason));
+  diagnostics.resetReason.toCharArray(reason, sizeof(reason));
   haResetReason_.setState(reason);
 }
 

@@ -1,5 +1,5 @@
 #include "time_service.h"
-#include <ESP8266WiFi.h>
+#include "../platform/wifi_headers.h"
 #include <time.h>
 
 namespace {

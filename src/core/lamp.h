@@ -53,6 +53,8 @@ public:
   void loop();
 
 private:
+  bool safeMode_ = false;
+
   static void onWifiEvent(const WifiController::Event& event, void* context);
   static void onOtaEvent(const OtaController::Event& event, void* context);
 };

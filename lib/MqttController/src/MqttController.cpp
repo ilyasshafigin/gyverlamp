@@ -12,6 +12,8 @@ MqttController::MqttController(HAMQTTController& controller, PubSubClient& clien
 }
 
 void MqttController::begin(const Config& config, bool prerequisitesReady) {
+  if (initialized_) return;
+
   prerequisitesReady_ = prerequisitesReady && hooksReady();
   requestedConfigValid_ = copyConfig(requestedConfig_, config);
   requestedEnabled_ = requestedConfigValid_ && requestedConfig_.host[0] != '\0';
@@ -122,11 +124,11 @@ void MqttController::consumeEvents(EventHandler handler, void* context) {
   const uint8_t events = pendingEvents_;
   pendingEvents_ = 0;
   if (events & (1 << static_cast<uint8_t>(EventType::TransportFailure)))
-    handler(context, Event{EventType::TransportFailure, state_});
+    handler(Event{EventType::TransportFailure, state_}, context);
   if (events & (1 << static_cast<uint8_t>(EventType::StateChanged)))
-    handler(context, Event{EventType::StateChanged, state_});
+    handler(Event{EventType::StateChanged, state_}, context);
   if (events & (1 << static_cast<uint8_t>(EventType::BecameOnline)))
-    handler(context, Event{EventType::BecameOnline, state_});
+    handler(Event{EventType::BecameOnline, state_}, context);
 }
 
 bool MqttController::copyString(char* destination, size_t capacity, const char* source) {

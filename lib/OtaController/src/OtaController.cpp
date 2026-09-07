@@ -20,13 +20,17 @@ void OtaController::copyString(char* destination, uint8_t capacity, const char* 
 }
 
 void OtaController::begin(const Config& config, EventHandler eventHandler, void* context) {
+  if (initialized_) return;
+
   copyString(hostname_, sizeof(hostname_), config.hostname);
   copyString(password_, sizeof(password_), config.password);
   copyString(passwordHash_, sizeof(passwordHash_), config.passwordHash);
   port_ = config.port == 0 ? 8266 : config.port;
-  enabled_ = config.enabled;
+  desiredEnabled_ = config.enabled;
+  effectiveEnabled_ = config.enabled;
   eventHandler_ = eventHandler;
   eventContext_ = context;
+  initialized_ = true;
 
 #ifdef USE_OTA
   ArduinoOTA.setHostname(hostname_);
@@ -94,10 +98,10 @@ void OtaController::tick(bool staConnected) {
 
   if (enableRequestPending_) {
     enableRequestPending_ = false;
-    enabled_ = requestedEnabled_;
+    effectiveEnabled_ = desiredEnabled_;
   }
 
-  if (!enabled_ || !staConnected) {
+  if (!effectiveEnabled_ || !staConnected) {
     stopListener();
     restartRequested_ = false;
     return;
@@ -109,10 +113,16 @@ void OtaController::tick(bool staConnected) {
   }
 
   const unsigned long now = millis();
-  if (!beginAttempted_ || now - lastBeginAttemptAt_ >= kBeginRetryIntervalMs) {
+  if (!listenerStartIssued_ || now - lastBeginAttemptAt_ >= kBeginRetryIntervalMs) {
+#if defined(ARDUINO_ARCH_ESP8266)
     ArduinoOTA.begin(false);
-    beginAttempted_ = true;
-    listenerActive_ = true;
+#elif defined(ARDUINO_ARCH_ESP32)
+    ArduinoOTA.setMdnsEnabled(false);
+    ArduinoOTA.begin();
+#else
+    ArduinoOTA.begin();
+#endif
+    listenerStartIssued_ = true;
     lastBeginAttemptAt_ = millis();
   }
 
@@ -124,7 +134,7 @@ void OtaController::tick(bool staConnected) {
 
 void OtaController::requestEnabled(bool enabled) {
 #ifdef USE_OTA
-  requestedEnabled_ = enabled;
+  desiredEnabled_ = enabled;
   enableRequestPending_ = true;
 #else
   (void)enabled;
@@ -133,13 +143,13 @@ void OtaController::requestEnabled(bool enabled) {
 
 void OtaController::requestRestart() {
 #ifdef USE_OTA
-  if (enabled_) restartRequested_ = true;
+  if (desiredEnabled_) restartRequested_ = true;
 #endif
 }
 
 bool OtaController::isEnabled() const {
 #ifdef USE_OTA
-  return enabled_;
+  return desiredEnabled_;
 #else
   return false;
 #endif
@@ -148,9 +158,9 @@ bool OtaController::isEnabled() const {
 OtaController::State OtaController::state() const {
 #ifdef USE_OTA
   if (updating_) return State::Updating;
-  if (!enabled_) return State::Disabled;
-  if (!listenerActive_) return State::WaitingForSta;
-  return State::Listening;
+  if (!effectiveEnabled_) return State::Disabled;
+  if (!listenerStartIssued_) return State::WaitingForSta;
+  return State::ListenerStartIssued;
 #else
   return State::Disabled;
 #endif
@@ -160,7 +170,7 @@ const char* OtaController::stateName() const {
   switch (state()) {
     case State::Disabled: return "Disabled";
     case State::WaitingForSta: return "Waiting for STA";
-    case State::Listening: return "Listening";
+    case State::ListenerStartIssued: return "OTA listener start requested";
     case State::Updating: return "Updating";
   }
   return "Disabled";
@@ -168,10 +178,9 @@ const char* OtaController::stateName() const {
 
 void OtaController::stopListener() {
 #ifdef USE_OTA
-  if (listenerActive_) ArduinoOTA.end();
+  if (listenerStartIssued_) ArduinoOTA.end();
 #endif
-  beginAttempted_ = false;
-  listenerActive_ = false;
+  listenerStartIssued_ = false;
   lastBeginAttemptAt_ = 0;
 }
 

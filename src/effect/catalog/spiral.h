@@ -6,7 +6,7 @@ class EffectSpiral : public Effect {
 public:
   static constexpr Effects::Id kId = Effects::Id::Spiral;
   static constexpr const char* kName = "Spiral";
-  static constexpr EffectSettingsSpec kSettings = {
+  static inline constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     30,  // speed
     100, // scale

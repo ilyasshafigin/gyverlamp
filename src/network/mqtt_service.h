@@ -6,7 +6,13 @@
 #include "mqtt_config.h"
 
 #ifdef USE_MQTT
-#include <ESP8266WiFi.h>
+static_assert(MqttConfig::kMqttHostLen <= MqttController::kHostCapacity, "MQTT host exceeds controller storage");
+static_assert(MqttConfig::kMqttUserLen <= MqttController::kUserCapacity, "MQTT user exceeds controller storage");
+static_assert(
+  MqttConfig::kMqttPassLen <= MqttController::kPasswordCapacity, "MQTT password exceeds controller storage"
+);
+
+#include "../platform/wifi_headers.h"
 #include <HaMqttEntities.h>
 #include <PubSubClient.h>
 #include "../util/timer.h"
@@ -107,7 +113,11 @@ private:
   HASensorNumeric haRssi_;
   HASensorNumeric haRssiPct_;
   HASensorNumeric haChannel_;
+#if defined(ARDUINO_ARCH_ESP32)
+  HASensorText haVcc_;
+#else
   HASensorNumeric haVcc_;
+#endif
   HASensorText haResetReason_;
 
   HAEntity* entityRegistry_[34] = {};
@@ -126,7 +136,7 @@ private:
   static bool staConnectedForward(void* context);
   static void abortTransportForward(void* context);
   static uint32_t nowForward(void* context);
-  static void mqttEventForward(void* context, const MqttController::Event& event);
+  static void mqttEventForward(const MqttController::Event& event, void* context);
   static void haCallbackForward(void* context, HAEntity& entity, char* topic, byte* payload, size_t length);
   void handleHaCommand(HAEntity& entity, char* topic, byte* payload, size_t length);
   void consumeControllerEvents();

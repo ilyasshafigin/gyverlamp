@@ -19,17 +19,12 @@ namespace wifi_controller {
       Connected,
     };
 
-    enum class PlatformEventType : uint8_t {
-      StaConnected,
-      StaDisconnected,
-      StaGotIp,
-      StaDhcpTimeout,
-    };
-
     struct PlatformEvent {
-      PlatformEventType type;
       uint16_t disconnectReason;
     };
+
+    // Platform callbacks are registered once and remain active for the
+    // process lifetime. Events contain only STA disconnects used by controller.
 
     void platformInitialize();
     void platformSetAutoReconnect(bool enabled);

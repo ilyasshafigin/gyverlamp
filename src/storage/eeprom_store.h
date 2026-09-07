@@ -13,7 +13,8 @@
 class EepromStore {
 public:
   EepromStore() {};
-  void init();
+  bool init();
+  bool isReady() const { return ready_; }
 
   const WifiConfig& readWifiConfig();
   bool writeWifiConfig(const char* ssid, const char* password);
@@ -60,6 +61,7 @@ public:
 private:
   WifiConfig wifiConfigCache_ = {};
   MqttConfig mqttConfigCache_ = {};
+  bool ready_ = false;
 
   void ensureLayoutVersion();
   bool migrateLayoutV4ToV5();

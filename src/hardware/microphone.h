@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "../audio/audio_frame.h"
+#include "../config.h"
 
 #ifdef USE_ADC
 #include "../util/fast_filter.h"
@@ -12,7 +13,7 @@ class Microphone {
 public:
   explicit Microphone()
 #ifdef USE_ADC
-    : vol_(A0) {
+    : vol_(MIC_PIN) {
   }
 #else
   {

@@ -113,7 +113,7 @@ void UpdService::sendReply(const char* reply) {
   }
 
   Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-  Udp.write(reply);
+  Udp.write(reinterpret_cast<const uint8_t*>(reply), strlen(reply));
   Udp.endPacket();
 }
 

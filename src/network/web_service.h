@@ -70,6 +70,7 @@ private:
 
   char inputWifiSsid_[WifiConfig::kWifiSsidLen];
   char inputWifiPass_[WifiConfig::kWifiPassLen];
+  bool wifiSaveFailed_ = false;
 #ifdef USE_MQTT
   char inputMqttHost_[MqttConfig::kMqttHostLen];
   char inputMqttPort_[MqttConfig::kMqttPortTextLen] = {};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <cstring>
 #include <FastLED.h>
 
 uint8_t mapsin8(uint8_t theta, uint8_t lowest = 0, uint8_t highest = 255);

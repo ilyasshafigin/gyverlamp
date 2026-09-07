@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "../platform/board_profile.h"
 #include "fast_filter.h"
 
 // From https://github.com/AlexGyver/GyverLamp2/blob/main/firmware/GyverLamp2/VolAnalyzer.h
@@ -65,7 +66,7 @@ public:
       maxF_.compute(nowMs);
       minF_.compute(nowMs);
       maxs_ = 0;
-      mins_ = 1023;
+      mins_ = PLATFORM_ADC_INPUT_MAX;
     }
     // период между захватом сэмплов
     if (period_ == 0 || nowMs - tmr1_ >= period_) {
@@ -131,7 +132,7 @@ private:
   int32_t max_ = 0;
   uint16_t count_ = 0;
   int32_t maxs_ = 0;
-  int32_t mins_ = 1023;
+  int32_t mins_ = PLATFORM_ADC_INPUT_MAX;
   int32_t volMin_ = 0;
   int32_t volMax_ = 100;
   int32_t trsh_ = 30;

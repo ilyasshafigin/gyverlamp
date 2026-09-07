@@ -5,19 +5,12 @@
 namespace {
   using wifi_controller::detail::Mode;
   using wifi_controller::detail::PlatformEvent;
-  using wifi_controller::detail::PlatformEventType;
   using wifi_controller::detail::StaLinkStatus;
 
   bool elapsed(uint32_t now, uint32_t startedAt, uint32_t intervalMs) {
     return now - startedAt >= intervalMs;
   }
 } // namespace
-
-WifiController::~WifiController() {
-  eventHandler_ = nullptr;
-  eventContext_ = nullptr;
-  pendingEventCount_ = 0;
-}
 
 bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandler, void* eventContext) {
   eventHandler_ = eventHandler;
@@ -156,10 +149,7 @@ bool WifiController::isFastFailDisconnectReason(uint16_t reason) {
 void WifiController::processPlatformEvents() {
   PlatformEvent event{};
   while (wifi_controller::detail::platformNextEvent(event)) {
-    if (
-      event.type == PlatformEventType::StaDisconnected && staState_ == State::Connecting &&
-      acceptingStaDisconnectEvents_ && !pendingDisconnectValid_
-    ) {
+    if (staState_ == State::Connecting && acceptingStaDisconnectEvents_ && !pendingDisconnectValid_) {
       pendingDisconnectValid_ = true;
       pendingDisconnectAttemptId_ = activeAttemptId_;
       pendingDisconnectReason_ = event.disconnectReason;

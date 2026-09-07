@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "platform/board_profile.h"
 
 // ============= НАСТРОЙКИ =============
 
@@ -38,7 +39,7 @@
 // Порядок цветов на ленте. Если цвет отображается некорректно - меняйте. Начать можно с RGB
 #define COLOR_ORDER GRB
 // Пин ленты
-#define LED_PIN 2
+#define LED_PIN PLATFORM_LED_PIN
 // Тип светодиодов
 #define LED_TYPE WS2812
 
@@ -64,12 +65,13 @@
 // Будет ли поддержка кнопки
 //#define USE_BUTTON - задается в platformio.local.ini
 // Пин сенсорной кнопки
-#define BTN_PIN 4
+#define BTN_PIN PLATFORM_BUTTON_PIN
 
 // -------- Микрофон ---------
 
 // Будет ли поддержка микрофона
 //#define USE_ADC - задается в platformio.local.ini
+#define MIC_PIN PLATFORM_MICROPHONE_PIN
 
 // ----- AP (точка доступа) -------
 

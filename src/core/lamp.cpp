@@ -7,7 +7,12 @@ void Lamp::setup() {
   Serial.println();
   delay(1000);
 
-  eeprom.init();
+  if (!eeprom.init()) {
+    led.blackout();
+    safeMode_ = true;
+    Serial.println(F("[SAFE MODE] EEPROM initialization failed; settings services disabled"));
+    return;
+  }
   connectivity.load();
   settings.init();
   audio.init();
@@ -28,6 +33,11 @@ void Lamp::setup() {
 }
 
 void Lamp::loop() {
+  if (safeMode_) {
+    yield();
+    return;
+  }
+
   power.tick();
 
   LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(power.isOn()); });

@@ -1,36 +1,30 @@
-#if defined(ESP8266) || defined(ARDUINO_ARCH_ESP8266)
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
 
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
+
+#include <atomic>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 
 #include "../../detail/wifi_platform.h"
 
 namespace {
-  constexpr uint8_t kMailboxCapacity = 8;
-  wifi_controller::detail::PlatformEvent mailbox[kMailboxCapacity]{};
-  uint8_t mailboxReadIndex = 0;
-  uint8_t mailboxWriteIndex = 0;
-  uint8_t mailboxCount = 0;
-  bool initialized = false;
-  WiFiEventHandler stationDisconnectedEventHandler;
+  constexpr UBaseType_t kEventQueueDepth = 8;
 
-  void pushEvent(uint16_t disconnectReason) {
-    if (mailboxCount == kMailboxCapacity) {
-      mailboxReadIndex = (mailboxReadIndex + 1) % kMailboxCapacity;
-      --mailboxCount;
-    }
-    mailbox[mailboxWriteIndex] = {disconnectReason};
-    mailboxWriteIndex = (mailboxWriteIndex + 1) % kMailboxCapacity;
-    ++mailboxCount;
-  }
+  QueueHandle_t eventQueue = nullptr;
+  std::atomic<bool> resyncPending{false};
+  std::atomic<uint16_t> latestDisconnectReason{0};
+  bool initialized = false;
 
   WiFiMode_t toEspMode(wifi_controller::detail::Mode mode) {
     switch (mode) {
-      case wifi_controller::detail::Mode::Off: return WIFI_OFF;
-      case wifi_controller::detail::Mode::Sta: return WIFI_STA;
-      case wifi_controller::detail::Mode::Ap: return WIFI_AP;
-      case wifi_controller::detail::Mode::ApSta: return WIFI_AP_STA;
+      case wifi_controller::detail::Mode::Off: return WIFI_MODE_NULL;
+      case wifi_controller::detail::Mode::Sta: return WIFI_MODE_STA;
+      case wifi_controller::detail::Mode::Ap: return WIFI_MODE_AP;
+      case wifi_controller::detail::Mode::ApSta: return WIFI_MODE_APSTA;
     }
-    return WIFI_OFF;
+    return WIFI_MODE_NULL;
   }
 
   IPAddress toIpAddress(const WifiController::Ipv4Address& address) {
@@ -40,6 +34,26 @@ namespace {
   WifiController::Ipv4Address fromIpAddress(const IPAddress& address) {
     return WifiController::Ipv4Address(address[0], address[1], address[2], address[3]);
   }
+
+  void queueEvent(const wifi_controller::detail::PlatformEvent& event) {
+    if (eventQueue != nullptr && xQueueSend(eventQueue, &event, 0) == pdPASS) return;
+    resyncPending.store(true, std::memory_order_release);
+  }
+
+  void onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+    using wifi_controller::detail::PlatformEvent;
+
+    switch (event) {
+      case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
+        const uint16_t reason = static_cast<uint16_t>(info.wifi_sta_disconnected.reason);
+        latestDisconnectReason.store(reason, std::memory_order_release);
+        queueEvent({reason});
+        break;
+      }
+
+      default: break;
+    }
+  }
 } // namespace
 
 namespace wifi_controller {
@@ -47,10 +61,8 @@ namespace wifi_controller {
     void platformInitialize() {
       if (initialized) return;
 
-      stationDisconnectedEventHandler =
-        WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& event) {
-          pushEvent(static_cast<uint16_t>(event.reason));
-        });
+      eventQueue = xQueueCreate(kEventQueueDepth, sizeof(PlatformEvent));
+      WiFi.onEvent(onWifiEvent);
       initialized = true;
     }
 
@@ -104,11 +116,15 @@ namespace wifi_controller {
     }
 
     bool platformNextEvent(PlatformEvent& event) {
-      if (mailboxCount == 0) return false;
-      event = mailbox[mailboxReadIndex];
-      mailboxReadIndex = (mailboxReadIndex + 1) % kMailboxCapacity;
-      --mailboxCount;
-      return true;
+      if (resyncPending.exchange(false, std::memory_order_acq_rel)) {
+        // Queue contents predate overflow and may no longer describe current link.
+        if (eventQueue != nullptr) xQueueReset(eventQueue);
+        if (platformStaLinkStatus() != StaLinkStatus::Disconnected) return false;
+        event = {latestDisconnectReason.load(std::memory_order_acquire)};
+        return true;
+      }
+
+      return eventQueue != nullptr && xQueueReceive(eventQueue, &event, 0) == pdPASS;
     }
   } // namespace detail
 } // namespace wifi_controller

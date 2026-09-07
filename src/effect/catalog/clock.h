@@ -6,7 +6,7 @@ class EffectClock : public Effect {
 public:
   static constexpr Effects::Id kId = Effects::Id::Clock;
   static constexpr const char* kName = "Clock";
-  static constexpr EffectSettingsSpec kSettings = {
+  static inline constexpr EffectSettingsSpec kSettings = {
     255, // brightness
     170, // speed (scroll speed)
     40,  // scale (hue), 1 - white
