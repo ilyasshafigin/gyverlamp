@@ -1,9 +1,11 @@
 #pragma once
 
 #include <Arduino.h>
+
 #ifdef USE_UDP
-#include "../platform/wifi_headers.h"
 #include <WiFiUdp.h>
+
+#include "../platform/wifi_headers.h"
 #endif
 
 class EffectController;
@@ -69,7 +71,7 @@ private:
   uint16_t port_;
 
   void handlePacket(const char* packet, int length, char* reply, size_t replySize);
-  bool startsWith(const char* packet, const char* command) const;
+  bool startsWith(const char* packet, int length, const char* command) const;
   void sendReply(const char* reply);
   void writeTime(char* buffer, size_t bufferSize) const;
   void writeCurrentState(char* reply, size_t replySize) const;

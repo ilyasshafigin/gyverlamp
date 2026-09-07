@@ -1,6 +1,6 @@
-#include <FastLED.h>
-
 #include "fade_animator.h"
+
+#include <FastLED.h>
 
 void FadeAnimator::snapTo(uint8_t value) {
   from_ = value;

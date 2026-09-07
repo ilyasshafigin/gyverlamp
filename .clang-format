@@ -58,8 +58,12 @@ ConstructorInitializerIndentWidth: 2
 PackConstructorInitializers: Never
 
 # --- includes: preserve order, do NOT sort (Arduino/PlatformIO include order matters) ---
+# Manual order: implementation header in .cpp, then <library/system>, ../parent,
+# then same-directory quoted headers. Keep blank lines between nonempty groups.
+# clang-format cannot validate this grouping while preserving intra-group order.
 IncludeBlocks: Preserve
-SortIncludes: Never
+# Boolean form stays compatible with clang-format 14+.
+SortIncludes: false
 
 # --- alignment ---
 AlignAfterOpenBracket: BlockIndent

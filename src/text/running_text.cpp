@@ -1,6 +1,8 @@
+#include "running_text.h"
+
 #include "../hardware/led.h"
 #include "../notification/overlay.h"
-#include "running_text.h"
+
 #include "text_renderer.h"
 
 #define TEXT_HEIGHT 2 // высота, на которой бежит текст (от низа матрицы)

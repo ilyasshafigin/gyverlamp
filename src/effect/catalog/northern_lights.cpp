@@ -1,4 +1,5 @@
 #include "northern_lights.h"
+
 #include "../shared.h"
 
 // Effect: Northern Lights

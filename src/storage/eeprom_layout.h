@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../effect/ids.h"
 #include "../effect/settings.h"
 #include "../network/mqtt_config.h"

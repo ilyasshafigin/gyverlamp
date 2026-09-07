@@ -1,3 +1,5 @@
+#include "web_service.h"
+
 #include <SettingsAsync.h>
 #include <uptime_formatter.h>
 
@@ -20,8 +22,6 @@
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
 #include "../util/loop_profiler.h"
-#include "web_service.h"
-
 namespace {
   constexpr uint32_t kSecondsPerDay = 24UL * 60UL * 60UL;
 
@@ -33,7 +33,7 @@ namespace {
     return static_cast<uint16_t>(seconds / 60UL);
   }
 
-#ifdef USE_MQTT
+#if defined(USE_MQTT)
   bool parseMqttPort(const char* text, uint16_t& port) {
     uint32_t value = 0;
     for (uint8_t i = 0; i < MqttConfig::kMqttPortTextLen; ++i) {
@@ -80,7 +80,7 @@ void WebService::init() {
     strlcpy(inputWifiPass_, wifiConfig.password, WifiConfig::kWifiPassLen);
   }
 
-#ifdef USE_MQTT
+#if defined(USE_MQTT)
   const MqttConfig mqttConfig = connectivity_.mqttConfig();
   if (strlen(mqttConfig.host) > 0) {
     strlcpy(inputMqttHost_, mqttConfig.host, MqttConfig::kMqttHostLen);
@@ -361,7 +361,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
       }
     }
   }
-#ifdef USE_MQTT
+#if defined(USE_MQTT)
   {
     sets::Menu g(b, "MQTT");
 
@@ -394,7 +394,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     }
   }
 #endif
-#ifdef USE_OTA
+#if defined(USE_OTA)
   {
     sets::Menu g(b, "OTA");
 
@@ -443,7 +443,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", Device::metricText(diagnostics.freeHeapBytes) + " bytes");
     b.Label("Max free block size", Device::metricText(diagnostics.maxFreeBlockBytes) + " bytes");
     b.Label("Heap fragmentation", Device::metricText(diagnostics.heapFragmentationPercent) + "%");
-#ifdef USE_MQTT
+#if defined(USE_MQTT)
     b.Label("MQTT host", String(connectivity_.mqttConfig().host));
     b.Label("MQTT enabled", connectivity_.isMqttEnabled() ? "on" : "off");
 #endif
@@ -457,7 +457,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     }
   }
 
-#ifdef TEST_NOTIFICATIONS
+#if defined(TEST_NOTIFICATIONS)
   {
     sets::Menu g(b, "Notification Test");
 
@@ -614,7 +614,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
   }
 #endif
 
-#ifdef PROFILE_LOOP
+#if defined(PROFILE_LOOP)
   {
     sets::Menu g(b, "Profiler (last/max us)");
 

@@ -1,3 +1,5 @@
+#include "eeprom_store.h"
+
 #include <EEPROM.h>
 #include <cstring>
 
@@ -5,8 +7,8 @@
 #include "../core/quiet_hours_config.h"
 #include "../network/mqtt_config.h"
 #include "../effect/palette_catalog.h"
+
 #include "eeprom_layout.h"
-#include "eeprom_store.h"
 
 namespace {
 

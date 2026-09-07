@@ -1,4 +1,5 @@
 #include "fire.h"
+
 #include "../shared.h"
 
 // Effect: Fire - Пламя

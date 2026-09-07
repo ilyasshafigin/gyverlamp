@@ -1,6 +1,7 @@
 #pragma once
 
 #include <FastLED.h>
+
 #include "palette_ids.h"
 
 #define PALETTE_REGISTRY(X)                                      \

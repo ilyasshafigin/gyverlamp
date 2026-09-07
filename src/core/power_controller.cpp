@@ -1,9 +1,11 @@
+#include "power_controller.h"
+
 #include <Arduino.h>
 
 #include "../effect/controller.h"
 #include "../storage/eeprom_store.h"
+
 #include "auto_off_config.h"
-#include "power_controller.h"
 #include "state_notifier.h"
 
 namespace {

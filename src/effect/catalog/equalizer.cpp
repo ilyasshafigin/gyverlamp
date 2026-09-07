@@ -1,7 +1,8 @@
 #include "equalizer.h"
-#include "../shared.h"
 
 #include <Arduino.h>
+
+#include "../shared.h"
 
 namespace {
 

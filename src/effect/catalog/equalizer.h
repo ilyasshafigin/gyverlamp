@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Arduino.h>
+
+#include "../../config.h"
 #include "../effect.h"
 
 class EffectEqualizer : public Effect {

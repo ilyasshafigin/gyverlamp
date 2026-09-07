@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../audio/audio_frame.h"
 #include "../config.h"
 

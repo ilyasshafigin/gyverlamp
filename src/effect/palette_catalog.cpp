@@ -1,6 +1,8 @@
 #include "palette_catalog.h"
-#include "palettes.h"
+
 #include <string.h>
+
+#include "palettes.h"
 
 namespace Palettes {
 

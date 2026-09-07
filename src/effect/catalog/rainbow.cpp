@@ -1,4 +1,5 @@
 #include "rainbow.h"
+
 #include "../shared.h"
 
 // Effect: Rainbow

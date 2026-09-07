@@ -1,7 +1,9 @@
+#include "user_renderer.h"
+
 #include "../config.h"
 #include "../text/running_text.h"
+
 #include "render_utils.h"
-#include "user_renderer.h"
 
 void UserNotificationRenderer::render(NotificationOverlay& overlay, const NotificationSnapshot& notification) {
   if (notification.userType == UserNotificationType::Alarm) {

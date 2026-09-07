@@ -1,6 +1,7 @@
 #pragma once
 
 #include <FastLED.h>
+
 #include "palette_catalog.h"
 
 DECLARE_GRADIENT_PALETTE(Sunset_gp);

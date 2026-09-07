@@ -1,7 +1,10 @@
+#include "rotation_controller.h"
+
 #include <Arduino.h>
+
 #include "../effect/controller.h"
 #include "../storage/eeprom_store.h"
-#include "rotation_controller.h"
+
 #include "rotation_presets.h"
 #include "state_notifier.h"
 

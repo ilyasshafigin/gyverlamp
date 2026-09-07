@@ -1,7 +1,8 @@
 #include "thunderstorm.h"
-#include "../shared.h"
 
 #include <cstring>
+
+#include "../shared.h"
 
 // Effect: Thunderstorm - ЭФФЕКТЫ ОСАДКИ / ТУЧКА В БАНКЕ / ГРОЗА В БАНКЕ
 // Authors: marcmerlin

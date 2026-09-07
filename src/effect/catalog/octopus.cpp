@@ -1,4 +1,5 @@
 #include "octopus.h"
+
 #include "../shared.h"
 
 // Effect: Octupus - Осьминог

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <FastLED.h>
+
 #include "../config.h"
 #include "../audio/audio_config.h"
 #include "../audio/audio_frame.h"
 #include "../hardware/led.h"
+
 #include "settings.h"
 #include "ids.h"
 #include "palette_ids.h"

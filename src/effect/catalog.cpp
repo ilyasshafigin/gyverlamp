@@ -1,5 +1,7 @@
-#include <new>
 #include "catalog.h"
+
+#include <new>
+
 #include "effects.h"
 
 namespace Effects {

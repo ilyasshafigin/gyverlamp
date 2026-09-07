@@ -1,4 +1,5 @@
 #include "spiral.h"
+
 #include "../shared.h"
 
 // Effect: Spiral - эффект спирали

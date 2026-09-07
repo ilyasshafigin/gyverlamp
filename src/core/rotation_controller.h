@@ -1,7 +1,9 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../util/timer.h"
+
 #include "rotation_mode.h"
 
 class EepromStore;

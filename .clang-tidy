@@ -17,8 +17,11 @@ Checks: >
 WarningsAsErrors: ''
 HeaderFilterRegex: '(^src/|.*/GyverLamp/src/).*'
 FormatStyle: file
+SystemHeaders: false
 
 CheckOptions:
+  - key: readability-identifier-naming.MethodCase
+    value: camelBack
   - key: readability-identifier-naming.PrivateMemberCase
     value: camelBack
   - key: readability-identifier-naming.PrivateMemberSuffix

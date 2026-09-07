@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../effect/settings.h"
+
 #include "audio_config.h"
 #include "audio_frame.h"
 

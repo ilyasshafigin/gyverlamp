@@ -5,6 +5,7 @@
 
 #include "../config.h"
 #include "../util/fade_animator.h"
+
 #include "indicator_renderer.h"
 #include "quiet_hours.h"
 #include "system_renderer.h"

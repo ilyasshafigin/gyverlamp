@@ -1,6 +1,8 @@
+#include "text_renderer.h"
+
 #include "../hardware/led.h"
 #include "../notification/overlay.h"
-#include "text_renderer.h"
+
 #include "font_5x8.h"
 
 // **************** НАСТРОЙКИ ****************

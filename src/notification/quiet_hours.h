@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../core/quiet_hours_config.h"
 
 struct NotificationQuietHours {

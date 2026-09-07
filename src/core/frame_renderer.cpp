@@ -9,6 +9,7 @@
 #include "../notification/types.h"
 #include "../storage/settings_repository.h"
 #include "../util/loop_profiler.h"
+
 #include "power_controller.h"
 #include "state_notifier.h"
 

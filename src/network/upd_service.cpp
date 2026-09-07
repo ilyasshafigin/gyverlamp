@@ -2,6 +2,10 @@
 
 #ifdef USE_UDP
 
+#include <cctype>
+#include <cstdint>
+#include <cstring>
+
 #include "../core/power_controller.h"
 #include "../core/state_notifier.h"
 #include "../effect/controller.h"
@@ -10,13 +14,45 @@
 #include "../time/time_service.h"
 
 namespace {
-  uint8_t parseUint8(const char* value) {
-    return static_cast<uint8_t>(constrain(atoi(value), 0, 255));
+  bool hasLength(int length, size_t required) {
+    return length >= 0 && static_cast<size_t>(length) >= required;
+  }
+
+  bool isDecimalDigit(char value) {
+    return value >= '0' && value <= '9';
+  }
+
+  uint32_t parseDecimal(const char* value, size_t length, uint32_t maximum) {
+    size_t position = 0;
+    while (position < length && std::isspace(static_cast<unsigned char>(value[position]))) {
+      position++;
+    }
+
+    bool negative = false;
+    if (position < length && (value[position] == '+' || value[position] == '-')) {
+      negative = value[position] == '-';
+      position++;
+    }
+
+    uint32_t result = 0;
+    while (position < length && isDecimalDigit(value[position])) {
+      const uint8_t digit = static_cast<uint8_t>(value[position] - '0');
+      if (result > (maximum - digit) / 10U) {
+        return negative ? 0 : maximum;
+      }
+      result = result * 10U + digit;
+      position++;
+    }
+
+    return negative ? 0 : result;
+  }
+
+  uint8_t parseUint8(const char* value, size_t length) {
+    return static_cast<uint8_t>(parseDecimal(value, length, UINT8_MAX));
   }
 
   uint8_t parseFixedUint8(const char* value) {
-    char buffer[3] = {value[0], value[1], '\0'};
-    return parseUint8(buffer);
+    return parseUint8(value, 2);
   }
 } // namespace
 
@@ -48,63 +84,72 @@ void UpdService::tick() {
 }
 
 void UpdService::handlePacket(const char* packet, int length, char* reply, size_t replySize) {
-  (void)length;
-
-  if (startsWith(packet, "DEB")) {
+  if (startsWith(packet, length, "DEB")) {
     handleDebug(reply, replySize);
-  } else if (startsWith(packet, "GET")) {
+  } else if (startsWith(packet, length, "GET")) {
     handleGet(reply, replySize);
-  } else if (startsWith(packet, "EFF")) {
-    handleEffect(parseUint8(packet + 3), reply, replySize);
-  } else if (startsWith(packet, "BRI")) {
-    handleBrightness(parseUint8(packet + 3), reply, replySize);
-  } else if (startsWith(packet, "SPD")) {
-    handleSpeed(parseUint8(packet + 3), reply, replySize);
-  } else if (startsWith(packet, "SCA")) {
-    handleScale(parseUint8(packet + 3), reply, replySize);
-  } else if (startsWith(packet, "P_ON")) {
+  } else if (startsWith(packet, length, "EFF") && hasLength(length, 4)) {
+    handleEffect(parseUint8(packet + 3, static_cast<size_t>(length - 3)), reply, replySize);
+  } else if (startsWith(packet, length, "BRI") && hasLength(length, 4)) {
+    handleBrightness(parseUint8(packet + 3, static_cast<size_t>(length - 3)), reply, replySize);
+  } else if (startsWith(packet, length, "SPD") && hasLength(length, 4)) {
+    handleSpeed(parseUint8(packet + 3, static_cast<size_t>(length - 3)), reply, replySize);
+  } else if (startsWith(packet, length, "SCA") && hasLength(length, 4)) {
+    handleScale(parseUint8(packet + 3, static_cast<size_t>(length - 3)), reply, replySize);
+  } else if (startsWith(packet, length, "P_ON")) {
     handlePowerOn(reply, replySize);
-  } else if (startsWith(packet, "P_OFF")) {
+  } else if (startsWith(packet, length, "P_OFF")) {
     handlePowerOff(reply, replySize);
-  } else if (startsWith(packet, "ALM_SET")) {
-    const uint8_t alarmIndex = static_cast<uint8_t>(packet[7] - '1');
-    if (strncmp(packet + 9, "ON", 2) == 0) {
-      handleAlarmSet(alarmIndex, AlarmAction::Enable, 0, reply, replySize);
-    } else if (strncmp(packet + 9, "OFF", 3) == 0) {
-      handleAlarmSet(alarmIndex, AlarmAction::Disable, 0, reply, replySize);
-    } else {
-      handleAlarmSet(alarmIndex, AlarmAction::SetTime, static_cast<uint16_t>(atoi(packet + 8)), reply, replySize);
+  } else if (startsWith(packet, length, "ALM_SET")) {
+    if (!hasLength(length, 8) || !isDecimalDigit(packet[7])) {
+      return;
     }
-  } else if (startsWith(packet, "ALM_GET")) {
+
+    const uint8_t alarmIndex = static_cast<uint8_t>(packet[7] - '1');
+    if (hasLength(length, 11) && memcmp(packet + 9, "ON", 2) == 0) {
+      handleAlarmSet(alarmIndex, AlarmAction::Enable, 0, reply, replySize);
+    } else if (hasLength(length, 12) && memcmp(packet + 9, "OFF", 3) == 0) {
+      handleAlarmSet(alarmIndex, AlarmAction::Disable, 0, reply, replySize);
+    } else if (hasLength(length, 10)) {
+      handleAlarmSet(
+        alarmIndex,
+        AlarmAction::SetTime,
+        static_cast<uint16_t>(parseDecimal(packet + 8, static_cast<size_t>(length - 8), UINT16_MAX)),
+        reply,
+        replySize
+      );
+    }
+  } else if (startsWith(packet, length, "ALM_GET")) {
     handleAlarmGet(reply, replySize);
-  } else if (startsWith(packet, "DAWN")) {
-    handleDawn(parseUint8(packet + 4), reply, replySize);
-  } else if (startsWith(packet, "DISCOVER")) {
+  } else if (startsWith(packet, length, "DAWN") && hasLength(length, 5)) {
+    handleDawn(parseUint8(packet + 4, static_cast<size_t>(length - 4)), reply, replySize);
+  } else if (startsWith(packet, length, "DISCOVER")) {
     handleDiscover(reply, replySize);
-  } else if (startsWith(packet, "TMR_GET")) {
+  } else if (startsWith(packet, length, "TMR_GET")) {
     handleTimerGet(reply, replySize);
-  } else if (startsWith(packet, "TMR_SET")) {
+  } else if (startsWith(packet, length, "TMR_SET") && hasLength(length, 13)) {
     const bool running = parseFixedUint8(packet + 8) != 0;
     const uint8_t option = parseFixedUint8(packet + 10);
-    const uint32_t seconds = static_cast<uint32_t>(strtoul(packet + 12, nullptr, 10));
+    const uint32_t seconds = parseDecimal(packet + 12, static_cast<size_t>(length - 12), UINT32_MAX);
     handleTimerSet(running, option, seconds, reply, replySize);
-  } else if (startsWith(packet, "FAV_GET")) {
+  } else if (startsWith(packet, length, "FAV_GET")) {
     handleFavoritesGet(reply, replySize);
-  } else if (startsWith(packet, "FAV_SET")) {
+  } else if (startsWith(packet, length, "FAV_SET")) {
     handleFavoritesSet(packet, reply, replySize);
-  } else if (startsWith(packet, "OTA")) {
+  } else if (startsWith(packet, length, "OTA")) {
     handleOta();
-  } else if (startsWith(packet, "BTN")) {
-    if (strncmp(packet + 4, "ON", 2) == 0) {
+  } else if (startsWith(packet, length, "BTN")) {
+    if (hasLength(length, 6) && memcmp(packet + 4, "ON", 2) == 0) {
       handleButton(true, reply, replySize);
-    } else if (strncmp(packet + 4, "OFF", 3) == 0) {
+    } else if (hasLength(length, 7) && memcmp(packet + 4, "OFF", 3) == 0) {
       handleButton(false, reply, replySize);
     }
   }
 }
 
-bool UpdService::startsWith(const char* packet, const char* command) const {
-  return strncmp(packet, command, strlen(command)) == 0;
+bool UpdService::startsWith(const char* packet, int length, const char* command) const {
+  const size_t commandLength = strlen(command);
+  return hasLength(length, commandLength) && memcmp(packet, command, commandLength) == 0;
 }
 
 void UpdService::sendReply(const char* reply) {

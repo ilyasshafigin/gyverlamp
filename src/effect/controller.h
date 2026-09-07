@@ -1,12 +1,15 @@
 #pragma once
 
+#include <Arduino.h>
+
+#include "../util/fade_animator.h"
+#include "../util/linear_u8_rate_limiter.h"
+
 #include "catalog.h"
 #include "effect.h"
 #include "ids.h"
 #include "palette_ids.h"
 #include "settings.h"
-#include "../util/fade_animator.h"
-#include "../util/linear_u8_rate_limiter.h"
 
 class AudioService;
 class EepromStore;
@@ -107,8 +110,7 @@ private:
   enum class TransitionPhase : uint8_t { Idle, FadingOut, FadingIn };
 
   // Буфер для placement new. Размер вычисляется по самому большому effect.
-  /*alignas(alignof(std::max_align_t)) */
-  alignas(8) char effectBuffer_[Effects::kStorageSize];
+  alignas(Effects::kStorageAlignment) char effectBuffer_[Effects::kStorageSize];
 
   FadeAnimator transitionOpacity_;
   TransitionPhase transitionPhase_ = TransitionPhase::Idle;

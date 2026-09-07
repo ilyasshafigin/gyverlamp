@@ -1,6 +1,8 @@
 #include "overlay.h"
-#include "render_utils.h"
+
 #include "../hardware/led.h"
+
+#include "render_utils.h"
 
 static constexpr uint8_t kTopY = HEIGHT - 1;
 

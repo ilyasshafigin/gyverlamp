@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 #include "../effect.h"
 
 class EffectClock : public Effect {

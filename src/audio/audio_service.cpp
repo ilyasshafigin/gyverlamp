@@ -1,7 +1,8 @@
+#include "audio_service.h"
 
 #include <FastLED.h>
+
 #include "../storage/eeprom_store.h"
-#include "audio_service.h"
 
 void AudioService::init() {
   microphone_.init();

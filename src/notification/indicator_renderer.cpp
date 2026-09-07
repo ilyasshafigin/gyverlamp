@@ -1,6 +1,7 @@
 #include "indicator_renderer.h"
 
 #include "../config.h"
+
 #include "render_utils.h"
 
 static constexpr uint8_t kTopY = HEIGHT - 1;

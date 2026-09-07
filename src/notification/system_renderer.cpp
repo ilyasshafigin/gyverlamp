@@ -1,6 +1,8 @@
 #include "system_renderer.h"
-#include "render_utils.h"
+
 #include "../config.h"
+
+#include "render_utils.h"
 
 void SystemNotificationRenderer::renderWifi(NotificationOverlay& overlay, ConnectionState state, uint32_t startedMs) {
   if (state == ConnectionState::Connecting) {

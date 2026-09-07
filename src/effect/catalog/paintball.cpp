@@ -1,4 +1,5 @@
 #include "paintball.h"
+
 #include "../shared.h"
 
 // Effect: Paintball

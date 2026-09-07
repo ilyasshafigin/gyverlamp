@@ -2,10 +2,12 @@
 
 #include <cstring>
 #include <FastLED.h>
+
+#include "../config.h"
+
 #include "math.h"
 #include "palette_catalog.h"
 #include "palette_utils.h"
-#include "../config.h"
 
 #define MAX_DIMENSION (max(WIDTH, HEIGHT))
 

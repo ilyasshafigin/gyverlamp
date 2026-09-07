@@ -1,4 +1,5 @@
 #include "color_change.h"
+
 #include "../shared.h"
 
 // Effect: Color Change

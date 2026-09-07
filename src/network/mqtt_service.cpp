@@ -33,7 +33,10 @@ namespace {
   const char* kAudioModeOptions[] = {"Off", "Brightness", "Speed", "Scale", "Effect"};
   const char* kAudioBandOptions[] = {"Level", "Bass", "Treble"};
   const char* audioModeName(AudioMode mode) {
-    return kAudioModeOptions[static_cast<uint8_t>(mode)];
+    const uint8_t index = static_cast<uint8_t>(mode);
+    return index < sizeof(kAudioModeOptions) / sizeof(kAudioModeOptions[0])
+             ? kAudioModeOptions[index]
+             : kAudioModeOptions[static_cast<uint8_t>(AudioMode::Off)];
   }
   AudioMode parseAudioMode(const char* value) {
     for (uint8_t i = 0; i <= static_cast<uint8_t>(AudioMode::Effect); i++)
@@ -41,7 +44,10 @@ namespace {
     return AudioMode::Off;
   }
   const char* audioBandName(AudioBand band) {
-    return kAudioBandOptions[static_cast<uint8_t>(band)];
+    const uint8_t index = static_cast<uint8_t>(band);
+    return index < sizeof(kAudioBandOptions) / sizeof(kAudioBandOptions[0])
+             ? kAudioBandOptions[index]
+             : kAudioBandOptions[static_cast<uint8_t>(AudioBand::Level)];
   }
   AudioBand parseAudioBand(const char* value) {
     for (uint8_t i = 0; i <= static_cast<uint8_t>(AudioBand::Treble); i++)

@@ -1,4 +1,5 @@
 #include "clock.h"
+
 #include "../effect.h"
 #include "../shared.h"
 #include "../../text/text_renderer.h"

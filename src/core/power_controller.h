@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../util/fade_animator.h"
 #include <Arduino.h>
+
+#include "../util/fade_animator.h"
 
 class EffectController;
 class EepromStore;

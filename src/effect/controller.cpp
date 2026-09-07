@@ -1,3 +1,5 @@
+#include "controller.h"
+
 #include <Arduino.h>
 
 #include "../config.h"
@@ -9,8 +11,8 @@
 #include "../storage/settings_repository.h"
 #include "../time/time_service.h"
 #include "../util/loop_profiler.h"
+
 #include "catalog.h"
-#include "controller.h"
 #include "palette_catalog.h"
 
 void EffectController::init() {

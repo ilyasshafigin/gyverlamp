@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../hardware/led.h"
 
 class NotificationDimmer {

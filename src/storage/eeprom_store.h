@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+
 #include "../audio/audio_config.h"
 #include "../core/rotation_mode.h"
 #include "../effect/ids.h"

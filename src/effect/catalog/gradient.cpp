@@ -1,4 +1,5 @@
 #include "gradient.h"
+
 #include "../shared.h"
 
 // Effect: Gradient

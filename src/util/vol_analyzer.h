@@ -1,6 +1,9 @@
 #pragma once
+
 #include <Arduino.h>
+
 #include "../platform/board_profile.h"
+
 #include "fast_filter.h"
 
 // From https://github.com/AlexGyver/GyverLamp2/blob/main/firmware/GyverLamp2/VolAnalyzer.h

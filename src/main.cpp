@@ -7,6 +7,7 @@
 // Для NodeMCU выбираем NodeMCU 1.0 (ESP-12E Module)
 
 #include <Arduino.h>
+
 #include "core/lamp.h"
 
 #if defined(ARDUINO_ARCH_ESP8266) && !defined(USE_ADC)

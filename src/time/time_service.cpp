@@ -1,6 +1,8 @@
 #include "time_service.h"
-#include "../platform/wifi_headers.h"
+
 #include <time.h>
+
+#include "../platform/wifi_headers.h"
 
 namespace {
   constexpr time_t kMinValidTime = 1704067200LL; // 2024-01-01 UTC

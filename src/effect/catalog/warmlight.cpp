@@ -1,4 +1,5 @@
 #include "warmlight.h"
+
 #include "../shared.h"
 
 // Effect: Warm Light

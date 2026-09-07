@@ -3,6 +3,7 @@
 #include <SettingsAsync.h>
 #include <OtaController.h>
 #include <WifiController.h>
+
 #include "../config.h"
 #include "../audio/audio_service.h"
 #include "../effect/controller.h"
@@ -17,6 +18,7 @@
 #include "../text/running_text.h"
 #include "../time/time_service.h"
 #include "../util/loop_profiler.h"
+
 #include "frame_renderer.h"
 #include "power_controller.h"
 #include "rotation_controller.h"

@@ -1,6 +1,8 @@
+#include "settings_repository.h"
+
 #include "../effect/catalog.h"
 #include "../effect/palette_catalog.h"
-#include "settings_repository.h"
+
 #include "eeprom_store.h"
 
 void SettingsRepository::init() {

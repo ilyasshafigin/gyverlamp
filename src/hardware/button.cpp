@@ -2,7 +2,6 @@
 
 #ifdef USE_BUTTON
 #include "../platform/wifi_headers.h"
-
 #include "../core/power_controller.h"
 #include "../core/rotation_controller.h"
 #include "../core/state_notifier.h"

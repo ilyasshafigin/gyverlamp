@@ -1,4 +1,5 @@
 #include "liquid_lamp.h"
+
 #include "../shared.h"
 
 // Effect: Liquid Lamp - Жидкая лампа - Лавовая лампа

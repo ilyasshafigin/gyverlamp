@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <Arduino.h>
+
 #include "effect.h"
 #include "effects.h"
 #include "ids.h"
@@ -46,6 +47,13 @@ namespace Effects {
       static constexpr size_t value = sizeof(T);
     };
   } // namespace detail
+
+  constexpr size_t kStorageAlignment = 8;
+
+#define EFFECT_ALIGNMENT_ASSERT(T) \
+  static_assert(alignof(T) <= kStorageAlignment, "Effect alignment grew; increase storage alignment intentionally");
+  EFFECT_REGISTRY(EFFECT_ALIGNMENT_ASSERT)
+#undef EFFECT_ALIGNMENT_ASSERT
 
   constexpr size_t kStorageSize = detail::MaxEffectSize<
 #define EFFECT_STORAGE_TYPE(T) T,
