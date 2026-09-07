@@ -4,7 +4,55 @@
 
 #ifdef USE_OTA
 #include <ArduinoOTA.h>
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
+#include <Updater.h>
 #endif
+#endif
+
+namespace {
+
+#if defined(USE_OTA) && defined(ARDUINO_ARCH_ESP8266)
+  void logOtaSuccess(unsigned long elapsedMs, uint8_t progress) {
+    Serial.printf(
+      "[OTA] success elapsed=%lums progress=%u%% rssi=%ddBm heap=%u max=%u frag=%u%%\n",
+      elapsedMs,
+      progress,
+      WiFi.RSSI(),
+      ESP.getFreeHeap(),
+      ESP.getMaxFreeBlockSize(),
+      ESP.getHeapFragmentation()
+    );
+  }
+
+  void logOtaError(ota_error_t error, unsigned long elapsedMs, uint8_t progress) {
+    Serial.printf(
+      "[OTA] error code=%u elapsed=%lums progress=%u%% rssi=%ddBm heap=%u max=%u frag=%u%%\n",
+      static_cast<unsigned int>(error),
+      elapsedMs,
+      progress,
+      WiFi.RSSI(),
+      ESP.getFreeHeap(),
+      ESP.getMaxFreeBlockSize(),
+      ESP.getHeapFragmentation()
+    );
+
+    if (Update.getError() != 0) Update.printError(Serial);
+  }
+#elif defined(USE_OTA)
+  void logOtaSuccess(unsigned long elapsedMs, uint8_t progress) {
+    Serial.printf("[OTA] success elapsed=%lums progress=%u%%\n", elapsedMs, progress);
+  }
+
+  void logOtaError(ota_error_t error, unsigned long elapsedMs, uint8_t progress) {
+    Serial.printf(
+      "[OTA] error code=%u elapsed=%lums progress=%u%%\n", static_cast<unsigned int>(error), elapsedMs, progress
+    );
+  }
+#endif
+
+} // namespace
 
 void OtaController::copyString(char* destination, uint8_t capacity, const char* source) {
   if (capacity == 0) return;
@@ -42,21 +90,23 @@ void OtaController::begin(const Config& config, EventHandler eventHandler, void*
   }
 
   ArduinoOTA.onStart([this]() {
-    Serial.println("[OTA] OTA Start");
     updating_ = true;
     lastProgressCallbackAt_ = 0;
     lastProgressPercent_ = 0xFF;
+    uploadStartedAt_ = millis();
+    finalProgressPercent_ = 0;
     emit(EventType::Start);
   });
 
   ArduinoOTA.onEnd([this]() {
-    Serial.println("[OTA] OTA End");
+    logOtaSuccess(millis() - uploadStartedAt_, finalProgressPercent_);
     updating_ = false;
     emit(EventType::End);
   });
 
   ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
     const uint8_t percent = total == 0 ? 0 : static_cast<uint8_t>((static_cast<uint64_t>(progress) * 100U) / total);
+    finalProgressPercent_ = percent;
     const unsigned long now = millis();
     if (
       percent == lastProgressPercent_ ||
@@ -68,21 +118,10 @@ void OtaController::begin(const Config& config, EventHandler eventHandler, void*
     lastProgressPercent_ = percent;
     lastProgressCallbackAt_ = now;
     emit(EventType::Progress, percent);
-    Serial.printf("[OTA] Progress: %u%%\n\r", percent);
   });
 
   ArduinoOTA.onError([this](ota_error_t error) {
-    Serial.printf("[OTA] OTA Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("[OTA] Auth Failed");
-    else if (error == OTA_BEGIN_ERROR)
-      Serial.println("[OTA] Begin Failed");
-    else if (error == OTA_CONNECT_ERROR)
-      Serial.println("[OTA] Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR)
-      Serial.println("[OTA] Receive Failed");
-    else if (error == OTA_END_ERROR)
-      Serial.println("[OTA] End Failed");
-
+    logOtaError(error, millis() - uploadStartedAt_, finalProgressPercent_);
     updating_ = false;
     emit(EventType::Error, 0, static_cast<uint8_t>(error));
   });

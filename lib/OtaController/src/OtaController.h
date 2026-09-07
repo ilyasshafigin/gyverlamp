@@ -71,7 +71,9 @@ private:
   bool restartRequested_ = false;
   unsigned long lastBeginAttemptAt_ = 0;
   unsigned long lastProgressCallbackAt_ = 0;
+  unsigned long uploadStartedAt_ = 0;
   uint8_t lastProgressPercent_ = 0xFF;
+  uint8_t finalProgressPercent_ = 0;
   EventHandler eventHandler_ = nullptr;
   void* eventContext_ = nullptr;
 

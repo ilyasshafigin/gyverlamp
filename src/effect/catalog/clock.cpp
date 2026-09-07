@@ -38,7 +38,7 @@ void EffectClock::render(EffectContext& ctx) {
   const uint8_t secs = ctx.time.seconds();
 
   if (mins != lastMinute_ || secs != lastSecond_) {
-    separatorVisible_ = !separatorVisible_;
+    //separatorVisible_ = !separatorVisible_;
     lastMinute_ = mins;
     lastSecond_ = secs;
     rebuildText(ctx);

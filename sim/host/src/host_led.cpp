@@ -53,7 +53,7 @@ void Led::drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color) {
   for (uint8_t i = 0; i < 4; i++) {
     int16_t xn = static_cast<int16_t>(x + (i & 1));
     int16_t yn = static_cast<int16_t>(y + ((i >> 1) & 1));
-    CRGB clr = getPixelColor(buff, xn, yn);
+    CRGB clr = isValidXY(xn, yn) ? buff[pixelNumber(xn, yn)] : CRGB::Black;
     clr.r = qadd8(clr.r, (color.r * wu[i]) >> 8);
     clr.g = qadd8(clr.g, (color.g * wu[i]) >> 8);
     clr.b = qadd8(clr.b, (color.b * wu[i]) >> 8);
@@ -71,7 +71,7 @@ void Led::fadeBuffToBlack(uint8_t step) {
 
 void Led::fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = leds_[getPixelNumber(x, y)];
+  CRGB& pixel = leds_[pixelNumber(x, y)];
   if (pixel == CRGB::Black) return;
   if (pixel.r >= 30 || pixel.g >= 30 || pixel.b >= 30) {
     pixel.fadeToBlackBy(step);
@@ -82,7 +82,7 @@ void Led::fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
 
 void Led::fadeBuffPixelToBlack(uint8_t x, uint8_t y, uint8_t step) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = ledsbuff_[getPixelNumber(x, y)];
+  CRGB& pixel = ledsbuff_[pixelNumber(x, y)];
   if (pixel == CRGB::Black) return;
   if (pixel.r >= 30 || pixel.g >= 30 || pixel.b >= 30) {
     pixel.fadeToBlackBy(step);
@@ -121,7 +121,7 @@ void Led::addBuff(const CRGB& color) {
 
 void Led::addPixel(uint8_t x, uint8_t y, const CRGB& color) {
   if (!isValidXY(x, y)) return;
-  CRGB& pixel = leds_[getPixelNumber(x, y)];
+  CRGB& pixel = leds_[pixelNumber(x, y)];
   pixel += color;
 }
 

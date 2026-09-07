@@ -230,13 +230,13 @@ namespace sim {
   void SimRuntime::buttonHold() {
     if (!_power->isOn()) return;
     _buttonBrightDirection = !_buttonBrightDirection;
-    const EffectSettings& s = _settings->getEffectSettings(_effects->getSelectedEffectId());
+    const EffectSettings& s = _settings->effectSettings(_effects->selectedEffectId());
     _notifications->onButtonBrightness(s.brightness, _buttonBrightDirection);
   }
 
   void SimRuntime::buttonStep() {
     if (!_power->isOn()) return;
-    const EffectSettings& effectSettings = _settings->getEffectSettings(_effects->getSelectedEffectId());
+    const EffectSettings& effectSettings = _settings->effectSettings(_effects->selectedEffectId());
     uint8_t newBrightness = effectSettings.brightness;
     if (_buttonBrightDirection) {
       if (effectSettings.brightness < 10U) newBrightness = effectSettings.brightness + 1U;
@@ -288,7 +288,7 @@ namespace sim {
     }
 
     // 6. Persist settings after the normal firmware delay.
-    _settings->tick(_effects->getActiveEffectId());
+    _settings->tick(_effects->activeEffectId());
 
     // 7. Advance host-emulated time.
     _time->tick();
@@ -297,11 +297,11 @@ namespace sim {
   }
 
   Effects::Id SimRuntime::activeEffect() const {
-    return _effects ? _effects->getActiveEffectId() : Effects::kDefaultId;
+    return _effects ? _effects->activeEffectId() : Effects::kDefaultId;
   }
 
   uint8_t SimRuntime::outputBrightness() const {
-    return _effects ? _effects->getOutputBrightness() : 255;
+    return _effects ? _effects->outputBrightness() : 255;
   }
 
   AudioConfig SimRuntime::audioConfig() const {
@@ -317,7 +317,7 @@ namespace sim {
     for (uint16_t row = 0; row < HEIGHT; ++row) {
       const uint16_t y = HEIGHT - row - 1;
       for (uint16_t x = 0; x < WIDTH; ++x) {
-        const CRGB& c = _led->getPixel(static_cast<uint8_t>(x), static_cast<uint8_t>(y));
+        const CRGB& c = _led->pixel(static_cast<uint8_t>(x), static_cast<uint8_t>(y));
         *dst++ = c.r;
         *dst++ = c.g;
         *dst++ = c.b;
@@ -335,11 +335,11 @@ namespace sim {
   }
 
   const char* SimRuntime::effectName(Effects::Id id) {
-    return Effects::getEffectName(id);
+    return Effects::effectName(id);
   }
 
   EffectSettingsSpec SimRuntime::effectSettingsSpec(Effects::Id id) {
-    return Effects::getEffectSettingsSpec(id);
+    return Effects::effectSettingsSpec(id);
   }
 
   uint8_t SimRuntime::paletteCount() {
@@ -353,7 +353,7 @@ namespace sim {
   }
 
   const char* SimRuntime::paletteName(Palettes::Id id) {
-    return Palettes::getPaletteName(id);
+    return Palettes::paletteName(id);
   }
 
 } // namespace sim

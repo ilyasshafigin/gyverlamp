@@ -62,8 +62,8 @@ public:
 
 private:
 #ifdef USE_MQTT
-  static constexpr unsigned long kTelemetryIntervalMs = 60000;
-  static constexpr unsigned long kStateRefreshIntervalMs = 30000;
+  static constexpr unsigned long kTelemetryIntervalMs = 60UL * 1000UL;
+  static constexpr unsigned long kStateRefreshIntervalMs = 5UL * 60UL * 1000UL;
 
   AudioService& audio_;
   EffectController& effects_;

@@ -31,7 +31,7 @@ void TimeService::tick() {
   syncTime();
 }
 
-String TimeService::getTimeStampString() const {
+String TimeService::timeStampString() const {
   char timestamp[40];
   std::snprintf(
     timestamp,
