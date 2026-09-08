@@ -76,7 +76,8 @@ function referenceConfiguration() {
 function compile(output, source, includes, defines = []) {
   const args = ['-std=c++17', '-O2', '-Wall', '-Wextra', '-ffunction-sections', ...defines.flatMap((define) => [`-D${define}`])];
   for (const include of includes) args.push('-I', include);
-  args.push(source, '-Wl,-dead_strip', '-o', output);
+  const deadCodeElimination = process.platform === 'darwin' ? '-Wl,-dead_strip' : '-Wl,--gc-sections';
+  args.push(source, deadCodeElimination, '-o', output);
   run('c++', args);
 }
 
