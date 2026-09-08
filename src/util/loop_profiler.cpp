@@ -3,12 +3,11 @@
 #ifdef PROFILE_LOOP
 
 LoopProfiler::Sample LoopProfiler::samples_[LoopProfiler::SECTION_COUNT];
-uint32_t LoopProfiler::startUs_ = 0;
-LoopProfiler::Section LoopProfiler::current_ = LoopProfiler::SECTION_COUNT;
 uint32_t LoopProfiler::resetTimer_ = 0;
 
 const char* LoopProfiler::sectionName(Section section) {
   switch (section) {
+    case LOOP: return "loop";
     case ROTATION: return "rotation";
     case AUDIO: return "audio";
     case RENDER: return "render";
@@ -18,27 +17,21 @@ const char* LoopProfiler::sectionName(Section section) {
     case TIME: return "time";
     case BUTTON: return "button";
     case WIFI: return "wifi";
+    case OTA: return "ota";
     case WEB: return "web";
     case MQTT: return "mqtt";
-    case MQTT_TIMER: return "mqtt_timer";
+    case MQTT_TELEMETRY_TIMER: return "mqtt_telemetry_timer";
+    case MQTT_STATE_REFRESH_TIMER: return "mqtt_state_refresh_timer";
     case MQTT_LOOP: return "mqtt_loop";
     case UDP: return "udp";
     default: return "unknown";
   }
 }
 
-void LoopProfiler::begin(Section section) {
-  current_ = section;
-  startUs_ = micros();
-}
-
-void LoopProfiler::end(Section section) {
-  if (section != current_) return;
-  uint32_t elapsed = micros() - startUs_;
+void LoopProfiler::record(Section section, uint32_t elapsedUs) {
   Sample& s = samples_[section];
-  s.lastUs = elapsed;
-  if (elapsed > s.maxUs) s.maxUs = elapsed;
-  current_ = SECTION_COUNT;
+  s.lastUs = elapsedUs;
+  if (elapsedUs > s.maxUs) s.maxUs = elapsedUs;
 }
 
 void LoopProfiler::resetMax() {
@@ -49,10 +42,23 @@ void LoopProfiler::resetMax() {
 
 void LoopProfiler::tick() {
   const uint32_t now = millis();
-  if (now - resetTimer_ >= kResetIntervalMs) {
-    resetTimer_ = now;
-    resetMax();
+  const uint32_t elapsed = now - resetTimer_;
+  if (elapsed < kResetIntervalMs) return;
+
+  Serial.print(F("[PROFILE 10s last/max us]"));
+  for (uint8_t i = 0; i < SECTION_COUNT; i++) {
+    const Sample& sample = samples_[i];
+    Serial.print(' ');
+    Serial.print(sectionName(static_cast<Section>(i)));
+    Serial.print('=');
+    Serial.print(sample.lastUs);
+    Serial.print('/');
+    Serial.print(sample.maxUs);
   }
+  Serial.println();
+
+  resetMax();
+  resetTimer_ += (elapsed / kResetIntervalMs) * kResetIntervalMs;
 }
 
 #endif

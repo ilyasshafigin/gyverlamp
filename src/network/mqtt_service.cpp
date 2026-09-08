@@ -380,8 +380,8 @@ bool MqttService::registerEntities() {
 }
 
 void MqttService::tickTimers() {
-  LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { telemetryTimer_.update(); });
-  LoopProfiler::measure(LoopProfiler::MQTT_TIMER, [this]() { stateRefreshTimer_.update(); });
+  LoopProfiler::measure(LoopProfiler::MQTT_TELEMETRY_TIMER, [this]() { telemetryTimer_.update(); });
+  LoopProfiler::measure(LoopProfiler::MQTT_STATE_REFRESH_TIMER, [this]() { stateRefreshTimer_.update(); });
 }
 
 void MqttService::onTransportState(State state) {

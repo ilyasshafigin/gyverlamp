@@ -39,7 +39,7 @@ void FrameRenderer::render(bool forceShow) {
   bool frameChanged = false;
 
   if (power_.isEffectVisible()) {
-    LoopProfiler::measure(LoopProfiler::EFFECT_RENDER, [&]() { frameChanged = effects_.render(forceEffectRender); });
+    frameChanged = effects_.render(forceEffectRender);
 
     const uint8_t combinedOpacity = scale8(power_.effectOpacity(), effects_.transitionOpacity());
     if (combinedOpacity < 255) {

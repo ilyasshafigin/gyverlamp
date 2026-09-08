@@ -616,7 +616,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
 
 #if defined(PROFILE_LOOP)
   {
-    sets::Menu g(b, "Profiler (last/max us)");
+    sets::Menu g(b, "Profiler (last/current-window max us)");
 
     for (uint8_t i = 0; i < LoopProfiler::SECTION_COUNT; i++) {
       LoopProfiler::Section section = static_cast<LoopProfiler::Section>(i);

@@ -38,28 +38,30 @@ void Lamp::loop() {
     return;
   }
 
-  LoopProfiler::measure(LoopProfiler::WIFI, [this]() { wifi.tick(); });
-  LoopProfiler::measure(LoopProfiler::OTA, [this]() { ota.tick(wifi.staConnected()); });
+  LoopProfiler::measure(LoopProfiler::LOOP, [this]() {
+    LoopProfiler::measure(LoopProfiler::WIFI, [this]() { wifi.tick(); });
+    LoopProfiler::measure(LoopProfiler::OTA, [this]() { ota.tick(wifi.staConnected()); });
 
-  power.tick();
+    power.tick();
 
-  LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(power.isOn()); });
+    LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(power.isOn()); });
 
-  const bool audioReadEnabled = power.isOn() && audio.config().mode != AudioMode::Off;
-  LoopProfiler::measure(LoopProfiler::AUDIO, [this, audioReadEnabled]() { audio.tick(audioReadEnabled); });
-  yield();
-  LoopProfiler::measure(LoopProfiler::RENDER, [this]() { frameRenderer.render(); });
-  LoopProfiler::measure(LoopProfiler::SETTINGS, [this]() { settings.tick(effects.activeEffectId()); });
-  LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });
-  LoopProfiler::measure(LoopProfiler::BUTTON, [this]() { button.tick(); });
-  LoopProfiler::measure(LoopProfiler::UDP, [this]() { upd.tick(); });
-  LoopProfiler::measure(LoopProfiler::WEB, [this]() { web.tick(); });
-  yield();
-  LoopProfiler::measure(LoopProfiler::MQTT, [this]() { mqtt.tick(); });
+    const bool audioReadEnabled = power.isOn() && audio.config().mode != AudioMode::Off;
+    LoopProfiler::measure(LoopProfiler::AUDIO, [this, audioReadEnabled]() { audio.tick(audioReadEnabled); });
+    yield();
+    LoopProfiler::measure(LoopProfiler::RENDER, [this]() { frameRenderer.render(); });
+    LoopProfiler::measure(LoopProfiler::SETTINGS, [this]() { settings.tick(effects.activeEffectId()); });
+    LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });
+    LoopProfiler::measure(LoopProfiler::BUTTON, [this]() { button.tick(); });
+    LoopProfiler::measure(LoopProfiler::UDP, [this]() { upd.tick(); });
+    LoopProfiler::measure(LoopProfiler::WEB, [this]() { web.tick(); });
+    yield();
+    LoopProfiler::measure(LoopProfiler::MQTT, [this]() { mqtt.tick(); });
 
-  if (stateNotifier.consumeChanged()) {
-    mqtt.updateStates();
-  }
+    if (stateNotifier.consumeChanged()) {
+      mqtt.updateStates();
+    }
+  });
 
   LoopProfiler::tick();
   yield();

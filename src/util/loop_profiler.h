@@ -7,7 +7,8 @@
 class LoopProfiler {
 public:
   enum Section : uint8_t {
-    ROTATION = 0,
+    LOOP = 0,
+    ROTATION,
     AUDIO,
     RENDER,
     EFFECT_RENDER,
@@ -19,7 +20,8 @@ public:
     OTA,
     WEB,
     MQTT,
-    MQTT_TIMER,
+    MQTT_TELEMETRY_TIMER,
+    MQTT_STATE_REFRESH_TIMER,
     MQTT_LOOP,
     UDP,
     SECTION_COUNT
@@ -33,32 +35,26 @@ public:
 
   static const char* sectionName(Section section);
 
-  static void begin(Section section);
-  static void end(Section section);
-  static void resetMax();
   static void tick();
 
   template <typename Func> static void measure(Section section, Func&& func) {
-    begin(section);
+    const uint32_t startUs = micros();
     func();
-    end(section);
+    record(section, micros() - startUs);
   }
 
   static const Sample& sample(Section section) { return samples_[section]; }
 
 private:
   static Sample samples_[Section::SECTION_COUNT];
-  static uint32_t startUs_;
-  static Section current_;
+  static void record(Section section, uint32_t elapsedUs);
+  static void resetMax();
   static uint32_t resetTimer_;
   static constexpr uint32_t kResetIntervalMs = 10000;
 
 #else
   static const char* sectionName(Section) { return ""; }
-  static void begin(Section) {}
-  static void end(Section) {}
-  static void resetMax() {}
   static void tick() {}
-  template <typename Func> static void measure(Section section, Func&& func) { func(); }
+  template <typename Func> static void measure(Section, Func&& func) { func(); }
 #endif
 };
