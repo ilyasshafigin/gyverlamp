@@ -61,6 +61,18 @@ Error: emcmake not found. Emscripten is required to build the WASM simulator.
 - `int sim_render()` — отрисовать один кадр и заполнить framebuffer.
 - `int sim_tick(double now_ms)` — совместимый хелпер: update + render.
 - `uint8_t* sim_framebuffer()` — указатель на RGB framebuffer.
+- `int sim_job_init(effectId, paletteId, brightness, speed, scale, seed, clockStartUtcMs)` —
+  инициализировать один детерминированный export job.
+- `int sim_job_advance_to(uint32_t nowMs)` — обработать internal frame boundaries
+  до timestamp; обратное время отклоняется.
+- `const uint8_t* sim_job_framebuffer()`, `int sim_job_framebuffer_size()` и
+  `int sim_job_output_brightness()` — read-only capture последнего displayed
+  frame и applied brightness.
+- `int sim_job_frame_ms()` — firmware-derived `FRAME_MS` для pre-job work-limit
+  проверки export tool.
+- `int sim_active_effect_id()`, `int sim_clock_is_deterministic()`,
+  `int sim_time_hours()`, `int sim_time_minutes()` — read-only legacy-clock
+  regression queries.
 - `int sim_width()`, `int sim_height()`
 - `int sim_set_effect(int id)`
 - `int sim_set_palette(int id)`
@@ -87,7 +99,11 @@ Error: emcmake not found. Emscripten is required to build the WASM simulator.
 `tick`, `update` и `render` не падают до вызова `sim_init()`. Вызов `sim_tick()`,
 `sim_update()` или `sim_render()` без `sim_init()` сначала выполняет
 инициализацию по умолчанию. `sim_init()` можно вызывать повторно; он обнуляет
-framebuffer.
+framebuffer. Этот legacy путь сохраняет browser-совместимость. Export ABI
+отдельный: `sim_job_init` допускается один раз, до construction controller'ов
+сбрасывает EEPROM, shared RNG, audio и UTC clock base; host wall clock не читается.
+Legacy `sim_init()` не включает deterministic clock: browser Clock сохраняет
+предыдущее host wall/local-clock поведение.
 
 ## Архитектура
 

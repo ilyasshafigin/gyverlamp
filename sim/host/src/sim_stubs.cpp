@@ -1,5 +1,6 @@
 #include "time/time_service.h"
 #include "hardware/led.h"
+#include "sim_time.h"
 
 #include <cstdio>
 #include <ctime>
@@ -14,9 +15,11 @@ void TimeService::init() {
 }
 
 bool TimeService::syncTime() {
-  std::time_t now = std::time(nullptr);
+  const std::time_t now =
+    sim_uses_deterministic_clock() ? static_cast<std::time_t>(sim_clock_utc_ms() / 1000ULL) : std::time(nullptr);
   std::tm ti{};
-  if (localtime_r(&now, &ti) == nullptr) return false;
+  const std::tm* converted = sim_uses_deterministic_clock() ? gmtime_r(&now, &ti) : localtime_r(&now, &ti);
+  if (converted == nullptr) return false;
 
   hrs_ = static_cast<uint8_t>(ti.tm_hour);
   mins_ = static_cast<uint8_t>(ti.tm_min);

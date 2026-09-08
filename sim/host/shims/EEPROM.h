@@ -42,6 +42,11 @@ public:
 
   uint16_t length() const { return _size; }
 
+  void reset() {
+    _size = capacity;
+    std::memset(_data, 0, sizeof(_data));
+  }
+
 private:
   static constexpr uint16_t capacity = 512;
   uint16_t _size = capacity;

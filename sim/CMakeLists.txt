@@ -25,6 +25,7 @@ endforeach()
 # source of truth for firmware sources, host LED implementation, and host stubs.
 set(SIM_COMMON_SOURCES
     ${COMMON_DIR}/sim_runtime.cpp
+    ${COMMON_DIR}/sim_random.cpp
     ${COMMON_DIR}/sim_time.cpp
     ${HOST_SRC_DIR}/host_led.cpp
     ${HOST_SRC_DIR}/sim_audio_input.cpp

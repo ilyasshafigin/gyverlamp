@@ -37,6 +37,9 @@ namespace sim {
     bool brightness_overridden = false;
     bool speed_overridden = false;
     bool scale_overridden = false;
+    uint32_t seed = 123456789;
+    uint64_t clock_start_utc_ms = 0;
+    bool deterministic_job = false;
   };
 
   enum class CommandType : uint8_t {
@@ -112,6 +115,12 @@ namespace sim {
     uint32_t frameCount() const { return _frameCount; }
     uint32_t nowMs() const { return _nowMs; }
     uint8_t outputBrightness() const;
+    uint8_t effectBrightness() const;
+    uint8_t effectSpeed() const;
+    uint8_t effectScale() const;
+    Palettes::Id palette() const;
+    uint8_t timeHours() const;
+    uint8_t timeMinutes() const;
     AudioConfig audioConfig() const;
     AudioFrame audioFrame() const;
 
@@ -130,7 +139,7 @@ namespace sim {
 
   private:
     void applyCommand(const Command& cmd);
-    void seedOptions(const RuntimeOptions& options);
+    void seedInitialState(const RuntimeOptions& options);
 
     // Button simulation helpers. These mirror production TouchButton semantics
     // without hardware/EncButton. They are invoked from applyCommand().

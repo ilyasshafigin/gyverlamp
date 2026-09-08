@@ -445,7 +445,7 @@ inline CRGBPalette16::CRGBPalette16(const uint8_t* gradient) {
   }
 }
 
-enum TBlendType { NOBLEND = 0, LINEARBLEND = 1 };
+enum TBlendType { NOBLEND = 0, LINEARBLEND = 1, LINEARBLEND_NOWRAP = 2 };
 
 inline CRGB
 ColorFromPalette(const CRGBPalette16& pal, uint8_t index, uint8_t brightness = 255, uint8_t blendType = LINEARBLEND) {
@@ -454,7 +454,7 @@ ColorFromPalette(const CRGBPalette16& pal, uint8_t index, uint8_t brightness = 2
   const CRGB& a = pal.entries[hi4 & 0x0F];
   CRGB e = a;
   if (blendType != 0 && lo4 != 0) {
-    const CRGB& b = pal.entries[(hi4 + 1) & 0x0F];
+    const CRGB& b = pal.entries[(blendType == LINEARBLEND_NOWRAP && hi4 == 15) ? 15 : ((hi4 + 1) & 0x0F)];
     const uint8_t f2 = lo4 << 4;
     const uint8_t f1 = 255 - f2;
     e.r = static_cast<uint8_t>(scale8(a.r, f1) + scale8(b.r, f2));
@@ -549,6 +549,13 @@ inline uint8_t ease8InOutQuad(uint8_t t) {
   }
   const uint8_t inv = 255 - t;
   return static_cast<uint8_t>(255 - (static_cast<uint16_t>(inv) * inv * 2) / 255);
+}
+
+inline uint8_t ease8InOutApprox(uint8_t t) {
+  const uint8_t inner = (t & 0x80U) ? static_cast<uint8_t>(255U - t) : t;
+  const uint8_t scaled = static_cast<uint8_t>((static_cast<uint16_t>(inner) * 255U) / 127U);
+  const uint8_t eased = ease8InOutQuad(scaled);
+  return (t & 0x80U) ? static_cast<uint8_t>(255U - eased) : eased;
 }
 
 inline uint8_t lerp8by8(uint8_t a, uint8_t b, uint8_t amount) {

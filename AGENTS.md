@@ -3,12 +3,23 @@
 ## Build and verify
 
 - PlatformIO project; `default_envs` comes from ignored `platformio.local.ini`. The committed example `platformio.local.example.ini` ships `lamp1_ota`; any additional per-lamp envs are local-only.
-- **For verification always build exactly ONE focused env. Default command: `pio run -e lamp1_ota`.** Do NOT run plain `pio run` and do NOT build multiple envs unless the user explicitly asks for it.
+- **For verification always build exactly ONE focused env. Default command: `just build lamp1_ota`.** Do not run `pio run` without `-e` and do not build multiple envs unless explicitly requested.
 - Lamp 1 (`env:lamp1_base` in the example) uses board `d1_mini`, `DEVICE_NAME="GyverLamp1"` (which becomes `AP_SSID` via the default in `src/config.h`), and `CURRENT_LIMIT=3000`.
-- Available focused builds from the example: `pio run -e lamp1_usb`, `pio run -e lamp1_ota`. Additional `lampN_*` envs may be defined locally in `platformio.local.ini`; do not assume their names or counts.
-- No repo test/lint config exists; use the relevant PlatformIO build as verification.
+- Available focused builds from the example: `just build lamp1_usb`, `just build lamp1_ota`. Additional `lampN_*` envs may be defined locally in `platformio.local.ini`; do not assume their names or counts.
+- There are no separate tests/lint checks for firmware; verification is the appropriate focused `just build <env>` command.
 - Formatting: `.clang-format` (clang-format 14+) encodes the house style — 2-space indent, attached braces, type-aligned `&`/`*`, case indented under `switch`, includes **not** sorted. Run `clang-format -i <file>` to apply, or `clang-format --dry-run -Werror <file>` to check. Do not reformat files unrelated to your change.
-- Never run `pio run -t upload` unless the user explicitly asks to flash hardware; `lamp*_ota` envs use `espota` with `upload_port` (device IP) set in `platformio.local.ini`.
+- Do not run `just upload <env>` unless explicitly requested to flash a device; `lamp*_ota` uses `espota` with `upload_port` (device IP) from `platformio.local.ini`.
+
+## Simulator commands
+
+- Simulator commands: `just sim run`, `just sim build`, `just sim test`, `just sim catalog`, `just sim render <args>`.
+- Build and upload firmware only with `just build <env>` and `just upload <env>`; do not use `just run sim` or `just build sim`.
+- Deterministic WASM/Node export and request/schema format are documented in [`sim/README.md`](sim/README.md). Export results reside in ignored `.artifacts/`; the exporter rejects missing or stale WASM identity/artifacts.
+- Store local deterministic render request files in ignored `.artifacts/requests/`. Store render output in `.artifacts/sim/` or another `.artifacts/` subdirectory. Reusable shared request fixtures belong in tracked `sim/fixtures/requests/`.
+
+```bash
+just sim render --request .artifacts/requests/<name>.json --out .artifacts/sim
+```
 
 ## LSP / `compile_commands.json`
 
@@ -55,7 +66,7 @@
 
 - Code is split by domain under `src/core`, `hardware`, `network`, `notification`, `storage`, `time`, `effect`, `audio`, `text`, `util`. The web UI lives under `src/network/` (there is no separate `src/web/`).
 - Local timer helpers `src/util/timer.h` and `src/util/periodic_timer.h` are part of build; do not assume every dependency comes from `lib_deps`.
-- `.pio`, `.omo`, `.slim/deepwork/`, generated VS Code files, and `compile_commands.json` are ignored; keep build artifacts out of commits.
+- `.pio`, `.omo`, `.slim/deepwork/`, `.artifacts/`, generated VS Code files, and `compile_commands.json` are ignored; keep build artifacts out of commits.
 
 ## Library dependency sources
 

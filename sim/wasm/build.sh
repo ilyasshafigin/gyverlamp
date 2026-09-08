@@ -48,6 +48,8 @@ if [ -z "${FW_VERSION}" ]; then
 fi
 printf '%s\n' "${FW_VERSION}" > "${SIM_DIR}/web/public/firmware-version.txt"
 cp "${SIM_DIR}/VERSION" "${SIM_DIR}/web/public/sim-version.txt"
+node "${SIM_DIR}/web/tools/lib/simulator-identity.js" --write > "${OUT_DIR}/gyverlamp_sim_wasm.identity.json.tmp"
+mv "${OUT_DIR}/gyverlamp_sim_wasm.identity.json.tmp" "${OUT_DIR}/gyverlamp_sim_wasm.identity.json"
 
 echo "firmware version: $(cat "${SIM_DIR}/web/public/firmware-version.txt")"
 echo "sim version: $(cat "${SIM_DIR}/web/public/sim-version.txt")"

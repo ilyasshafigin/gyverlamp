@@ -3,27 +3,26 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 default:
     @just --list
 
-run target:
-    @case "{{target}}" in \
-        sim) just sim ;; \
-        *) echo "Unknown run target: {{target}}" >&2; exit 2 ;; \
+sim command="run" *args:
+    @case "{{command}}" in \
+        run) cd sim/web && npm run sim ;; \
+        build) cd sim/web && npm run build:wasm ;; \
+        test) cd sim/web && npm run test:tools ;; \
+        catalog) node sim/web/tools/render-effect.js catalog --json ;; \
+        render) node sim/web/tools/render-effect.js effect {{args}} ;; \
+        *) echo "Unknown sim command: {{command}}. Use: run, build, test, catalog, render" >&2; exit 2 ;; \
     esac
 
-sim:
-    @cd sim/web && npm run sim
-
 build *envs:
-    @if [ "{{envs}}" = "sim" ]; then \
-        cd sim/web && npm run build:wasm; \
-    elif [ -z "{{envs}}" ]; then \
-        pio run; \
+    @if [ -z "{{envs}}" ]; then \
+        echo "Specify firmware environment, for example: just build lamp1_ota" >&2; exit 2; \
     else \
         for env in {{envs}}; do pio run -e "$env"; done; \
     fi
 
 upload *envs:
     @if [ -z "{{envs}}" ]; then \
-        pio run -t upload; \
+        echo "Specify firmware environment, for example: just upload lamp1_ota" >&2; exit 2; \
     else \
         for env in {{envs}}; do pio run -e "$env" -t upload; done; \
     fi

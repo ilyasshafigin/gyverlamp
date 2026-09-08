@@ -80,6 +80,13 @@ namespace sim {
     hadUnderrun = false;
   }
 
+  void audioReset() {
+    audioFlush();
+    enabled = false;
+    underrunCount = 0;
+    overflowCount = 0;
+  }
+
   uint32_t audioUnderrunCount() {
     return underrunCount;
   }

@@ -13,6 +13,7 @@ namespace sim {
   bool audioHadUnderrun();
   void audioClearUnderrun();
   void audioFlush();
+  void audioReset();
 
   uint32_t audioUnderrunCount();
   uint32_t audioOverflowCount();

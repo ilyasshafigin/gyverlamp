@@ -1,4 +1,5 @@
 #include "sim_runtime.h"
+#include "sim_random.h"
 #include "sim_time.h"
 
 #include "audio/audio_service.h"
@@ -13,9 +14,12 @@
 #include "notification/controller.h"
 #include "notification/overlay.h"
 #include "storage/eeprom_store.h"
+#include "storage/eeprom_layout.h"
 #include "storage/settings_repository.h"
 #include "text/running_text.h"
 #include "time/time_service.h"
+
+#include <EEPROM.h>
 
 #include <utility>
 
@@ -51,11 +55,21 @@ namespace sim {
   bool SimRuntime::init(const RuntimeOptions& options) {
     _nowMs = 0;
     sim_millis = 0;
+    sim_set_deterministic_clock(options.deterministic_job);
+    if (options.deterministic_job) {
+      sim_random_seed(options.seed);
+      sim_set_clock_start_utc_ms(options.clock_start_utc_ms);
+      EEPROM.reset();
+      audioReset();
+    }
 
     _led = new Led();
     _led->init();
 
     _eeprom = new EepromStore();
+    if (!_eeprom->init()) return false;
+    seedInitialState(options);
+
     _settings = new SettingsRepository(*_eeprom);
     _time = new TimeService();
     _audio = new AudioService(*_eeprom);
@@ -67,10 +81,6 @@ namespace sim {
     _rotation = new RotationController(*_eeprom, *_effects, *_stateNotifier);
     _frameRenderer = new FrameRenderer(*_effects, *_led, *_notifications, *_power, *_stateNotifier);
 
-    _eeprom->init();
-    // Seed power ON so the startup frame is visible instead of black.
-    _eeprom->writePowerState(true);
-
     _settings->init();
     _time->init();
     _audio->init();
@@ -79,32 +89,34 @@ namespace sim {
     _notifications->init();
     _rotation->init();
 
-    seedOptions(options);
-
     _fps.store(options.fps);
     _frameCount = 0;
 
     return true;
   }
 
-  void SimRuntime::seedOptions(const RuntimeOptions& options) {
-    if (options.effect != Effects::kDefaultId && Effects::isValid(options.effect)) {
-      _effects->setEffectImmediate(options.effect);
+  void SimRuntime::seedInitialState(const RuntimeOptions& options) {
+    const Effects::Id effect = Effects::isValid(options.effect) ? options.effect : Effects::kDefaultId;
+    EffectSettings settings[Effects::kCount];
+    for (uint8_t i = 0; i < Effects::kCount; ++i) {
+      settings[i] = EffectSettings::fromSpec(Effects::effectSettingsSpec(Effects::toId(i)));
     }
 
-    if (options.palette != Palettes::Id::Auto) {
-      _effects->setPalette(options.palette);
-    }
+    EffectSettings& initial = settings[Effects::toIndex(effect)];
+    if (options.brightness_overridden) initial.brightness = options.brightness;
+    if (options.speed_overridden) initial.speed = options.speed;
+    if (options.scale_overridden) initial.scale = options.scale;
 
-    if (options.brightness_overridden) {
-      _effects->setEffectBrightness(options.brightness);
-    }
-    if (options.speed_overridden) {
-      _effects->setEffectSpeed(options.speed);
-    }
-    if (options.scale_overridden) {
-      _effects->setEffectScale(options.scale);
-    }
+    // Write before SettingsRepository/EffectController construction. This makes
+    // setup() observe request values without command queues or fade transitions.
+    _eeprom->writeAllEffectSettings(settings);
+    _eeprom->writePowerState(true);
+    EEPROM.write(kEepromCurrentModeAddr, Effects::toIndex(effect));
+    _eeprom->writeGlobalPaletteId(
+      Palettes::isValid(Palettes::toIndex(options.palette)) ? options.palette : Palettes::Id::Auto
+    );
+    _eeprom->writeGlobalBrightness(255);
+    EEPROM.commit();
   }
 
   void SimRuntime::pushCommand(const Command& cmd) {
@@ -302,6 +314,30 @@ namespace sim {
 
   uint8_t SimRuntime::outputBrightness() const {
     return _effects ? _effects->outputBrightness() : 255;
+  }
+
+  uint8_t SimRuntime::effectBrightness() const {
+    return _settings && _effects ? _settings->effectSettings(_effects->activeEffectId()).brightness : 0;
+  }
+
+  uint8_t SimRuntime::effectSpeed() const {
+    return _settings && _effects ? _settings->effectSettings(_effects->activeEffectId()).speed : 0;
+  }
+
+  uint8_t SimRuntime::effectScale() const {
+    return _settings && _effects ? _settings->effectSettings(_effects->activeEffectId()).scale : 0;
+  }
+
+  Palettes::Id SimRuntime::palette() const {
+    return _settings ? _settings->selectedPalette() : Palettes::Id::Auto;
+  }
+
+  uint8_t SimRuntime::timeHours() const {
+    return _time ? _time->hours() : 0;
+  }
+
+  uint8_t SimRuntime::timeMinutes() const {
+    return _time ? _time->minutes() : 0;
   }
 
   AudioConfig SimRuntime::audioConfig() const {

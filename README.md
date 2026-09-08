@@ -53,6 +53,14 @@
 
 - Браузерный WASM-симулятор эффектов: смотреть и настраивать в браузере без лампы, прошивки и ESP8266.
 - Выбор эффекта и палитры, яркость/скорость/масштаб/FPS, пауза и покадровый шаг, diffuser-превью под белый плафон.
+- Детерминированный Node-экспортёр исполняет тот же WASM: `just sim catalog` выводит каталог, `just sim render <args>` экспортирует эффект. Результаты лежат в игнорируемом `.artifacts/`; отсутствующие или устаревшие WASM identity/artifacts отклоняются до экспорта.
+- Локальные request-файлы для детерминированного рендера создавайте в игнорируемом `.artifacts/requests/`. Результаты рендера сохраняйте в `.artifacts/sim/` или другом подкаталоге `.artifacts/`; общие переиспользуемые fixtures хранятся в отслеживаемом `sim/fixtures/requests/`.
+
+  ```bash
+  just sim render --request .artifacts/requests/<name>.json --out .artifacts/sim
+  ```
+
+- Полные команды, request и schema экспортёра: [`sim/README.md`](sim/README.md).
 - Онлайн: https://ilyasshafigin.github.io/gyverlamp/
 - Локальный запуск описан в разделе «Разработка».
 
@@ -134,16 +142,14 @@
 5. Собрать прошивку:
 
     ```bash
-    pio run -e lamp1_usb
-    # или
     just build lamp1_usb
     ```
+
+    Для проверки собирайте ровно один целевой env; например, `just build lamp1_ota`.
 
 6. Первая прошивка обычно делается по USB:
 
     ```bash
-    pio run -e lamp1_usb -t upload
-    # или
     just upload lamp1_usb
     ```
 
@@ -162,8 +168,6 @@
 8. Последующие прошивки можно делать через PlatformIO OTA, если listener включён, STA подключена и в `platformio.local.ini` указан правильный `upload_port`:
 
     ```bash
-    pio run -e lamp1_ota -t upload
-    # или
     just upload lamp1_ota
     ```
 
@@ -182,14 +186,12 @@
 Симулятор живёт в `sim/` (подробнее: [`sim/README.md`](sim/README.md)). Запуск локально:
 
 ```bash
-cd sim/web
-npm install
-npm run sim
-# или из корня проекта
-just run sim
+just sim run
 ```
 
-`npm run sim` сначала собирает WASM-артефакты, потом поднимает статический сервер на http://localhost:8080.
+`just sim run` сначала собирает WASM-артефакты, потом поднимает статический сервер на http://localhost:8080.
+
+Остальные команды: `just sim build`, `just sim test`, `just sim catalog`, `just sim render <args>`. Сборка и загрузка прошивки используют только `just build <env>` и `just upload <env>`; `just run sim` и `just build sim` не существуют.
 
 ### LSP / `compile_commands.json` (для агентов)
 

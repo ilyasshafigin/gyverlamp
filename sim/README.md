@@ -7,7 +7,8 @@
 ## Структура
 
 - `sim/wasm/` — Emscripten-обёртка и скрипт сборки WASM-модуля.
-- `sim/web/` — статический Node-сервер (`server.js`) и web UI (`public/index.html` + `public/app.js`).
+- `sim/web/` — статический Node-сервер (`server.js`), web UI (`public/index.html` + `public/app.js`) и
+  детерминированный CLI-экспортёр в `tools/`.
 - `sim/common/` — общий симуляторный runtime: `sim_runtime.{h,cpp}` и
   `sim_time.{h,cpp}`.
 - `sim/host/` — host-реализации и shim'ы для прошивочного кода:
@@ -97,6 +98,75 @@ SIM_WIDTH=32 SIM_HEIGHT=16 npm run build:wasm
 
 По умолчанию используются значения из `src/config.h`.
 
+## Детерминированный экспорт эффектов
+
+CLI загружает один свежий WASM-модуль на одну задачу. Сначала соберите WASM и
+установите зависимости:
+
+```bash
+cd sim/web
+npm ci
+npm run build:wasm
+npm run render:catalog -- --json
+npm run render:effect -- --request request.json --out ../../.artifacts
+```
+
+`render:catalog` и успешный `render:effect` печатают ровно один JSON в stdout;
+диагностика уходит в stderr. Пути к WASM вычисляются от расположения скрипта,
+поэтому команды работают из произвольного текущего каталога. Результат эффекта
+публикуется атомарно в `<out>/<jobId>/`; неполная задача не публикуется.
+
+Схема `request.json` (неизвестные поля запрещены):
+
+```json
+{
+  "schemaVersion": 1,
+  "effectId": 0,
+  "expectedEffectName": "Color",
+  "paletteId": 0,
+  "brightness": 255,
+  "speed": 128,
+  "scale": 128,
+  "seed": 12345,
+  "clockStartUtc": "2024-01-02T03:04:05.006Z",
+  "atMs": [0, 1000, 2000],
+  "views": ["logical", "sharp-v1", "diffuser-v1"],
+  "previewScale": 16
+}
+```
+
+Обязательны `schemaVersion`, `effectId`, `seed`, `clockStartUtc`, `atMs`,
+`views`. `clockStartUtc` строго использует формат UTC
+`YYYY-MM-DDTHH:mm:ss.sssZ`; `atMs` — отсортированный уникальный список от 0 до
+600000 мс. Максимум 120 captures и 30001 внутренних frame-boundary шагов.
+`seed` находится в `1..4294967295`: ноль отклоняется, поэтому manifest всегда
+фиксирует фактически использованный seed. Cadence берётся из export ABI
+`sim_job_frame_ms()` (`FRAME_MS` прошивки), до `sim_job_init()`; Node не хранит
+свою копию cadence.
+Пропущенные palette и effect-параметры берутся из WASM-каталога. Неверное
+ожидаемое имя эффекта завершает задачу до публикации.
+
+Сборка создаёт `gyverlamp_sim_wasm.identity.json`: fingerprint simulator/firmware
+compile inputs, фактические geometry/toolchain параметры и SHA-256 WASM/glue JS.
+CLI сверяет текущий source fingerprint и оба artifact hash; toolchain и `SIM_*`
+environment при render не читаются. Geometry берётся из loaded WASM/sidecar.
+Stale/missing binary отклоняется с командой rebuild. `manifest.json` содержит
+канонический resolved request, SHA-256 WASM и identity, job ID,
+геометрию и порядок строк (`bottom-row-first`), хэши RGB, размеры/пути PNG и
+предупреждения fidelity. `logical` — исходная матрица RGB до output brightness;
+`sharp-v1` — nearest-neighbor preview с applied brightness;
+`diffuser-v1` — CPU profile с linear RGB, X wrap, Y clamp и фиксированными
+kernel/LUT. CRGB bytes считаются linear LED intensity (`byte / 255`), brightness
+применяется в linear space, а sRGB — только финальный encode. Blur radius задан
+в LED pitch и не зависит от `previewScale`. Exporter создаёт только requested
+views; contact sheet выбирает `diffuser-v1`, затем `sharp-v1`, затем `logical` и
+записывает source level. До allocations проверяется budget 134217728 bytes:
+captured RGB/RGBA frames, linear diffusion buffers, contact sheet, `Buffer.from`,
+pngjs filter/deflate/result/`Buffer.concat` reserve. Каждый frame charge считается
+одновременно: admission не зависит от timing GC.
+Profile приближённый: current limiting и аппаратная калибровка не моделируются.
+`.artifacts/` игнорируется Git.
+
 ## Web UI
 
 В UI доступны:
@@ -138,5 +208,5 @@ Diffuser-настройки влияют только на отображени�
 - Вывод на реальную LED-ленту (`FastLED.show`) не используется.
 - Equalizer работает на fake audio внутри симулятора, полноценного аудио-входа
   нет.
-- Симулятор работает только в браузере через WASM; нативный CLI-runner и
-  WebSocket-шлюз удалены.
+- Экспортёр исполняет тот же WASM-модуль в Node.js; нативный CLI-runner и
+  WebSocket-шлюз не используются.

@@ -10,6 +10,7 @@
 #include <string>
 
 #include "sim_audio_input.h"
+#include "sim_random.h"
 
 using byte = uint8_t;
 using word = uint16_t;
@@ -126,24 +127,12 @@ template <typename T, typename U> inline auto max(const T& a, const U& b) -> dec
 // Random
 // ---------------------------------------------------------------------------
 
-namespace {
-  inline uint32_t& rng_state() {
-    static uint32_t state = 123456789;
-    return state;
-  }
-} // namespace
-
 inline void randomSeed(uint32_t seed) {
-  rng_state() = seed ? seed : 123456789;
+  sim_random_seed(seed);
 }
 
 inline uint32_t random_uint32() {
-  uint32_t x = rng_state();
-  x ^= x << 13;
-  x ^= x >> 17;
-  x ^= x << 5;
-  rng_state() = x;
-  return x;
+  return sim_random_uint32();
 }
 
 inline int32_t random_int() {

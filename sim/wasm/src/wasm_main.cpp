@@ -25,7 +25,10 @@ namespace {
   sim::SimRuntime* g_runtime = nullptr;
   uint8_t* g_framebuffer = nullptr;
   bool g_initialized = false;
+  bool g_jobInitialized = false;
   uint32_t g_nowMs = 0;
+  uint32_t g_nextJobFrameMs = 0;
+  constexpr uint32_t JOB_FRAME_MS = FRAME_MS;
   constexpr size_t FRAMEBUFFER_SIZE = static_cast<size_t>(WIDTH) * HEIGHT * 3;
   constexpr size_t MAX_NOTIFY_TEXT_LEN = 160;
 
@@ -80,6 +83,125 @@ WASM_KEEPALIVE int sim_init() {
   }
   g_initialized = true;
   return 1;
+}
+
+WASM_KEEPALIVE int sim_job_init(
+  int effect_id, int palette_id, int brightness, int speed, int scale, uint32_t seed, double clock_start_utc_ms
+) {
+  // Export jobs deliberately get one fresh module/runtime. Browser controls use
+  // sim_init and retain their legacy lifecycle.
+  if (
+    g_jobInitialized || g_initialized || effect_id < 0 || effect_id > 255 || palette_id < 0 || palette_id > 255 ||
+    brightness < 0 || brightness > 255 || speed < 0 || speed > 255 || scale < 0 || scale > 255 ||
+    clock_start_utc_ms < 0 || clock_start_utc_ms > 9007199254740991.0 ||
+    clock_start_utc_ms != static_cast<double>(static_cast<uint64_t>(clock_start_utc_ms))
+  ) {
+    return 0;
+  }
+
+  const Effects::Id effect = Effects::toId(static_cast<uint8_t>(effect_id));
+  const Palettes::Id palette = static_cast<Palettes::Id>(palette_id);
+  if (!Effects::isValid(effect) || !Palettes::isValid(Palettes::toIndex(palette))) return 0;
+
+  ensureRuntime();
+  ensureFramebuffer();
+  std::memset(g_framebuffer, 0, FRAMEBUFFER_SIZE);
+
+  sim::RuntimeOptions options = defaultOptions();
+  options.effect = effect;
+  options.palette = palette;
+  options.brightness = static_cast<uint8_t>(brightness);
+  options.speed = static_cast<uint8_t>(speed);
+  options.scale = static_cast<uint8_t>(scale);
+  options.brightness_overridden = true;
+  options.speed_overridden = true;
+  options.scale_overridden = true;
+  options.seed = seed;
+  options.clock_start_utc_ms = static_cast<uint64_t>(clock_start_utc_ms);
+  options.deterministic_job = true;
+
+  if (!g_runtime->init(options)) return 0;
+  g_initialized = true;
+  g_jobInitialized = true;
+  g_nowMs = 0;
+  g_nextJobFrameMs = 0;
+  return 1;
+}
+
+WASM_KEEPALIVE int sim_job_advance_to(double now_ms) {
+  if (
+    !g_jobInitialized || !g_runtime || !g_initialized || now_ms < 0 || now_ms > 4294967295.0 ||
+    now_ms != static_cast<double>(static_cast<uint32_t>(now_ms))
+  ) {
+    return 0;
+  }
+
+  const uint32_t target = static_cast<uint32_t>(now_ms);
+  if (target < g_nowMs) return 0;
+
+  while (g_nextJobFrameMs <= target) {
+    g_runtime->tick(g_nextJobFrameMs);
+    g_runtime->copyFrameRgb(g_framebuffer);
+    if (g_nextJobFrameMs > UINT32_MAX - JOB_FRAME_MS) break;
+    g_nextJobFrameMs += JOB_FRAME_MS;
+  }
+  g_nowMs = target;
+  return 1;
+}
+
+WASM_KEEPALIVE const uint8_t* sim_job_framebuffer() {
+  return g_jobInitialized ? g_framebuffer : nullptr;
+}
+
+WASM_KEEPALIVE int sim_job_framebuffer_size() {
+  return g_jobInitialized ? static_cast<int>(FRAMEBUFFER_SIZE) : 0;
+}
+
+WASM_KEEPALIVE int sim_job_output_brightness() {
+  return g_jobInitialized && g_runtime ? g_runtime->outputBrightness() : -1;
+}
+
+WASM_KEEPALIVE int sim_job_effect_id() {
+  return g_jobInitialized && g_runtime ? Effects::toIndex(g_runtime->activeEffect()) : -1;
+}
+
+WASM_KEEPALIVE int sim_job_palette_id() {
+  return g_jobInitialized && g_runtime ? Palettes::toIndex(g_runtime->palette()) : -1;
+}
+
+WASM_KEEPALIVE int sim_job_brightness() {
+  return g_jobInitialized && g_runtime ? g_runtime->effectBrightness() : -1;
+}
+
+WASM_KEEPALIVE int sim_job_speed() {
+  return g_jobInitialized && g_runtime ? g_runtime->effectSpeed() : -1;
+}
+
+WASM_KEEPALIVE int sim_job_scale() {
+  return g_jobInitialized && g_runtime ? g_runtime->effectScale() : -1;
+}
+
+WASM_KEEPALIVE int sim_job_frame_ms() {
+  return JOB_FRAME_MS;
+}
+
+WASM_KEEPALIVE int sim_active_effect_id() {
+  lazyInit();
+  return g_runtime ? Effects::toIndex(g_runtime->activeEffect()) : -1;
+}
+
+WASM_KEEPALIVE int sim_clock_is_deterministic() {
+  return sim_uses_deterministic_clock() ? 1 : 0;
+}
+
+WASM_KEEPALIVE int sim_time_hours() {
+  lazyInit();
+  return g_runtime ? g_runtime->timeHours() : -1;
+}
+
+WASM_KEEPALIVE int sim_time_minutes() {
+  lazyInit();
+  return g_runtime ? g_runtime->timeMinutes() : -1;
 }
 
 WASM_KEEPALIVE int sim_tick(double now_ms) {

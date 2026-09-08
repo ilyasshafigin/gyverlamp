@@ -8,3 +8,4 @@
 .slim/deepwork/
 compile_commands.json
 platformio.local.ini
+.artifacts/
