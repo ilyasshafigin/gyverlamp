@@ -89,8 +89,8 @@ test('capture is timestamp-local, initial values snap, and clock ignores TZ', ()
     assert.equal(manifest(root, 'dark', dark).frames[0].appliedOutputBrightness, 0);
     const midpoint = render(root, 'midpoint', { ...base, effectId: 0, brightness: 128, atMs: [0] });
     const full = render(root, 'full', { ...base, effectId: 0, brightness: 255, atMs: [0] });
-    assert.equal(manifest(root, 'midpoint', midpoint).frames[0].appliedOutputBrightness, 127);
-    assert.equal(manifest(root, 'full', full).frames[0].appliedOutputBrightness, 254);
+    assert.equal(manifest(root, 'midpoint', midpoint).frames[0].appliedOutputBrightness, 128);
+    assert.equal(manifest(root, 'full', full).frames[0].appliedOutputBrightness, 255);
     const utc = render(root, 'utc', { ...base, atMs: [99] }, { TZ: 'UTC' });
     const tokyo = render(root, 'tokyo', { ...base, atMs: [99] }, { TZ: 'Asia/Tokyo' });
     assert.equal(manifest(root, 'utc', utc).frames[0].rgbSha256, manifest(root, 'tokyo', tokyo).frames[0].rgbSha256);

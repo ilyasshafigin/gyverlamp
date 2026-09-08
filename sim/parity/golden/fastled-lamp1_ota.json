@@ -1,0 +1,72 @@
+{
+  "schema": 2,
+  "provenance": {
+    "commit": "ba8cef0d0cd6bbe47358b9281d8c6e89adc38ff9",
+    "referenceCompileMacros": {
+      "ARDUINO": "10805",
+      "SKETCH_HAS_LARGE_MEMORY": "0"
+    },
+    "fastledConfiguration": {
+      "FASTLED_SCALE8_FIXED": "1",
+      "FASTLED_BLEND_FIXED": "1",
+      "FASTLED_NOISE_FIXED": "1",
+      "FASTLED_NOISE_ALLOW_AVERAGE_TO_OVERFLOW": "0"
+    },
+    "sharedBranches": {
+      "scale8": "platforms/shared/scale8.h (SCALE8_C=1)",
+      "trig8": "platforms/shared/trig8.h (!__AVR__ && !USE_SIN_32)",
+      "sketchHasLargeMemory": "0"
+    },
+    "sources": {
+      "fastled_config.h": "79a8c8f58b0aa0ead9af343e7a633fb29b26ce0c2c7361e4064c09f851373e46",
+      "platforms/math8.h": "962ffc376b5e4969b4704aef77bf0a2f22fd5db33a2f3a30b47646354241b4de",
+      "platforms/trig8.h": "27ae94aafb0a3f2fef8ebba098f02b758ccb5bc6e062386555c5dc0494630aa8",
+      "platforms/shared/scale8.h": "c6f3bc384a8f34cfe9827f10b2e91e36e21d95eb7ae628e975bf9c255cdbcaa2",
+      "platforms/shared/trig8.h": "12eaefdaf67caabff9570386974a1a046b8128672e411f49d60158364e2506f7",
+      "platforms/shared/math8.h": "4302e0504646682aece1ff8a86595537df2cbc821003244857f2776b22b188fb",
+      "lib8tion.h": "62d9af31f9d4f34f4d53b1ec673e1b50dc66e3e59413622bf011807a41e4e6f4",
+      "fl/math/beat.h": "29aac3a26c5dc0875a1a54c2bfe27be2298a470ceb01b8b434d9995d28a35d97",
+      "fl/math/xymap.h": "806c7e3cdfdc5a2d31c847dda382bb7fe6790489b676d6b822c41b1f3ec812ec",
+      "fl/math/xymap.cpp.hpp": "a1aec5bb373aacd94df4d2a811f24f6ab29c930002ce0ef2fe60ddcd5bb442ba",
+      "fl/stl/shared_ptr.cpp.hpp": "9ed3bbc00f5853e47b78fd8974f93393a62fb4480d1789459e06299dd40105f1",
+      "fl/gfx/colorutils.cpp.hpp": "26cac10d9dd60719cc5eaaf2f6f8f5d376ffd9aa17eceeb3ea063554d4806965",
+      "fl/gfx/blur.cpp.hpp": "4767ce5d1415ba10a103204d9aa9b25fb7b576891e76a81ab738992374bd1381",
+      "hsv2rgb.cpp.hpp": "a33d5ed0512942947f2afad8f09e52d60167b5e56e83b019db3e51c191f22ed8",
+      "noise.cpp.hpp": "e50e0e0abc1f2bdad6752b616becc305a9a39d32cac20ce0a786d8f788b51371",
+      "noise.h": "7baccf93488d5f7969a4ef22e24340b253163e898128f00446949f513a09a0e9",
+      "crgb.cpp.hpp": "155f539bd19b6a202acec396671e050db2df98d7e1b31f41e5d55e5cbd113419"
+    }
+  },
+  "vectors": {
+    "scale": { "bytes": 131072, "sha256": "37018e48f3c6c5e659af3f72d55b8b5357f4929a8e8cb946090e15cfa89ebe3b" },
+    "trig": { "bytes": 768, "sha256": "8bf394de7b34d4df2725246f6cc95ba965e4fc7d2dc9f4f011e6841caf56e712" },
+    "trig16": { "bytes": 262144, "sha256": "21deb63aa6d5cb63157a859b5f6d5628e6450abe4ded2482e8f5281e936286b2" },
+    "trig16Boundaries": { "bytes": 52, "sha256": "4c3a927d011a845a8d6a1581703614e744a2a554cb2b51af8eda1f73c8b1fb42" },
+    "scale16Digest": { "bytes": 12, "sha256": "ef40551807c1fd2d7cece2a9219c03f5d02ca8c26a8c02cf2fdd0e6f046ea8dd" },
+    "scale16Boundaries": { "bytes": 176, "sha256": "27b740e0164da2274e6ef4228c3ad6a53996a9fb95e21acb14d584f5703192c8" },
+    "beat": { "bytes": 800, "sha256": "3054755b93629f29fd6191edd01bb0e47874434bf4b1580bf0f6d179bbecd1b6" },
+    "blendDigest": { "bytes": 12, "sha256": "4a3a1d0b1a7168a3015afbed537457c805f940e5588d50b61dfdf84fc728fe72" },
+    "blendBoundaries": { "bytes": 288, "sha256": "efe4b844b4faef083fb0e14f62cf5fca36e2c8ebc0f01909ecb719984177e06a" },
+    "palette": { "bytes": 16128, "sha256": "8695c39dcc7e6ba8c203dc3e5ef6b83a7cd31611429a0391a20fd5e81c683555" },
+    "hsv": { "bytes": 12, "sha256": "4b0fefd72cb74874128b13b23f7c0078b0c0aaffaefa49ce7282803dfb531090" },
+    "rainbowDigest": { "bytes": 12, "sha256": "8f161c8fe5517ddd7c6ccf2a52320c6ba57ae79e347bb7e724d04ee2727b9a96" },
+    "spectrumDigest": { "bytes": 12, "sha256": "9a167c95c7f8f19a33438f4106e733ec07158027a1ed75a2db35fc18a5c0fc8d" },
+    "hsvBoundaries": { "bytes": 2400, "sha256": "30c6f0620c0e7e111a6c40df7e01c81c429335f3265d463dee812ebde99929a6" },
+    "reverseDigest": { "bytes": 12, "sha256": "83f4a83a202ae87f11a51c45daf9f9c1eae33faef2c63423085fafebc6288dd2" },
+    "reverseBoundaries": { "bytes": 54, "sha256": "a0fbfc2cc600a8dca2bddf992be230ad32e9053393c66f1a047859c5d50bf8ff" },
+    "blur1d": { "bytes": 1080, "sha256": "36a7da0314f12208102d55822f1f0a7d7812a7c6bab83cbe61320a186e59eea5" },
+    "blur2d": { "bytes": 156, "sha256": "da270625f540c48a0f73260b3455ca4b398520072ae13996fc6ab52bd5504b89" },
+    "noiseBoundaries": { "bytes": 1872, "sha256": "06de2ecf27f07f2c336761302917b86422074f26ce507a76314f01ac4175d556" },
+    "noiseDigest": { "bytes": 12, "sha256": "9bdda2068001a294fbf47eba2bf64bf6181c99cfebfcdacaf543afcdf968dbd6" }
+  },
+  "sentinels": {
+    "sin16_0": 0,
+    "sin16_4000": 32645,
+    "scale16_ffff_ffff": 65535,
+    "beat88_q88_120_at_60000": 10680,
+    "scale8_255_255": 255,
+    "scale8_video_255_255": 255,
+    "blend_black_white_128": [128, 128, 128],
+    "hsv_rainbow_h0_s0_v255": [255, 255, 255]
+  }
+}

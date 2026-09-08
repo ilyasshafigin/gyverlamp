@@ -12,6 +12,7 @@ struct CHSV;
 struct CRGBPalette16;
 
 using fract8 = uint8_t;
+using fract16 = uint16_t;
 using accum88 = uint16_t;
 using TProgmemRGBPalette16 = const uint8_t;
 
@@ -49,11 +50,11 @@ namespace fl {
 // ---------------------------------------------------------------------------
 
 inline uint8_t scale8(uint8_t i, uint8_t scale) {
-  return static_cast<uint8_t>((static_cast<uint16_t>(i) * scale) >> 8);
+  return static_cast<uint8_t>((static_cast<uint16_t>(i) * (1U + static_cast<uint16_t>(scale))) >> 8);
 }
 
 inline uint8_t scale8_video(uint8_t i, uint8_t scale) {
-  return scale8(i, scale) + (i && scale ? 1 : 0);
+  return static_cast<uint8_t>(((static_cast<uint16_t>(i) * scale) >> 8) + (i && scale ? 1 : 0));
 }
 
 inline uint8_t qadd8(uint8_t a, uint8_t b) {
@@ -65,9 +66,11 @@ inline uint8_t qsub8(uint8_t a, uint8_t b) {
   return a > b ? a - b : 0;
 }
 
-inline uint8_t scale16(uint16_t i, uint16_t scale) {
-  return static_cast<uint8_t>((static_cast<uint32_t>(i) * scale) >> 16);
+inline uint16_t scale16(uint16_t i, uint16_t scale) {
+  return static_cast<uint16_t>((static_cast<uint32_t>(i) * (1U + static_cast<uint32_t>(scale))) >> 16);
 }
+
+inline uint8_t sqrt16(uint16_t x);
 
 // ---------------------------------------------------------------------------
 // CRGB
@@ -204,121 +207,61 @@ struct CHSV {
 };
 
 inline CRGB hsv2rgb_rainbow(const CHSV& hsv) {
-  uint8_t hue = hsv.h;
-  const uint8_t offset = hue & 0x1F;
-  const uint8_t ramp = offset << 3;
-  const uint8_t rampdown = 255 - ramp;
-  uint8_t r = 0, g = 0, b = 0;
+  const uint8_t hue = hsv.h;
+  const uint8_t sat = hsv.s;
+  uint8_t val = hsv.v;
+  const uint8_t offset8 = static_cast<uint8_t>((hue & 0x1f) << 3);
+  const uint8_t third = scale8(offset8, 256 / 3);
+  uint8_t r, g, b;
 
-  // FastLED's rainbow is not plain HSV: it uses eight custom hue bands,
-  // with a broad yellow/orange region and video-style scaling.
-  switch (hue >> 5) {
-    case 0:
-      r = 255;
-      g = ramp;
-      b = 0;
-      break; // red -> orange
-    case 1:
-      r = 255;
-      g = 255;
-      b = 0;
-      break; // yellow hold
-    case 2:
-      r = rampdown;
-      g = 255;
-      b = 0;
-      break; // yellow -> green
-    case 3:
-      r = 0;
-      g = 255;
-      b = ramp;
-      break; // green -> aqua
-    case 4:
-      r = 0;
-      g = rampdown;
-      b = 255;
-      break; // aqua -> blue
-    case 5:
-      r = ramp;
-      g = 0;
-      b = 255;
-      break; // blue -> purple
-    case 6:
-      r = 255;
-      g = 0;
-      b = rampdown;
-      break; // purple -> red
-    default:
-      r = 255;
-      g = 0;
-      b = 0;
-      break;
+  if (!(hue & 0x80)) {
+    if (!(hue & 0x40)) {
+      if (!(hue & 0x20)) { r = 255 - third; g = third; b = 0; }
+      else { r = 171; g = 85 + third; b = 0; }
+    } else {
+      if (!(hue & 0x20)) { r = 171 - scale8(offset8, (256 * 2) / 3); g = 170 + third; b = 0; }
+      else { r = 0; g = 255 - third; b = third; }
+    }
+  } else if (!(hue & 0x40)) {
+    if (!(hue & 0x20)) { r = 0; g = 171 - scale8(offset8, (256 * 2) / 3); b = 85 + scale8(offset8, (256 * 2) / 3); }
+    else { r = third; g = 0; b = 255 - third; }
+  } else if (!(hue & 0x20)) {
+    r = 85 + third; g = 0; b = 171 - third;
+  } else {
+    r = 170 + third; g = 0; b = 85 - third;
   }
 
-  if (hsv.s != 255) {
-    uint8_t desat = 255 - hsv.s;
-    desat = scale8_video(desat, desat);
-    const uint8_t satscale = 255 - desat;
-    r = scale8(r, satscale) + (r ? 1 : 0);
-    g = scale8(g, satscale) + (g ? 1 : 0);
-    b = scale8(b, satscale) + (b ? 1 : 0);
-    r = qadd8(r, desat);
-    g = qadd8(g, desat);
-    b = qadd8(b, desat);
+  if (sat != 255) {
+    if (sat == 0) {
+      r = 255; g = 255; b = 255;
+    } else {
+      uint8_t desat = scale8_video(255 - sat, 255 - sat);
+      const uint8_t satscale = 255 - desat;
+      r = scale8(r, satscale);
+      g = scale8(g, satscale);
+      b = scale8(b, satscale);
+      r += desat; g += desat; b += desat;
+    }
   }
-
-  if (hsv.v != 255) {
-    if (hsv.v == 0) return CRGB::Black;
-    const uint8_t val = hsv.v + 1;
-    r = scale8(r, val);
-    g = scale8(g, val);
-    b = scale8(b, val);
+  if (val != 255) {
+    val = scale8_video(val, val);
+    if (val == 0) r = g = b = 0;
+    else { r = scale8(r, val); g = scale8(g, val); b = scale8(b, val); }
   }
-
-  CRGB rgb;
-  rgb.r = r;
-  rgb.g = g;
-  rgb.b = b;
-  return rgb;
+  return CRGB(r, g, b);
 }
 
 inline CRGB hsv2rgb_spectrum(const CHSV& hsv) {
   const uint8_t hue = scale8(hsv.h, 191);
-  const uint8_t section = hue >> 6;
-  const uint8_t offset = (hue & 0x3F) << 2;
-  const uint8_t ramp = offset;
-  const uint8_t rampinv = 255 - ramp;
-  uint8_t r, g, b;
-  switch (section) {
-    case 0:
-      r = rampinv;
-      g = ramp;
-      b = 0;
-      break;
-    case 1:
-      r = 0;
-      g = rampinv;
-      b = ramp;
-      break;
-    default:
-      r = ramp;
-      g = 0;
-      b = rampinv;
-      break;
-  }
-  if (hsv.s != 255) {
-    const uint8_t desat = 255 - hsv.s;
-    const uint8_t satscale = 255 - desat;
-    r = qadd8(scale8(r, satscale), desat);
-    g = qadd8(scale8(g, satscale), desat);
-    b = qadd8(scale8(b, satscale), desat);
-  }
-  if (hsv.v != 255) {
-    r = scale8(r, hsv.v);
-    g = scale8(g, hsv.v);
-    b = scale8(b, hsv.v);
-  }
-  return CRGB(r, g, b);
+  const uint8_t invsat = 255 - hsv.s;
+  const uint8_t brightnessFloor = static_cast<uint8_t>((static_cast<uint16_t>(hsv.v) * invsat) / 256);
+  const uint8_t amplitude = hsv.v - brightnessFloor;
+  const uint8_t offset = hue & 0x3f;
+  const uint8_t rampup = static_cast<uint8_t>((static_cast<uint16_t>(offset) * amplitude) / 64);
+  const uint8_t rampdown = static_cast<uint8_t>((static_cast<uint16_t>(63 - offset) * amplitude) / 64);
+  if (hue / 0x40 == 0) return CRGB(rampdown + brightnessFloor, rampup + brightnessFloor, brightnessFloor);
+  if (hue / 0x40 == 1) return CRGB(brightnessFloor, rampdown + brightnessFloor, rampup + brightnessFloor);
+  return CRGB(rampup + brightnessFloor, brightnessFloor, rampdown + brightnessFloor);
 }
 
 inline void hsv2rgb_spectrum(const CHSV& hsv, CRGB& rgb) {
@@ -327,42 +270,74 @@ inline void hsv2rgb_spectrum(const CHSV& hsv, CRGB& rgb) {
 
 inline CHSV rgb2hsv_approximate(const CRGB& rgb) {
   uint8_t r = rgb.r, g = rgb.g, b = rgb.b;
-  uint8_t maxc = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
-  uint8_t minc = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-  uint8_t v = maxc;
-  uint8_t s = (v == 0) ? 0 : static_cast<uint8_t>((static_cast<uint16_t>(maxc - minc) * 255) / v);
-  uint8_t h = 0;
-  if (s != 0) {
-    uint8_t delta = maxc - minc;
-    if (maxc == r) {
-      h = static_cast<uint8_t>((static_cast<uint16_t>(g - b) * 43) / delta + (g < b ? 255 : 0));
-    } else if (maxc == g) {
-      h = static_cast<uint8_t>((static_cast<uint16_t>(b - r) * 43) / delta + 85);
-    } else {
-      h = static_cast<uint8_t>((static_cast<uint16_t>(r - g) * 43) / delta + 170);
-    }
+  uint8_t desat = std::min(r, std::min(g, b));
+  r -= desat; g -= desat; b -= desat;
+  uint8_t s = 255 - desat;
+  if (s != 255) s = 255 - sqrt16(static_cast<uint16_t>((255 - s) * 256));
+  if ((static_cast<uint16_t>(r) + g + b) == 0) return CHSV(0, 0, 255 - s);
+  if (s < 255) {
+    if (s == 0) s = 1;
+    const uint32_t scaleup = 65535 / s;
+    r = static_cast<uint8_t>((static_cast<uint32_t>(r) * scaleup) / 256);
+    g = static_cast<uint8_t>((static_cast<uint32_t>(g) * scaleup) / 256);
+    b = static_cast<uint8_t>((static_cast<uint32_t>(b) * scaleup) / 256);
   }
-  return CHSV(h, s, v);
+  const uint16_t total = r + g + b;
+  if (total < 255) {
+    const uint32_t scaleup = 65535 / (total ? total : 1);
+    r = static_cast<uint8_t>((static_cast<uint32_t>(r) * scaleup) / 256);
+    g = static_cast<uint8_t>((static_cast<uint32_t>(g) * scaleup) / 256);
+    b = static_cast<uint8_t>((static_cast<uint32_t>(b) * scaleup) / 256);
+  }
+  uint8_t v = total > 255 ? 255 : qadd8(desat, total);
+  if (v != 255) v = sqrt16(static_cast<uint16_t>(v * 256));
+  uint8_t h;
+  const uint8_t highest = std::max(r, std::max(g, b));
+  if (highest == r) {
+    if (g == 0) h = 208 + scale8(qsub8(r, 128), (48 * 256) / 128);
+    else if ((r - g) > g) h = scale8(g, (32 * 256) / 85);
+    else h = 32 + scale8(qsub8((g - 85) + (255 - r), 4), (32 * 256) / 170);
+  } else if (highest == g) {
+    if (b == 0) h = 64 + (scale8(qsub8(171, r), 47) + scale8(qsub8(g, 171), 96)) / 2;
+    else if ((g - b) > b) h = 96 + scale8(b, (32 * 256) / 85);
+    else h = 128 + scale8(qsub8(b, 85), (8 * 256) / 42);
+  } else {
+    if (r == 0) h = 136 + scale8(qsub8(b, 128), (24 * 256) / 128);
+    else if ((b - r) > r) h = 160 + scale8(r, (32 * 256) / 85);
+    else h = 192 + scale8(qsub8(r, 85), (32 * 256) / 85);
+  }
+  return CHSV(static_cast<uint8_t>(h + 1), s, v);
 }
 
 // ---------------------------------------------------------------------------
 // Blend
 // ---------------------------------------------------------------------------
 
-inline CRGB blend(const CRGB& a, const CRGB& b, uint8_t amount) {
-  if (amount == 0) return a;
-  if (amount == 255) return b;
-  const uint8_t keep = 255 - amount;
-  return CRGB(
-    static_cast<uint8_t>((static_cast<uint16_t>(a.r) * keep + static_cast<uint16_t>(b.r) * amount) / 255),
-    static_cast<uint8_t>((static_cast<uint16_t>(a.g) * keep + static_cast<uint16_t>(b.g) * amount) / 255),
-    static_cast<uint8_t>((static_cast<uint16_t>(a.b) * keep + static_cast<uint16_t>(b.b) * amount) / 255)
-  );
+inline uint8_t blend8(uint8_t a, uint8_t b, uint8_t amountOfB) {
+  uint16_t partial = static_cast<uint16_t>(a) << 8;
+  partial += static_cast<uint16_t>(b) * amountOfB;
+  partial -= static_cast<uint16_t>(a) * amountOfB;
+  partial += 0x80;
+  return static_cast<uint8_t>(partial >> 8);
 }
 
 inline CRGB& nblend(CRGB& a, const CRGB& b, uint8_t amount) {
-  a = blend(a, b, amount);
+  if (amount == 0) return a;
+  if (amount == 255) {
+    a = b;
+    return a;
+  }
+
+  a.r = blend8(a.r, b.r, amount);
+  a.g = blend8(a.g, b.g, amount);
+  a.b = blend8(a.b, b.b, amount);
   return a;
+}
+
+inline CRGB blend(const CRGB& a, const CRGB& b, uint8_t amount) {
+  CRGB result(a);
+  nblend(result, b, amount);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -447,14 +422,20 @@ inline CRGBPalette16::CRGBPalette16(const uint8_t* gradient) {
 
 enum TBlendType { NOBLEND = 0, LINEARBLEND = 1, LINEARBLEND_NOWRAP = 2 };
 
+inline uint8_t map8(uint8_t x, uint8_t out_min, uint8_t out_max);
+
 inline CRGB
 ColorFromPalette(const CRGBPalette16& pal, uint8_t index, uint8_t brightness = 255, uint8_t blendType = LINEARBLEND) {
+  if (blendType == LINEARBLEND_NOWRAP) {
+    index = map8(index, 0, 239);
+  }
+
   const uint8_t hi4 = index >> 4;
   const uint8_t lo4 = index & 0x0F;
-  const CRGB& a = pal.entries[hi4 & 0x0F];
+  const CRGB& a = pal.entries[hi4];
   CRGB e = a;
   if (blendType != 0 && lo4 != 0) {
-    const CRGB& b = pal.entries[(blendType == LINEARBLEND_NOWRAP && hi4 == 15) ? 15 : ((hi4 + 1) & 0x0F)];
+    const CRGB& b = pal.entries[hi4 == 15 ? 0 : hi4 + 1];
     const uint8_t f2 = lo4 << 4;
     const uint8_t f1 = 255 - f2;
     e.r = static_cast<uint8_t>(scale8(a.r, f1) + scale8(b.r, f2));
@@ -464,9 +445,9 @@ ColorFromPalette(const CRGBPalette16& pal, uint8_t index, uint8_t brightness = 2
   if (brightness == 255) return e;
   if (brightness == 0) return CRGB::Black;
   ++brightness;
-  e.r = scale8(e.r, brightness) + (e.r ? 1 : 0);
-  e.g = scale8(e.g, brightness) + (e.g ? 1 : 0);
-  e.b = scale8(e.b, brightness) + (e.b ? 1 : 0);
+  e.r = scale8(e.r, brightness);
+  e.g = scale8(e.g, brightness);
+  e.b = scale8(e.b, brightness);
   return e;
 }
 
@@ -544,18 +525,27 @@ inline void fill_rainbow(CRGB* leds, int numLeds, uint8_t initialHue, uint8_t de
 // ---------------------------------------------------------------------------
 
 inline uint8_t ease8InOutQuad(uint8_t t) {
-  if (t < 128) {
-    return static_cast<uint8_t>((static_cast<uint16_t>(t) * t * 2) / 255);
-  }
-  const uint8_t inv = 255 - t;
-  return static_cast<uint8_t>(255 - (static_cast<uint16_t>(inv) * inv * 2) / 255);
+  uint8_t j = t;
+  if (j & 0x80) j = 255 - j;
+  uint8_t jj = scale8(j, j);
+  uint8_t jj2 = jj << 1;
+  if (t & 0x80) jj2 = 255 - jj2;
+  return jj2;
 }
 
 inline uint8_t ease8InOutApprox(uint8_t t) {
-  const uint8_t inner = (t & 0x80U) ? static_cast<uint8_t>(255U - t) : t;
-  const uint8_t scaled = static_cast<uint8_t>((static_cast<uint16_t>(inner) * 255U) / 127U);
-  const uint8_t eased = ease8InOutQuad(scaled);
-  return (t & 0x80U) ? static_cast<uint8_t>(255U - eased) : eased;
+  if (t < 64) {
+    t /= 2;
+  } else if (t > (255 - 64)) {
+    t = 255 - t;
+    t /= 2;
+    t = 255 - t;
+  } else {
+    t -= 64;
+    t += t / 2;
+    t += 32;
+  }
+  return t;
 }
 
 inline uint8_t lerp8by8(uint8_t a, uint8_t b, uint8_t amount) {
@@ -575,7 +565,18 @@ inline uint8_t brighten8_raw(uint8_t x) {
 }
 
 inline uint8_t sqrt16(uint16_t x) {
-  return static_cast<uint8_t>(std::sqrt(static_cast<float>(x)));
+  if (x <= 1) return static_cast<uint8_t>(x);
+  uint8_t low = 0;
+  uint8_t hi = x > 7904 ? 255 : static_cast<uint8_t>((x >> 5) + 8);
+  do {
+    const uint8_t mid = static_cast<uint8_t>((low + hi) >> 1);
+    if (static_cast<uint16_t>(mid * mid) > x) hi = mid - 1;
+    else {
+      if (mid == 255) return 255;
+      low = mid + 1;
+    }
+  } while (hi >= low);
+  return low - 1;
 }
 
 inline uint8_t square8(uint8_t x) {
@@ -626,9 +627,27 @@ inline void fadeLightBy(CRGB* leds, int numLeds, uint8_t step) {
 // ---------------------------------------------------------------------------
 
 inline uint8_t sin8(uint8_t theta) {
-  static constexpr float scale = 2.0f * 3.14159265f / 256.0f;
-  float v = std::sin(static_cast<float>(theta) * scale);
-  return static_cast<uint8_t>((v + 1.0f) * 127.5f);
+  static constexpr uint8_t b_m16_interleave[] = {0, 49, 49, 41, 90, 27, 117, 10};
+  uint8_t offset = theta;
+  if (theta & 0x40) {
+    offset = static_cast<uint8_t>(255 - offset);
+  }
+  offset &= 0x3F;
+
+  uint8_t secoffset = offset & 0x0F;
+  if (theta & 0x40) {
+    ++secoffset;
+  }
+
+  const uint8_t section = offset >> 4;
+  const uint8_t b = b_m16_interleave[section * 2];
+  const uint8_t m16 = b_m16_interleave[section * 2 + 1];
+  const uint8_t mx = static_cast<uint8_t>((m16 * secoffset) >> 4);
+  int8_t y = static_cast<int8_t>(mx + b);
+  if (theta & 0x80) {
+    y = -y;
+  }
+  return static_cast<uint8_t>(y + 128);
 }
 
 inline uint8_t cos8(uint8_t theta) {
@@ -636,24 +655,37 @@ inline uint8_t cos8(uint8_t theta) {
 }
 
 inline int16_t sin16(uint16_t theta) {
-  static constexpr float scale = 2.0f * 3.14159265f / 65536.0f;
-  float v = std::sin(static_cast<float>(theta) * scale);
-  return static_cast<int16_t>(v * 32767.0f);
+  static constexpr uint16_t base[] = {0, 6393, 12539, 18204, 23170, 27245, 30273, 32137};
+  static constexpr uint8_t slope[] = {49, 48, 44, 38, 31, 23, 14, 4};
+
+  uint16_t offset = (theta & 0x3FFFU) >> 3;
+  if (theta & 0x4000U) {
+    offset = 2047 - offset;
+  }
+
+  const uint8_t section = offset / 256;
+  const uint8_t secoffset8 = static_cast<uint8_t>(offset) / 2;
+  const uint16_t mx = static_cast<uint16_t>(slope[section]) * secoffset8;
+  int16_t y = static_cast<int16_t>(mx + base[section]);
+  if (theta & 0x8000U) {
+    y = -y;
+  }
+  return y;
 }
 
 inline int16_t cos16(uint16_t theta) {
   return sin16(theta + 16384);
 }
 
-inline uint32_t bpm_to_q88(accum88 beats_per_minute) {
-  return (beats_per_minute < 256U) ? static_cast<uint32_t>(beats_per_minute) * 256U
-                                   : static_cast<uint32_t>(beats_per_minute);
+inline uint16_t beat88(accum88 beats_per_minute_88, uint32_t timebase = 0) {
+  return static_cast<uint16_t>(((sim_millis - timebase) * static_cast<uint32_t>(beats_per_minute_88) * 280U) >> 16);
 }
 
 inline uint16_t beat16(accum88 beats_per_minute, uint32_t timebase = 0) {
-  const uint32_t elapsed_ms = sim_millis - timebase;
-  const uint32_t bpm_q88 = bpm_to_q88(beats_per_minute);
-  return static_cast<uint16_t>((static_cast<uint64_t>(elapsed_ms) * bpm_q88 * 256ULL) / 60000ULL);
+  if (beats_per_minute < 256) {
+    beats_per_minute <<= 8;
+  }
+  return beat88(beats_per_minute, timebase);
 }
 
 inline uint8_t beat8(accum88 beats_per_minute, uint32_t timebase = 0) {
@@ -664,9 +696,13 @@ inline uint8_t beatsin8(
   accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest = 255, uint32_t timebase = 0, uint8_t phase_offset = 0
 ) {
   uint8_t beat = beat8(beats_per_minute, timebase);
-  uint8_t sine = sin8(beat + phase_offset);
-  uint8_t range = highest - lowest;
-  return lowest + scale8(sine, range);
+  const uint8_t sine = sin8(beat + phase_offset);
+  const uint8_t range = highest - lowest;
+  uint8_t result = lowest + scale8(sine, range);
+  if (result > highest) {
+    result = highest;
+  }
+  return result;
 }
 
 inline uint16_t beatsin16(
@@ -676,10 +712,14 @@ inline uint16_t beatsin16(
   uint32_t timebase = 0,
   uint16_t phase_offset = 0
 ) {
-  uint16_t beat = beat16(beats_per_minute, timebase);
-  uint16_t sine = static_cast<uint16_t>(static_cast<int32_t>(sin16(beat + phase_offset)) + 32768);
-  uint32_t range = static_cast<uint32_t>(highest - lowest);
-  return lowest + static_cast<uint16_t>((sine * range) >> 16);
+  const uint16_t beat = beat16(beats_per_minute, timebase);
+  const uint16_t sine = static_cast<uint16_t>(static_cast<int32_t>(sin16(beat + phase_offset)) + 32768);
+  const uint16_t range = highest - lowest;
+  uint16_t result = lowest + scale16(sine, range);
+  if (result > highest) {
+    result = highest;
+  }
+  return result;
 }
 
 inline uint16_t beatsin88(
@@ -689,7 +729,14 @@ inline uint16_t beatsin88(
   uint32_t timebase = 0,
   uint16_t phase_offset = 0
 ) {
-  return beatsin16(beats_per_minute, lowest, highest, timebase, phase_offset);
+  const uint16_t beat = beat88(beats_per_minute, timebase);
+  const uint16_t sine = static_cast<uint16_t>(static_cast<int32_t>(sin16(beat + phase_offset)) + 32768);
+  const uint16_t range = highest - lowest;
+  uint16_t result = lowest + scale16(sine, range);
+  if (result > highest) {
+    result = highest;
+  }
+  return result;
 }
 
 inline uint8_t map8(uint8_t x, uint8_t out_min, uint8_t out_max) {
@@ -724,36 +771,77 @@ namespace detail {
     return a + (((static_cast<int16_t>(b) - a) * t) >> 8);
   }
 
+  inline uint8_t noise_p(uint8_t index) {
+    static constexpr uint8_t p[] = {
+      151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,
+      247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,
+      74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,
+      65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,
+      217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,
+      248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,
+      246,97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,
+      84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180
+    };
+    return p[index];
+  }
+
+  inline int8_t avg7(int8_t a, int8_t b) {
+    return static_cast<int8_t>((a >> 1) + (b >> 1) + (a & 1));
+  }
+
+  inline int8_t noise_grad8(uint8_t hash, int8_t x, int8_t y, int8_t z) {
+    switch (hash & 0x0f) {
+      case 0: return avg7(x, y); case 1: return avg7(-x, y); case 2: return avg7(x, -y); case 3: return avg7(-x, -y);
+      case 4: return avg7(x, z); case 5: return avg7(-x, z); case 6: return avg7(x, -z); case 7: return avg7(-x, -z);
+      case 8: return avg7(y, z); case 9: return avg7(-y, z); case 10: return avg7(y, -z); case 11: return avg7(-y, -z);
+      case 12: return avg7(x, y); case 13: return avg7(-x, y); case 14: return avg7(x, -y); default: return avg7(-x, -y);
+    }
+  }
+
+  inline int8_t noise_grad8(uint8_t hash, int8_t x, int8_t y) {
+    int8_t u = (hash & 4) ? y : x;
+    int8_t v = (hash & 4) ? x : y;
+    if (hash & 1) u = -u;
+    if (hash & 2) v = -v;
+    return avg7(u, v);
+  }
+
+  inline int8_t noise_lerp7by8(int8_t a, int8_t b, uint8_t fraction) {
+    if (b > a) return static_cast<int8_t>(a + scale8(static_cast<uint8_t>(b - a), fraction));
+    return static_cast<int8_t>(a - scale8(static_cast<uint8_t>(a - b), fraction));
+  }
+
 } // namespace detail
 
-inline uint8_t inoise8(uint16_t x, uint16_t y = 0, uint16_t z = 0) {
-  uint8_t X = static_cast<uint8_t>(x >> 8);
-  uint8_t Y = static_cast<uint8_t>(y >> 8);
-  uint8_t Z = static_cast<uint8_t>(z >> 8);
-  uint8_t fx = static_cast<uint8_t>(x);
-  uint8_t fy = static_cast<uint8_t>(y);
-  uint8_t fz = static_cast<uint8_t>(z);
-
-  uint8_t n000 = detail::noise_hash(X, Y, Z);
-  uint8_t n100 = detail::noise_hash(X + 1, Y, Z);
-  uint8_t n010 = detail::noise_hash(X, Y + 1, Z);
-  uint8_t n110 = detail::noise_hash(X + 1, Y + 1, Z);
-  uint8_t n001 = detail::noise_hash(X, Y, Z + 1);
-  uint8_t n101 = detail::noise_hash(X + 1, Y, Z + 1);
-  uint8_t n011 = detail::noise_hash(X, Y + 1, Z + 1);
-  uint8_t n111 = detail::noise_hash(X + 1, Y + 1, Z + 1);
-
-  uint8_t n00 = detail::lerp8(n000, n100, fx);
-  uint8_t n10 = detail::lerp8(n010, n110, fx);
-  uint8_t n01 = detail::lerp8(n001, n101, fx);
-  uint8_t n11 = detail::lerp8(n011, n111, fx);
-
-  uint8_t n0 = detail::lerp8(n00, n10, fy);
-  uint8_t n1 = detail::lerp8(n01, n11, fy);
-
-  return detail::lerp8(n0, n1, fz);
+inline uint8_t inoise8(uint16_t x, uint16_t y, uint16_t z) {
+  const uint8_t X = x >> 8, Y = y >> 8, Z = z >> 8;
+  const uint8_t A = detail::noise_p(X) + Y, AA = detail::noise_p(A) + Z, AB = detail::noise_p(A + 1) + Z;
+  const uint8_t B = detail::noise_p(X + 1) + Y, BA = detail::noise_p(B) + Z, BB = detail::noise_p(B + 1) + Z;
+  uint8_t u = ease8InOutQuad(static_cast<uint8_t>(x)), v = ease8InOutQuad(static_cast<uint8_t>(y)), w = ease8InOutQuad(static_cast<uint8_t>(z));
+  const int8_t xx = (static_cast<uint8_t>(x) >> 1) & 0x7f, yy = (static_cast<uint8_t>(y) >> 1) & 0x7f, zz = (static_cast<uint8_t>(z) >> 1) & 0x7f;
+  constexpr uint8_t N = 0x80;
+  const int8_t X1 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AA), xx, yy, zz), detail::noise_grad8(detail::noise_p(BA), xx - N, yy, zz), u);
+  const int8_t X2 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AB), xx, yy - N, zz), detail::noise_grad8(detail::noise_p(BB), xx - N, yy - N, zz), u);
+  const int8_t X3 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AA + 1), xx, yy, zz - N), detail::noise_grad8(detail::noise_p(BA + 1), xx - N, yy, zz - N), u);
+  const int8_t X4 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AB + 1), xx, yy - N, zz - N), detail::noise_grad8(detail::noise_p(BB + 1), xx - N, yy - N, zz - N), u);
+  const int8_t result = detail::noise_lerp7by8(detail::noise_lerp7by8(X1, X2, v), detail::noise_lerp7by8(X3, X4, v), w);
+  return qadd8(static_cast<uint8_t>(result + 64), static_cast<uint8_t>(result + 64));
 }
 
+inline uint8_t inoise8(uint16_t x, uint16_t y) {
+  const uint8_t X = x >> 8, Y = y >> 8;
+  const uint8_t A = detail::noise_p(X) + Y, AA = detail::noise_p(A), AB = detail::noise_p(A + 1);
+  const uint8_t B = detail::noise_p(X + 1) + Y, BA = detail::noise_p(B), BB = detail::noise_p(B + 1);
+  const uint8_t u = ease8InOutQuad(static_cast<uint8_t>(x)), v = ease8InOutQuad(static_cast<uint8_t>(y));
+  const int8_t xx = (static_cast<uint8_t>(x) >> 1) & 0x7f, yy = (static_cast<uint8_t>(y) >> 1) & 0x7f;
+  constexpr uint8_t N = 0x80;
+  const int8_t X1 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AA), xx, yy), detail::noise_grad8(detail::noise_p(BA), xx - N, yy), u);
+  const int8_t X2 = detail::noise_lerp7by8(detail::noise_grad8(detail::noise_p(AB), xx, yy - N), detail::noise_grad8(detail::noise_p(BB), xx - N, yy - N), u);
+  const int8_t result = detail::noise_lerp7by8(X1, X2, v);
+  return qadd8(static_cast<uint8_t>(result + 64), static_cast<uint8_t>(result + 64));
+}
+
+// Known non-parity placeholder. Phase 4A covers only inoise8 2D/3D overloads.
 inline uint16_t inoise16(uint16_t x, uint16_t y = 0, uint16_t z = 0) {
   return static_cast<uint16_t>(inoise8(x, y, z)) * 257U;
 }
@@ -763,52 +851,52 @@ inline uint16_t inoise16(uint16_t x, uint16_t y = 0, uint16_t z = 0) {
 // ---------------------------------------------------------------------------
 
 inline void blur1d(CRGB* leds, int numLeds, fract8 amount) {
-  if (numLeds <= 1) return;
-  CRGB prev = leds[0];
+  const uint8_t keep = 255 - amount;
+  const uint8_t seep = amount >> 1;
+  CRGB carryover = CRGB::Black;
   for (int i = 0; i < numLeds; ++i) {
     CRGB cur = leds[i];
-    CRGB next = leds[(i + 1) % numLeds];
-    CRGB avg = (prev + cur + cur + next) * static_cast<uint8_t>(64);
-    leds[i] = blend(cur, avg, amount);
-    prev = cur;
+    CRGB part = cur;
+    part.nscale8(seep);
+    cur.nscale8(keep);
+    cur += carryover;
+    if (i) leds[i - 1] += part;
+    leds[i] = cur;
+    carryover = part;
   }
 }
 
 inline void blur2d(CRGB* leds, uint8_t width, uint8_t height, fract8 amount, const fl::XYMap& xyMap) {
-  if (width == 0 || height == 0) return;
-  const uint16_t n = static_cast<uint16_t>(width) * height;
-  CRGB* tmp = new CRGB[n];
-  std::memcpy(tmp, leds, n * sizeof(CRGB));
-
-  for (uint8_t y = 0; y < height; ++y) {
-    for (uint8_t x = 0; x < width; ++x) {
-      uint16_t idx = xyMap(x, y);
-      uint8_t neighbors = 1;
-      uint16_t r = tmp[idx].r;
-      uint16_t g = tmp[idx].g;
-      uint16_t b = tmp[idx].b;
-
-      auto add = [&](uint8_t nx, uint8_t ny) {
-        uint16_t ni = xyMap(nx, ny);
-        r += tmp[ni].r;
-        g += tmp[ni].g;
-        b += tmp[ni].b;
-        ++neighbors;
-      };
-
-      if (x > 0) add(x - 1, y);
-      if (x + 1 < width) add(x + 1, y);
-      if (y > 0) add(x, y - 1);
-      if (y + 1 < height) add(x, y + 1);
-
-      CRGB avg(
-        static_cast<uint8_t>(r / neighbors), static_cast<uint8_t>(g / neighbors), static_cast<uint8_t>(b / neighbors)
-      );
-      leds[idx] = blend(tmp[idx], avg, amount);
+  const uint8_t keep = 255 - amount;
+  const uint8_t seep = amount >> 1;
+  for (uint8_t row = 0; row < height; ++row) {
+    CRGB carryover = CRGB::Black;
+    for (uint8_t col = 0; col < width; ++col) {
+      const uint16_t index = xyMap(col, row);
+      CRGB cur = leds[index];
+      CRGB part = cur;
+      part.nscale8(seep);
+      cur.nscale8(keep);
+      cur += carryover;
+      if (col) leds[xyMap(col - 1, row)] += part;
+      leds[index] = cur;
+      carryover = part;
     }
   }
-
-  delete[] tmp;
+  for (uint8_t col = 0; col < width; ++col) {
+    CRGB carryover = CRGB::Black;
+    for (uint8_t row = 0; row < height; ++row) {
+      const uint16_t index = xyMap(col, row);
+      CRGB cur = leds[index];
+      CRGB part = cur;
+      part.nscale8(seep);
+      cur.nscale8(keep);
+      cur += carryover;
+      if (row) leds[xyMap(col, row - 1)] += part;
+      leds[index] = cur;
+      carryover = part;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

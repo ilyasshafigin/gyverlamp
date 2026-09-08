@@ -9,7 +9,8 @@
     "sim": "npm run build:wasm \u0026\u0026 node server.js",
     "render:catalog": "node tools/render-effect.js catalog",
     "render:effect": "node tools/render-effect.js effect",
-    "test:tools": "node --test tools/test/*.test.js"
+    "test:tools": "node --test tools/test/*.test.js",
+    "test:fastled-parity": "node --test tools/test/fastled-shim-parity.test.js"
   },
   "engines": {
     "node": ">=18.0.0"
