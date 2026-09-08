@@ -26,6 +26,9 @@ namespace Effects {
     Picasso,
     Equalizer,
     Octopus,
+    SilkRibbons,
+    VelvetFolds,
+    StainedGlass,
     COUNT,
     INVALID = 255,
   };

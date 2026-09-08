@@ -13,6 +13,7 @@ public:
     255, // brightness
     128, // speed
     40,  // scale
+    Effects::EFFECT_SPEC_USES_AUDIO,
   };
 
   void setup(EffectContext& ctx) override;

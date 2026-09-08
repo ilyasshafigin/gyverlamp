@@ -41,6 +41,7 @@ just sim render --request .artifacts/requests/<name>.json --out .artifacts/sim
 ## Effects and persistence gotchas
 
 - Effect identity is centralized in `src/effect/ids.h` as `Effects::Id`; UI/MQTT names and factory mapping live in `src/effect/catalog.cpp`.
+- Only one effect is active at a time. Reuse suitable working state from `src/effect/shared.h` before adding effect-instance fields: those shared variables deliberately conserve ESP RAM across effects. Initialize every shared value an effect owns in `setup()` and never rely on its value from a previous effect.
 - Effect catalog lives in `src/effect/catalog.h`; effect implementations live in `src/effect/catalog/` with files named `<effect>.h/.cpp` (no `effect_` prefix); `EFFECT_REGISTRY` drives IDs, names, and `createEffect()`.
 - Adding/removing effects must keep `Effects::Id`, `Effects::COUNT`, `EFFECT_REGISTRY`, `Effects::DISPLAY_ORDER`, and `createEffect()` in sync; web and MQTT enumerate `Effects::DISPLAY_COUNT`.
 - `EffectController` uses placement-new into storage sized by `Effects::STORAGE_SIZE`; static assert caps max effect object size at 64 bytes.

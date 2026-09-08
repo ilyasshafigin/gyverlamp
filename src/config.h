@@ -54,7 +54,10 @@
 #endif
 
 // Частота кадров переписовки матрицы
+#ifndef FRAME_RATE
 #define FRAME_RATE 50U
+#endif
+static_assert(FRAME_RATE >= 1 && FRAME_RATE <= 1000, "FRAME_RATE must be between 1 and 1000");
 // Время кадра в мс (1000 / FPS)
 #define FRAME_MS static_cast<uint16_t>(1000U / FRAME_RATE)
 

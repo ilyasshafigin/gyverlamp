@@ -46,7 +46,12 @@ void Lamp::loop() {
 
     LoopProfiler::measure(LoopProfiler::ROTATION, [this]() { rotation.tick(power.isOn()); });
 
-    const bool audioReadEnabled = power.isOn() && audio.config().mode != AudioMode::Off;
+    const AudioMode audioMode = audio.config().mode;
+    bool audioReadEnabled = power.isOn() && audioMode != AudioMode::Off;
+    if (audioReadEnabled && audioMode == AudioMode::Effect) {
+      const EffectSettingsSpec activeEffectSpec = effects.activeSettingsSpec();
+      audioReadEnabled = (activeEffectSpec.flags & Effects::EFFECT_SPEC_USES_AUDIO) != 0;
+    }
     LoopProfiler::measure(LoopProfiler::AUDIO, [this, audioReadEnabled]() { audio.tick(audioReadEnabled); });
     yield();
     LoopProfiler::measure(LoopProfiler::RENDER, [this]() { frameRenderer.render(); });
