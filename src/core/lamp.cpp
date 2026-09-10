@@ -89,7 +89,11 @@ void Lamp::onOtaEvent(const OtaController::Event& event, void* context) {
       lamp->notifications.onOtaStart();
       lamp->frameRenderer.renderNow();
       break;
-    case OtaController::EventType::Progress: lamp->notifications.onOtaProgress(event.progress); break;
+    case OtaController::EventType::Progress: lamp->notifications.onOtaProgress(event.progress);
+#ifdef OTA_FORCE_RENDER
+      lamp->frameRenderer.renderNow();
+#endif
+      break;
     case OtaController::EventType::End: lamp->notifications.onOtaEnd(); break;
     case OtaController::EventType::Error:
       lamp->notifications.onOtaError();

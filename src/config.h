@@ -97,6 +97,8 @@ static_assert(FRAME_RATE >= 1 && FRAME_RATE <= 1000, "FRAME_RATE must be between
 // ----- OTA -----
 // Будет ли поддержка OTA обновление по Wifi
 //#define USE_OTA - задается в platformio.local.ini
+// Принудительно отрисовывать индикацию прогресса OTA
+//#define OTA_FORCE_RENDER - задается в platformio.local.ini
 
 // ----- UDP -----
 // Будет ли использоваться UPD протокол для управления их мобильных приложений
