@@ -29,7 +29,7 @@ public:
     uint32_t staReconnectIntervalMs = 5000;
     uint32_t apRetryIntervalMs = 5000;
     uint32_t fallbackApIdleTimeoutMs = 5UL * 60UL * 1000UL;
-    uint32_t staAttemptTimeoutMs = 60UL * 1000UL;
+    uint32_t staAttemptTimeoutMs = 15UL * 1000UL;
     uint32_t fallbackApDelayMs = 60UL * 1000UL;
   };
 

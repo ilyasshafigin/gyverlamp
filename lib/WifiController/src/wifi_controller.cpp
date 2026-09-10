@@ -353,9 +353,9 @@ void WifiController::failStaConnection(StaFailureCause cause, uint16_t reason) {
   (void)reason;
   acceptingStaDisconnectEvents_ = false;
   pendingDisconnectValid_ = false;
+  stopStaConnection();
   staState_ = State::RetryWait;
   retryStartedAt_ = wifi_controller::detail::platformMillis();
-  if (cause == StaFailureCause::Deadline) stopStaConnection();
 #ifdef DEBUG
   if (cause == StaFailureCause::Deadline) {
     logText(F("STA attempt timeout"));
