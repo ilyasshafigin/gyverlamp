@@ -1,0 +1,213 @@
+input_select:
+  gyverlamp_encoder_mode:
+    name: GyverLamp — режим энкодера
+    options:
+      - brightness
+      - scale
+      - speed
+    initial: brightness
+
+input_number:
+  gyverlamp_encoder_brightness_step:
+    name: GyverLamp — шаг яркости энкодера
+    min: 1
+    max: 255
+    step: 1
+    initial: 15
+  gyverlamp_encoder_scale_step:
+    name: GyverLamp — шаг масштаба энкодера
+    min: 1
+    max: 255
+    step: 1
+    initial: 15
+  gyverlamp_encoder_speed_step:
+    name: GyverLamp — шаг скорости энкодера
+    min: 1
+    max: 255
+    step: 1
+    initial: 15
+
+script:
+  gyverlamp_encoder_next_mode:
+    alias: GyverLamp — следующий режим энкодера
+    mode: queued
+    sequence:
+    - action: input_select.select_next
+      target:
+        entity_id: input_select.gyverlamp_encoder_mode
+      data:
+        cycle: true
+  gyverlamp_encoder_set_brightness_mode:
+    alias: GyverLamp — режим энкодера brightness
+    mode: queued
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.gyverlamp_encoder_mode
+      data:
+        option: brightness
+
+  gyverlamp_encoder_adjust:
+    alias: GyverLamp — изменение параметра энкодером
+    mode: queued
+    fields:
+      direction:
+        description: "Направление поворота: 1 или -1"
+        required: true
+        selector:
+          number:
+            min: -1
+            max: 1
+            step: 2
+    sequence:
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: "{{ states('input_select.gyverlamp_encoder_mode') == 'brightness' }}"
+        sequence:
+        - action: light.turn_on
+          target:
+            entity_id: light.gyverlamp
+          data:
+            brightness: >-
+              {% set current = state_attr('light.gyverlamp', 'brightness') | int(1) %}
+              {% set step = states('input_number.gyverlamp_encoder_brightness_step') | int(15) %}
+              {{ [1, [255, current + (step * (direction | int))] | min] | max }}
+      - conditions:
+        - condition: template
+          value_template: "{{ states('input_select.gyverlamp_encoder_mode') == 'scale' }}"
+        sequence:
+        - action: number.set_value
+          target:
+            entity_id: number.gyverlamp_effect_scale
+          data:
+            value: >-
+              {% set current = states('number.gyverlamp_effect_scale') | int(1) %}
+              {% set step = states('input_number.gyverlamp_encoder_scale_step') | int(15) %}
+              {{ [1, [255, current + (step * (direction | int))] | min] | max }}
+      - conditions:
+        - condition: template
+          value_template: "{{ states('input_select.gyverlamp_encoder_mode') == 'speed' }}"
+        sequence:
+        - action: number.set_value
+          target:
+            entity_id: number.gyverlamp_effect_speed
+          data:
+            value: >-
+              {% set current = states('number.gyverlamp_effect_speed') | int(1) %}
+              {% set step = states('input_number.gyverlamp_encoder_speed_step') | int(15) %}
+              {{ [1, [255, current + (step * (direction | int))] | min] | max }}
+
+  gyverlamp_start_warning:
+    alias: GyverLamp - включение предупреждения
+    mode: single
+    fields:
+      duration:
+        description: Длительность
+        required: false
+        default: 0
+        selector:
+          number:
+    sequence:
+    - action: number.set_value
+      target:
+        entity_id: number.gyverlamp_user_notification_duration
+      data:
+        value: "{{ duration }}"
+    - action: select.select_option
+      target:
+        entity_id: select.gyverlamp_user_notification
+      data:
+        option: Warning
+
+  gyverlamp_start_alarm:
+    alias: GyverLamp - включение тревоги
+    mode: single
+    fields:
+      duration:
+        description: Длительность
+        required: false
+        default: 0
+        selector:
+          number:
+    sequence:
+    - action: number.set_value
+      target:
+        entity_id: number.gyverlamp_user_notification_duration
+      data:
+        value: "{{ duration }}"
+    - action: select.select_option
+      target:
+        entity_id: select.gyverlamp_user_notification
+      data:
+        option: Alarm
+
+  gyverlamp_start_text:
+    alias: GyverLamp - отображение текстового уведомления
+    mode: single
+    fields:
+      message:
+        description: Текст
+        required: true
+        selector:
+          text:
+      duration:
+        description: Длительность
+        required: false
+        default: 0
+        selector:
+          number:
+    sequence:
+    - action: number.set_value
+      target:
+        entity_id: number.gyverlamp_user_notification_duration
+      data:
+        value: "{{ duration }}"
+    - action: text.set_value
+      target:
+        entity_id: text.gyverlamp_user_notification_text
+      data:
+        value: "{{ message }}"
+    - action: select.select_option
+      target:
+        entity_id: select.gyverlamp_user_notification
+      data:
+        option: Text
+
+  gyverlamp_notify:
+    alias: GyverLamp - однократно уведомление
+    mode: single
+    sequence:
+    - action: button.press
+      target:
+        entity_id: button.gyverlamp_user_notify
+
+automation:
+- id: gyverlamp_ha_notifications_notify
+  alias: GyverLamp - уведомления на HA
+  mode: queued
+
+  trigger:
+  # Persistent notifications
+  - platform: persistent_notification
+    update_type:
+    - added
+    - updated
+
+  # Mobile app notifications
+  - platform: event
+    event_type: call_service
+    event_data:
+      domain: notify
+
+  condition:
+  # Оставляем только mobile_app notify-сервисы.
+  - condition: template
+    value_template: >
+      {{
+        trigger.platform == 'persistent_notification'
+        or trigger.event.data.service.startswith('mobile_app_')
+      }}
+
+  action:
+  - action: script.gyverlamp_notify

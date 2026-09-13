@@ -1,0 +1,44 @@
+blueprint:
+  name: Управление энкодером Zigbee2MQTT для ESPHome
+  description: >
+    Выполняет отдельные действия для поворота энкодера ESPHome.
+    Сенсор должен передавать 1 для поворота по часовой стрелке и -1 — против.
+    Состояние 0, unavailable и unknown игнорируются.
+  domain: automation
+  input:
+    sensor_event:
+      name: Сенсор событий энкодера
+      description: Сенсор Encoder из Zigbee2MQTT
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: sensor
+    clockwise_action:
+      name: Поворот по часовой стрелке
+      default: []
+      selector:
+        action: {}
+    counterclockwise_action:
+      name: Поворот против часовой стрелки
+      default: []
+      selector:
+        action: {}
+
+mode: queued
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input sensor_event
+
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == '1' }}"
+        sequence: !input clockwise_action
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == '-1' }}"
+        sequence: !input counterclockwise_action

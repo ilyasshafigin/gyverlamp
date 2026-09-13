@@ -1,0 +1,341 @@
+# Схема пайки (ESP32-H2 Super Mini, питание USB):
+# - Каждая из пяти нормально-разомкнутых кнопок: один контакт к GND, второй — к GPIO.
+# - EC11: A и B подключить к GPIO ниже; C (общий) — к GND; SW — к GPIO11,
+#   SW common (общий кнопки) — к GND.
+#
+# | Назначение       | GPIO    | Подключение                  |
+# |------------------|---------|------------------------------|
+# | Кнопка 1         | GPIO0   | второй контакт кнопки        |
+# | Кнопка 2         | GPIO1   | второй контакт кнопки        |
+# | Кнопка 3         | GPIO2   | второй контакт кнопки        |
+# | Кнопка 4         | GPIO3   | второй контакт кнопки        |
+# | Кнопка 5         | GPIO4   | второй контакт кнопки        |
+# | EC11 A           | GPIO5   | вывод A энкодера             |
+# | EC11 B           | GPIO10  | вывод B энкодера             |
+# | Нажатие EC11     | GPIO11  | вывод SW энкодера            |
+# | Общие контакты   | GND     | кнопки, EC11 C и SW common   |
+#
+# GPIO8/GPIO9, RX/TX и GPIO22/GPIO25/GPIO26/GPIO27 намеренно не используются.
+# Распиновка предварительная и зависит от конкретной платы: до пайки проверить
+# встроенный LED и разводку Super Mini.
+
+esphome:
+  name: esphome-control-pad
+  friendly_name: Control Pad
+  comment: 5 кнопок + EC11 Zigbee USB
+
+esp32:
+  board: esp32-h2-devkitm-1
+  variant: ESP32H2
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_PM_ENABLE: y
+      CONFIG_FREERTOS_USE_TICKLESS_IDLE: y
+
+external_components:
+  - source: github://luar123/zigbee_esphome
+    components: [zigbee]
+
+logger:
+  level: NONE
+  baud_rate: 0
+
+zigbee:
+  id: esphome_zigbee
+  name: control_pad_5_enc
+  power_supply: 4  # DC power
+  router: true
+  sleepy: false
+  endpoints:
+    - num: 1
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button1
+    - num: 2
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button2
+    - num: 3
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button3
+    - num: 4
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button4
+    - num: 5
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button5
+    - num: 6
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button6
+    - num: 7
+      device_type: SIMPLE_SENSOR
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_encoder
+
+sensor:
+  - platform: template
+    id: control_pad_button1
+    name: "Button1"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button1, state: 0}
+  - platform: template
+    id: control_pad_button2
+    name: "Button2"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button2, state: 0}
+  - platform: template
+    id: control_pad_button3
+    name: "Button3"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button3, state: 0}
+  - platform: template
+    id: control_pad_button4
+    name: "Button4"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button4, state: 0}
+  - platform: template
+    id: control_pad_button5
+    name: "Button5"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button5, state: 0}
+  - platform: template
+    id: control_pad_button6
+    name: "Button6"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish: {id: control_pad_button6, state: 0}
+  - platform: template
+    id: control_pad_encoder
+    name: "Encoder"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 100ms
+              - sensor.template.publish: {id: control_pad_encoder, state: 0}
+  - platform: rotary_encoder
+    id: rotary_encoder_input
+    internal: true
+    pin_a:
+      number: GPIO5
+      mode: INPUT_PULLUP
+    pin_b:
+      number: GPIO10
+      mode: INPUT_PULLUP
+    resolution: 1
+    filters:
+      - debounce: 30ms
+    on_clockwise:
+      - sensor.template.publish: {id: control_pad_encoder, state: 1}
+    on_anticlockwise:
+      - sensor.template.publish: {id: control_pad_encoder, state: -1}
+
+binary_sensor:
+  - platform: gpio
+    id: raw_state_button1
+    internal: true
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 25ms
+    on_press:
+      then:
+        - script.execute: check_zigbee_factory_reset_combo
+    on_multi_click:
+      - timing: &single_click
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish: {id: control_pad_button1, state: 1}
+      - timing: &double_click
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish: {id: control_pad_button1, state: 2}
+      - timing: &triple_click
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish: {id: control_pad_button1, state: 3}
+      - timing: &hold
+          - ON for at least 1s
+        then:
+          - sensor.template.publish: {id: control_pad_button1, state: 4}
+
+  - platform: gpio
+    id: raw_state_button2
+    internal: true
+    pin: {number: GPIO1, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 25ms}]
+    on_multi_click:
+      - {timing: *single_click, then: [{sensor.template.publish: {id: control_pad_button2, state: 1}}]}
+      - {timing: *double_click, then: [{sensor.template.publish: {id: control_pad_button2, state: 2}}]}
+      - {timing: *triple_click, then: [{sensor.template.publish: {id: control_pad_button2, state: 3}}]}
+      - {timing: *hold, then: [{sensor.template.publish: {id: control_pad_button2, state: 4}}]}
+
+  - platform: gpio
+    id: raw_state_button3
+    internal: true
+    pin: {number: GPIO2, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 25ms}]
+    on_press:
+      then:
+        - script.execute: check_zigbee_factory_reset_combo
+    on_multi_click:
+      - {timing: *single_click, then: [{sensor.template.publish: {id: control_pad_button3, state: 1}}]}
+      - {timing: *double_click, then: [{sensor.template.publish: {id: control_pad_button3, state: 2}}]}
+      - {timing: *triple_click, then: [{sensor.template.publish: {id: control_pad_button3, state: 3}}]}
+      - {timing: *hold, then: [{sensor.template.publish: {id: control_pad_button3, state: 4}}]}
+
+  - platform: gpio
+    id: raw_state_button4
+    internal: true
+    pin: {number: GPIO3, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 25ms}]
+    on_multi_click:
+      - {timing: *single_click, then: [{sensor.template.publish: {id: control_pad_button4, state: 1}}]}
+      - {timing: *double_click, then: [{sensor.template.publish: {id: control_pad_button4, state: 2}}]}
+      - {timing: *triple_click, then: [{sensor.template.publish: {id: control_pad_button4, state: 3}}]}
+      - {timing: *hold, then: [{sensor.template.publish: {id: control_pad_button4, state: 4}}]}
+
+  - platform: gpio
+    id: raw_state_button5
+    internal: true
+    pin: {number: GPIO4, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 25ms}]
+    on_multi_click:
+      - {timing: *single_click, then: [{sensor.template.publish: {id: control_pad_button5, state: 1}}]}
+      - {timing: *double_click, then: [{sensor.template.publish: {id: control_pad_button5, state: 2}}]}
+      - {timing: *triple_click, then: [{sensor.template.publish: {id: control_pad_button5, state: 3}}]}
+      - {timing: *hold, then: [{sensor.template.publish: {id: control_pad_button5, state: 4}}]}
+
+  - platform: gpio
+    id: raw_state_button6
+    internal: true
+    pin: {number: GPIO11, mode: INPUT_PULLUP, inverted: true}
+    filters: [{delayed_on_off: 25ms}]
+    on_multi_click:
+      - {timing: *single_click, then: [{sensor.template.publish: {id: control_pad_button6, state: 1}}]}
+      - {timing: *double_click, then: [{sensor.template.publish: {id: control_pad_button6, state: 2}}]}
+      - {timing: *triple_click, then: [{sensor.template.publish: {id: control_pad_button6, state: 3}}]}
+      - {timing: *hold, then: [{sensor.template.publish: {id: control_pad_button6, state: 4}}]}
+
+script:
+  - id: check_zigbee_factory_reset_combo
+    mode: single
+    then:
+      - delay: 5s
+      - if:
+          condition:
+            and:
+              - binary_sensor.is_on: raw_state_button1
+              - binary_sensor.is_on: raw_state_button3
+          then:
+            - logger.log: "Zigbee factory reset by Button1 + Button3"
+            - zigbee.reset: esphome_zigbee

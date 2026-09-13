@@ -1,0 +1,619 @@
+# Пины:
+# - GPIO0 - кнопка 1
+# - GPIO1 - заряд аккумалятора
+# - GPIO2 - кнопка 3
+# - GPIO3 - кнопка 4
+# - GPIO4 - кнопка 5
+# - GPIO5 - кнопка 6
+# - GPIO14 - кнопка 2
+#
+# Состояния кнопок:
+# - 0 - не нажата
+# - 1 - нажата один раз
+# - 2 - нажата два раза
+# - 3 - нажата три раза
+# - 4 - долгое нажатие (больше секунды)
+#
+
+substitutions:
+  device_name: Control Pad
+  upper_devicename: control_pad
+
+external_components:
+  - source: github://luar123/zigbee_esphome
+    components: [zigbee]
+  - source: github://pr#12325
+    components: [power_management]
+    refresh: 1h
+
+esphome:
+  name: esphome-control-pad
+  comment: 6 buttons Zigbee
+  friendly_name: Control Pad
+  on_boot:
+    priority: -100
+    then:
+      - delay: 10s
+      - component.update: battery_voltage
+      - sensor.template.publish:
+          id: control_pad_button1
+          state: 0
+      - sensor.template.publish:
+          id: control_pad_button2
+          state: 0
+      - sensor.template.publish:
+          id: control_pad_button3
+          state: 0
+      - sensor.template.publish:
+          id: control_pad_button4
+          state: 0
+      - sensor.template.publish:
+          id: control_pad_button5
+          state: 0
+      - sensor.template.publish:
+          id: control_pad_button6
+          state: 0
+
+esp32:
+  board: esp32-h2-devkitm-1
+  variant: ESP32H2
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_PM_ENABLE: y
+      CONFIG_FREERTOS_USE_TICKLESS_IDLE: y
+
+power_management:
+  enable_light_sleep: true
+  power_down_peripherals: true
+
+logger:
+  level: NONE
+  baud_rate: 0
+
+zigbee:
+  id: esphome_zigbee
+  name: control_pad_6          # Model Identifier в Basic cluster
+  power_supply: 3              # 3 = Battery
+  router: false                # End device (не router)
+  sleepy: true
+  keep_alive: 60000  # начать с 10 секунд; больше = меньше расход, хуже доступность
+  endpoints:
+    # Кнопка 1
+    - num: 1
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button1
+    # Кнопка 2
+    - num: 2
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button2
+    # Кнопка 3
+    - num: 3
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button3
+    # Кнопка 4
+    - num: 4
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button4
+    # Кнопка 5
+    - num: 5
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button5
+    # Кнопка 6
+    - num: 6
+      device_type: ON_OFF_SWITCH
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              report: force
+              device: control_pad_button6
+    # Батарея
+    - num: 7
+      device_type: SIMPLE_SENSOR
+      clusters:
+        - id: POWER_CONFIG
+          role: SERVER
+          attributes:
+            # 3.70 V -> Zigbee 37 (единица 0.1 V)
+            - attribute_id: 0x0020
+              type: UINT8
+              value: 0
+              device: battery_voltage
+              scale: 10
+              report: false
+
+            # 87% -> Zigbee 174 (единица 0.5%)
+            - attribute_id: 0x0021
+              type: UINT8
+              value: 0
+              device: battery_charge
+              scale: 2
+              report: force
+    - num: 8
+      device_type: SIMPLE_SENSOR
+      clusters:
+        - id: ANALOG_INPUT
+          role: SERVER
+          attributes:
+            - attribute_id: 0x0055
+              type: SINGLE
+              value: 0.0
+              device: battery_voltage
+              report: force
+
+  on_join:
+    then:
+      - logger.log: "Joined Zigbee network"
+
+sensor:
+  - platform: template
+    id: control_pad_button1
+    name: "Button1"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button1
+                  state: 0
+  - platform: template
+    id: control_pad_button2
+    name: "Button2"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button2
+                  state: 0
+  - platform: template
+    id: control_pad_button3
+    name: "Button3"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button3
+                  state: 0
+  - platform: template
+    id: control_pad_button4
+    name: "Button4"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button4
+                  state: 0
+  - platform: template
+    id: control_pad_button5
+    name: "Button5"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button5
+                  state: 0
+  - platform: template
+    id: control_pad_button6
+    name: "Button6"
+    accuracy_decimals: 0
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x != 0;'
+            then:
+              - delay: 500ms
+              - sensor.template.publish:
+                  id: control_pad_button6
+                  state: 0
+
+  - platform: adc
+    pin: GPIO1
+    id: battery_voltage
+    name: "Battery voltage"
+    device_class: voltage
+    state_class: measurement
+    unit_of_measurement: V
+    accuracy_decimals: 2
+    attenuation: 12db
+    samples: 16
+    update_interval: 1h
+    filters:
+      - multiply: 2.0  # компенсация делителя 1MΩ + 1MΩ
+      - sliding_window_moving_average:
+          window_size: 4
+          send_every: 1
+    on_value:
+      then:
+        - sensor.template.publish:
+            id: battery_charge
+            state: !lambda |-
+              // 3.68 V = 0%, 4.08 V = 95.5%, 4.099 V = 100%.
+              return clamp((x - 3.68f) * 100.0f / 0.419f, 0.0f, 100.0f);
+  - platform: template
+    id: battery_charge
+    name: "Battery charge"
+    device_class: battery
+    state_class: measurement
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+
+binary_sensor:
+  # Кнопка 1
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button1
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_press:
+      then:
+        - script.execute: check_zigbee_factory_reset_combo
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button1
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button1
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button1
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button1
+              state: 4
+
+  # Кнопка 2
+  - platform: gpio
+    pin:
+      number: GPIO14
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button2
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button2
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button2
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button2
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button2
+              state: 4
+
+  # Кнопка 3
+  - platform: gpio
+    pin:
+      number: GPIO2
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button3
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_press:
+      then:
+        - script.execute: check_zigbee_factory_reset_combo
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button3
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button3
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button3
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button3
+              state: 4
+
+  # Кнопка 4
+  - platform: gpio
+    pin:
+      number: GPIO3
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button4
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button4
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button4
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button4
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button4
+              state: 4
+
+  # Кнопка 5
+  - platform: gpio
+    pin:
+      number: GPIO4
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button5
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button5
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button5
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button5
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button5
+              state: 4
+
+  # Кнопка 6
+  - platform: gpio
+    pin:
+      number: GPIO5
+      mode: INPUT_PULLUP
+      inverted: true
+    id: raw_state_button6
+    internal: true
+    filters:
+      - delayed_on_off: 25ms
+    on_multi_click:
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button6
+              state: 1
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button6
+              state: 2
+      - timing:
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at most 350ms
+          - ON for 40ms to 800ms
+          - OFF for at least 350ms
+        then:
+          - sensor.template.publish:
+              id: control_pad_button6
+              state: 3
+      - timing:
+          - ON for at least 1s
+        then:
+          - sensor.template.publish:
+              id: control_pad_button6
+              state: 4
+
+  # Factory reset
+  - platform: gpio
+    pin:
+      number: GPIO9
+      mode: INPUT_PULLUP
+      inverted: true
+    id: zigbee_reset_button
+    name: "Zigbee factory reset"
+    internal: true
+    filters:
+      - delayed_on: 60ms
+    on_press:
+      then:
+        - delay: 5s
+        - if:
+            condition:
+              binary_sensor.is_on: zigbee_reset_button
+            then:
+              - logger.log: "Zigbee factory reset"
+              - zigbee.reset: esphome_zigbee
+
+script:
+  - id: check_zigbee_factory_reset_combo
+    mode: single
+    then:
+      - delay: 5s
+      - if:
+          condition:
+            and:
+              - binary_sensor.is_on: raw_state_button1
+              - binary_sensor.is_on: raw_state_button3
+          then:
+            - logger.log: "Zigbee factory reset by button 1 + button 3"
+            - zigbee.reset: esphome_zigbee

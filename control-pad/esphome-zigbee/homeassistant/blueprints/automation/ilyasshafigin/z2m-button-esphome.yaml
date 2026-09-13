@@ -1,0 +1,90 @@
+blueprint:
+  name: Управление кнопками Zigbee2mqtt для устройств ESPHome
+  description: >
+    # Управление кнопками Zigbee2mqtt для устройств ESPHome
+
+    Управление кнопками, настроенными через Zigbee2mqtt.
+    Позволяет настроить действия на события:
+      - одиночное нажатие (single)
+      - двойное нажатие (double)
+      - тройное нажатие (triple)
+      - удерживание кнопки (hold)
+
+    Поддержку нажатий нужно делать самостоятельно.
+    Для single - сенсор должен иметь состояние 1.
+    Для double - сенсор должен иметь состояние 2.
+    Для triple - сенсор должен иметь состояние 3.
+    Для hold - сенсор должен иметь состояние 4.
+
+    **Версия: 1.0**
+
+    ##Изменения:
+
+    ### 1.0
+    Создана автоматизация, поддерживаются события: 'single', 'double', 'triple', 'hold'
+
+  domain: automation
+  input:
+    sensor_event:
+      name: Сенсор событий кнопки
+      description: Сенсор
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: sensor
+    single_action:
+      name: Одиночное нажатие
+      description: Действие для одиночного нажатия
+      default: []
+      selector:
+        action: {}
+    double_action:
+      name: Двойное нажатие
+      description: Действие для двойного нажатия
+      default: []
+      selector:
+        action: {}
+    triple_action:
+      name: Тройное нажатие
+      description: Действие для тройного нажатия
+      default: []
+      selector:
+        action: {}
+    hold_action:
+      name: Удерживание кнопки
+      description: Действие после удерживания кнопки. Больше секунды
+      default: []
+      selector:
+        action: {}
+
+mode: restart
+max_exceeded: silent
+
+triggers:
+  - platform: state
+    entity_id: !input sensor_event
+    to: ~
+
+conditions:
+  - condition: template
+    value_template: "{{ trigger.from_state.state != 'unavailable' }}"
+  - condition: template
+    value_template: "{{ trigger.to_state.state != '' }}"
+
+actions:
+  - variables:
+      command: "{{ trigger.to_state.state }}"
+  - choose:
+      - conditions:
+          - "{{ command == 1 }}"
+        sequence: !input single_action
+      - conditions:
+          - "{{ command == 2 }}"
+        sequence: !input double_action
+      - conditions:
+          - "{{ command == 3 }}"
+        sequence: !input triple_action
+      - conditions:
+          - "{{ command == 4 }}"
+        sequence: !input hold_action

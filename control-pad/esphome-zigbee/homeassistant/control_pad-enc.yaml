@@ -1,0 +1,94 @@
+# Control Pad - ESPHome
+
+automation:
+- id: control_pad_button1_actions
+  alias: Control Pad - кнопка 1 - GyverLamp
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button1
+      single_action:
+      - action: light.toggle
+        target:
+          entity_id: light.gyverlamp1
+      double_action:
+      - action: button.press
+        target:
+          entity_id: button.gyverlamp1_reset_current_effect_settings
+
+- id: control_pad_button2_actions
+  alias: Control Pad - кнопка 2 - следующий эффект
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button2
+      single_action:
+      - action: button.press
+        target:
+          entity_id: button.gyverlamp1_next_effect
+
+- id: control_pad_button3_actions
+  alias: Control Pad - кнопка 3 - предыдущий эффект
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button3
+      single_action:
+      - action: button.press
+        target:
+          entity_id: button.gyverlamp1_previous_effect
+
+- id: control_pad_button4_actions
+  alias: Control Pad - кнопка 4 - надстольная лампа
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button4
+      single_action:
+      - action: switch.toggle
+        target:
+          entity_id: switch.socket13
+
+- id: control_pad_button5_actions
+  alias: Control Pad - кнопка 5 - GyverLamp rotation
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button5
+      single_action:
+      - action: switch.toggle
+        target:
+          entity_id: switch.gyverlamp1_rotation
+
+- id: control_pad_button6_actions
+  alias: Control Pad - кнопка 6 - следующий режим энкодера
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-button-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_button6
+      single_action:
+      - action: script.gyverlamp1_encoder_next_mode
+      double_action:
+      - action: script.gyverlamp1_encoder_set_brightness_mode
+
+- id: control_pad_encoder_actions
+  alias: Control Pad - энкодер - GyverLamp
+  description: ""
+  use_blueprint:
+    path: ilyasshafigin/z2m-encoder-esphome.yaml
+    input:
+      sensor_event: sensor.control_pad_encoder
+      clockwise_action:
+      - action: script.gyverlamp1_encoder_adjust
+        data:
+          direction: 1
+      counterclockwise_action:
+      - action: script.gyverlamp1_encoder_adjust
+        data:
+          direction: -1
