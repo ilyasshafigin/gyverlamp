@@ -191,6 +191,7 @@ namespace wifi_controller {
     void platformInitialize() {
       if (initialized) return;
 
+      WiFi.persistent(false);
       eventQueue = xQueueCreate(kEventQueueDepth, sizeof(PlatformEvent));
       WiFi.onEvent(onWifiEvent);
       initialized = true;
@@ -212,14 +213,8 @@ namespace wifi_controller {
       return hostname == nullptr || hostname[0] == '\0' || WiFi.setHostname(hostname);
     }
 
-    bool platformBeginSta(const char* ssid, const char* password, const char* hostname) {
-      (void)hostname;
+    void platformBeginSta(const char* ssid, const char* password) {
       WiFi.begin(ssid, password);
-      return true;
-    }
-
-    void platformDisconnectSta() {
-      WiFi.disconnect(false, false);
     }
 
     StaLinkStatus platformStaLinkStatus() {

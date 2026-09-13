@@ -26,10 +26,8 @@ public:
     const char* apSsid = nullptr;
     const char* apPassword = nullptr;
     Ipv4Address apIp{};
-    uint32_t staReconnectIntervalMs = 5000;
     uint32_t apRetryIntervalMs = 5000;
     uint32_t fallbackApIdleTimeoutMs = 5UL * 60UL * 1000UL;
-    uint32_t staAttemptTimeoutMs = 15UL * 1000UL;
     uint32_t fallbackApDelayMs = 60UL * 1000UL;
   };
 
@@ -37,7 +35,6 @@ public:
     Provisioning,
     Connecting,
     Connected,
-    RetryWait,
   };
 
   enum class EventType : uint8_t {
@@ -84,11 +81,6 @@ private:
     RetryWait,
   };
 
-  enum class StaFailureCause : uint8_t {
-    DisconnectEvent,
-    Deadline,
-  };
-
   struct OwnedConfig {
     char deviceId[kDeviceIdCapacity]{};
     char staSsid[kSsidCapacity]{};
@@ -96,10 +88,8 @@ private:
     char apSsid[kSsidCapacity]{};
     char apPassword[kPasswordCapacity]{};
     Ipv4Address apIp{};
-    uint32_t staReconnectIntervalMs = 0;
     uint32_t apRetryIntervalMs = 0;
     uint32_t fallbackApIdleTimeoutMs = 0;
-    uint32_t staAttemptTimeoutMs = 0;
     uint32_t fallbackApDelayMs = 0;
   };
 
@@ -110,14 +100,6 @@ private:
   ApState apState_ = ApState::Inactive;
   uint32_t apStartedAt_ = 0;
   uint32_t apRetryStartedAt_ = 0;
-  uint32_t connectStartedAt_ = 0;
-  uint32_t retryStartedAt_ = 0;
-  uint32_t nextAttemptId_ = 0;
-  uint32_t activeAttemptId_ = 0;
-  uint32_t pendingDisconnectAttemptId_ = 0;
-  uint16_t pendingDisconnectReason_ = 0;
-  bool acceptingStaDisconnectEvents_ = false;
-  bool pendingDisconnectValid_ = false;
   bool hasStaCredentials_ = false;
   bool staCampaignActive_ = false;
   bool fallbackApRequested_ = false;
@@ -128,7 +110,6 @@ private:
 
   static bool copyString(char* destination, uint8_t capacity, const char* source);
   static bool isValidHostname(const char* hostname);
-  static bool isFastFailDisconnectReason(uint16_t reason);
   bool copyConfig(const Config& runtimeConfig);
   void processPlatformEvents();
   void emit(EventType type);
@@ -137,14 +118,12 @@ private:
   void requestAp();
   void stopAp();
   void startStaConnection();
-  void stopStaConnection();
   void startStaCampaign();
   void endStaCampaign();
   void checkFallbackAp();
-  void failStaConnection(StaFailureCause cause, uint16_t reason);
   void checkStaConnecting();
-  void checkStaRetryWait();
   void onStaConnected();
+  void onStaDisconnected(uint16_t reason);
   void checkApRetry();
   void checkApTimeout();
 };

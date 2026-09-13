@@ -53,8 +53,6 @@ bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandle
   pendingEventCount_ = 0;
   staState_ = State::Provisioning;
   apState_ = ApState::Inactive;
-  acceptingStaDisconnectEvents_ = false;
-  pendingDisconnectValid_ = false;
   hasStaCredentials_ = false;
   staCampaignActive_ = false;
   fallbackApRequested_ = false;
@@ -74,11 +72,6 @@ bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandle
   wifi_controller::detail::platformInitialize();
   wifi_controller::detail::platformSetAutoReconnect(false);
 
-  const bool staHostnameApplied = wifi_controller::detail::platformSetStaHostname(config_.deviceId);
-#ifdef DEBUG
-  logHostnameOutcome(F("STA hostname setup"), staHostnameApplied);
-#endif
-
   PlatformEvent ignoredEvent{};
   while (wifi_controller::detail::platformNextEvent(ignoredEvent)) {
   }
@@ -90,6 +83,11 @@ bool WifiController::begin(const Config& runtimeConfig, EventHandler eventHandle
     emit(EventType::Disabled);
   } else {
     wifi_controller::detail::platformSetMode(Mode::Sta);
+    const bool staHostnameApplied = wifi_controller::detail::platformSetStaHostname(config_.deviceId);
+#ifdef DEBUG
+    logHostnameOutcome(F("STA hostname setup"), staHostnameApplied);
+#endif
+    wifi_controller::detail::platformSetAutoReconnect(true);
     startStaCampaign();
     startStaConnection();
   }
@@ -111,20 +109,8 @@ void WifiController::tick() {
 
     case State::Connected:
       if (!staConnected()) {
-        stopStaConnection();
-        startStaCampaign();
-        staState_ = State::RetryWait;
-        retryStartedAt_ = wifi_controller::detail::platformMillis();
-#ifdef DEBUG
-        logText(F("STA link lost"));
-        logRetry(F("STA"), config_.staReconnectIntervalMs);
-#endif
+        onStaDisconnected(0);
       }
-      break;
-
-    case State::RetryWait:
-      checkFallbackAp();
-      checkStaRetryWait();
       break;
   }
 
@@ -198,26 +184,18 @@ bool WifiController::copyConfig(const Config& runtimeConfig) {
   }
   if (candidate.apSsid[0] == '\0' || !isValidHostname(candidate.deviceId)) return false;
   if (
-    runtimeConfig.staReconnectIntervalMs == 0 || runtimeConfig.apRetryIntervalMs == 0 ||
-    runtimeConfig.fallbackApIdleTimeoutMs == 0 || runtimeConfig.staAttemptTimeoutMs == 0 ||
+    runtimeConfig.apRetryIntervalMs == 0 || runtimeConfig.fallbackApIdleTimeoutMs == 0 ||
     runtimeConfig.fallbackApDelayMs == 0
   ) {
     return false;
   }
 
   candidate.apIp = runtimeConfig.apIp;
-  candidate.staReconnectIntervalMs = runtimeConfig.staReconnectIntervalMs;
   candidate.apRetryIntervalMs = runtimeConfig.apRetryIntervalMs;
   candidate.fallbackApIdleTimeoutMs = runtimeConfig.fallbackApIdleTimeoutMs;
-  candidate.staAttemptTimeoutMs = runtimeConfig.staAttemptTimeoutMs;
   candidate.fallbackApDelayMs = runtimeConfig.fallbackApDelayMs;
   config_ = candidate;
   return true;
-}
-
-bool WifiController::isFastFailDisconnectReason(uint16_t reason) {
-  return reason == 2 || reason == 4 || reason == 15 || reason == 23 || reason == 201 || reason == 202 ||
-         reason == 203 || reason == 204;
 }
 
 void WifiController::processPlatformEvents() {
@@ -227,11 +205,8 @@ void WifiController::processPlatformEvents() {
     Serial.print(F("[WIFI] STA disconnect reason="));
     Serial.println(event.disconnectReason);
 #endif
-    if (staState_ == State::Connecting && acceptingStaDisconnectEvents_ && !pendingDisconnectValid_) {
-      pendingDisconnectValid_ = true;
-      pendingDisconnectAttemptId_ = activeAttemptId_;
-      pendingDisconnectReason_ = event.disconnectReason;
-    }
+    if (hasStaCredentials_ && staState_ == State::Connected && !staConnected())
+      onStaDisconnected(event.disconnectReason);
   }
 }
 
@@ -302,30 +277,12 @@ void WifiController::startStaConnection() {
     return;
   }
 
-  PlatformEvent ignoredEvent{};
-  while (wifi_controller::detail::platformNextEvent(ignoredEvent)) {
-  }
-
-  pendingDisconnectValid_ = false;
-  activeAttemptId_ = ++nextAttemptId_;
-  connectStartedAt_ = wifi_controller::detail::platformMillis();
   staState_ = State::Connecting;
-  acceptingStaDisconnectEvents_ = true;
   emit(EventType::Connecting);
 #ifdef DEBUG
-  Serial.print(F("[WIFI] STA attempt #"));
-  Serial.println(activeAttemptId_);
+  logText(F("STA begin"));
 #endif
-  const bool staHostnameApplied =
-    wifi_controller::detail::platformBeginSta(config_.staSsid, config_.staPassword, config_.deviceId);
-#ifdef DEBUG
-  logHostnameOutcome(F("STA hostname attempt"), staHostnameApplied);
-#endif
-}
-
-void WifiController::stopStaConnection() {
-  wifi_controller::detail::platformSetAutoReconnect(false);
-  wifi_controller::detail::platformDisconnectSta();
+  wifi_controller::detail::platformBeginSta(config_.staSsid, config_.staPassword);
 }
 
 void WifiController::startStaCampaign() {
@@ -345,65 +302,18 @@ void WifiController::checkFallbackAp() {
   if (!elapsed(now, staCampaignStartedAt_, config_.fallbackApDelayMs)) return;
 
   fallbackApRequested_ = true;
+  emit(EventType::Error);
   wifi_controller::detail::platformSetMode(Mode::ApSta);
   requestAp();
 }
 
-void WifiController::failStaConnection(StaFailureCause cause, uint16_t reason) {
-  (void)reason;
-  acceptingStaDisconnectEvents_ = false;
-  pendingDisconnectValid_ = false;
-  stopStaConnection();
-  staState_ = State::RetryWait;
-  retryStartedAt_ = wifi_controller::detail::platformMillis();
-#ifdef DEBUG
-  if (cause == StaFailureCause::Deadline) {
-    logText(F("STA attempt timeout"));
-  } else {
-    Serial.print(F("[WIFI] STA attempt failed reason="));
-    Serial.println(reason);
-  }
-  logRetry(F("STA"), config_.staReconnectIntervalMs);
-#endif
-  emit(EventType::Error);
-}
-
 void WifiController::checkStaConnecting() {
   if (staConnected()) {
-    acceptingStaDisconnectEvents_ = false;
-    pendingDisconnectValid_ = false;
     onStaConnected();
-    return;
   }
-
-  if (pendingDisconnectValid_ && pendingDisconnectAttemptId_ == activeAttemptId_) {
-    const uint16_t reason = pendingDisconnectReason_;
-    pendingDisconnectValid_ = false;
-    if (isFastFailDisconnectReason(reason)) {
-      failStaConnection(StaFailureCause::DisconnectEvent, reason);
-      return;
-    }
-  }
-
-  const uint32_t now = wifi_controller::detail::platformMillis();
-  if (!elapsed(now, connectStartedAt_, config_.staAttemptTimeoutMs)) return;
-  failStaConnection(StaFailureCause::Deadline, 0);
-}
-
-void WifiController::checkStaRetryWait() {
-  if (staConnected()) {
-    onStaConnected();
-    return;
-  }
-
-  const uint32_t now = wifi_controller::detail::platformMillis();
-  if (!elapsed(now, retryStartedAt_, config_.staReconnectIntervalMs)) return;
-  startStaConnection();
 }
 
 void WifiController::onStaConnected() {
-  acceptingStaDisconnectEvents_ = false;
-  pendingDisconnectValid_ = false;
   staState_ = State::Connected;
   endStaCampaign();
 #ifdef DEBUG
@@ -429,8 +339,22 @@ void WifiController::onStaConnected() {
   Serial.println(snapshot.rssi);
 #endif
   emit(EventType::Connected);
-  nextAttemptId_ = 0;
-  activeAttemptId_ = 0;
+}
+
+void WifiController::onStaDisconnected(uint16_t reason) {
+  if (staState_ != State::Connected) return;
+
+  staState_ = State::Connecting;
+  startStaCampaign();
+#ifdef DEBUG
+  if (reason == 0) {
+    logText(F("STA link lost"));
+  } else {
+    Serial.print(F("[WIFI] STA link lost reason="));
+    Serial.println(reason);
+  }
+#endif
+  emit(EventType::Connecting);
 }
 
 void WifiController::checkApRetry() {

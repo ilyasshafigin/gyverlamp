@@ -30,8 +30,7 @@ namespace wifi_controller {
     void platformSetAutoReconnect(bool enabled);
     void platformSetMode(Mode mode);
     bool platformSetStaHostname(const char* hostname);
-    bool platformBeginSta(const char* ssid, const char* password, const char* hostname);
-    void platformDisconnectSta();
+    void platformBeginSta(const char* ssid, const char* password);
     StaLinkStatus platformStaLinkStatus();
     void platformTickNetworkServices(const char* hostname);
     bool platformStartAp(const char* ssid, const char* password, const WifiController::Ipv4Address& ipAddress);

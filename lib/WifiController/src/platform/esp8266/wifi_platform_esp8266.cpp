@@ -182,6 +182,8 @@ namespace wifi_controller {
     void platformInitialize() {
       if (initialized) return;
 
+      WiFi.persistent(false);
+      WiFi.setAutoConnect(false);
       stationDisconnectedEventHandler =
         WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& event) {
           pushEvent(static_cast<uint16_t>(event.reason));
@@ -202,18 +204,11 @@ namespace wifi_controller {
     }
 
     bool platformSetStaHostname(const char* hostname) {
-      (void)hostname;
-      return true;
+      return hostname == nullptr || hostname[0] == '\0' || WiFi.hostname(hostname);
     }
 
-    bool platformBeginSta(const char* ssid, const char* password, const char* hostname) {
-      const bool hostnameSet = hostname == nullptr || hostname[0] == '\0' || WiFi.hostname(hostname);
+    void platformBeginSta(const char* ssid, const char* password) {
       WiFi.begin(ssid, password);
-      return hostnameSet;
-    }
-
-    void platformDisconnectSta() {
-      WiFi.disconnect(false, false);
     }
 
     StaLinkStatus platformStaLinkStatus() {
