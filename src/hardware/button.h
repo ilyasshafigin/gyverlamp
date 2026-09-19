@@ -48,15 +48,12 @@ public:
   }
 #endif
 
-  void detect();
   void init();
   void tick();
 
 #ifdef USE_BUTTON
-  bool isConnected() const { return connected_; }
   bool isEnabled() const { return enabled_; }
 #else
-  bool isConnected() const { return false; }
   bool isEnabled() const { return false; }
 #endif
   bool setEnabled(bool enabled);
@@ -72,7 +69,6 @@ private:
   StateNotifier& stateNotifier_;
   Button button_;
   int8_t pin_;
-  bool connected_ = false;
   bool enabled_ = true;
   bool brightDirection_ = false;
 #endif

@@ -2,7 +2,6 @@
 
 void Lamp::setup() {
   led.init();
-  button.detect();
 
   Serial.println();
   delay(1000);
@@ -24,7 +23,7 @@ void Lamp::setup() {
   wifi.begin(connectivity.wifiRuntimeConfig(), onWifiEvent, this);
   upd.init();
   const WifiController::Snapshot wifiSnapshot = wifi.snapshot();
-  const OtaController::Config otaConfig{wifiSnapshot.deviceId, 8266, connectivity.otaEnabled(), nullptr, nullptr};
+  const OtaController::Config otaConfig{wifiSnapshot.deviceId, 0, connectivity.otaEnabled(), nullptr, nullptr};
   ota.begin(otaConfig, onOtaEvent, this);
   mqtt.init(connectivity.mqttConfig());
   time.init();

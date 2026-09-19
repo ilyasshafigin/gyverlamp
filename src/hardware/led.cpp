@@ -1,5 +1,7 @@
 #include "led.h"
 
+#include <cstring>
+
 #include "../config.h"
 
 static uint16_t ledXYFunction(uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
@@ -42,7 +44,7 @@ void Led::clearLedsBuff() {
 }
 
 void Led::copyLedsBuffToLeds() {
-  fl::memcpy(leds_, ledsbuff_, sizeof(leds_));
+  std::memcpy(leds_, ledsbuff_, sizeof(leds_));
 }
 
 // по мотивам

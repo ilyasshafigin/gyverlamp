@@ -11,17 +11,6 @@
 #include "../storage/eeprom_store.h"
 #include "../storage/settings_repository.h"
 
-void TouchButton::detect() {
-  connected_ = !digitalRead(pin_);
-#ifdef DEBUG
-  if (connected_) {
-    Serial.println("[BUTTON] Touch button detected.");
-  } else {
-    Serial.println("[BUTTON] No touch button detected, touch button control disabled.");
-  }
-#endif
-}
-
 void TouchButton::init() {
   enabled_ = eeprom_.readButtonEnabled();
   button_.init(pin_, INPUT, HIGH);
@@ -35,8 +24,6 @@ bool TouchButton::setEnabled(bool enabled) {
 }
 
 void TouchButton::tick() {
-  if (!connected_) return;
-
   button_.tick();
 
   if (!enabled_) return;
@@ -125,8 +112,6 @@ void TouchButton::tick() {
 
 #else
 
-void TouchButton::detect() {
-}
 void TouchButton::init() {
 }
 bool TouchButton::setEnabled(bool enabled) {

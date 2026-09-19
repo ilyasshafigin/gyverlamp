@@ -61,7 +61,6 @@ private:
   char hostname_[kHostnameCapacity]{};
   char password_[kPasswordCapacity]{};
   char passwordHash_[kPasswordCapacity]{};
-  uint16_t port_ = 8266;
   bool initialized_ = false;
   bool desiredEnabled_ = false;
   bool effectiveEnabled_ = false;

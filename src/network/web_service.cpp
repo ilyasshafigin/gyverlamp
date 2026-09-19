@@ -422,7 +422,6 @@ void WebService::settingsBuilder(sets::Builder& b) {
     const ConnectivityStatus status = connectivity_.status();
     b.Label("Device ID", status.deviceId);
     b.Label("Wi-Fi", status.wifiSsid);
-    b.Label("WiFi RSSI", String(2 * (status.rssi + 100)) + "%");
     b.Label("IP Local", status.localIp);
     b.Label("IP Gateway", status.gateway);
     b.Label("MAC", status.mac);
@@ -443,10 +442,6 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", Device::metricText(diagnostics.freeHeapBytes) + " bytes");
     b.Label("Max free block size", Device::metricText(diagnostics.maxFreeBlockBytes) + " bytes");
     b.Label("Heap fragmentation", Device::metricText(diagnostics.heapFragmentationPercent) + "%");
-#if defined(USE_MQTT)
-    b.Label("MQTT host", String(connectivity_.mqttConfig().host));
-    b.Label("MQTT enabled", connectivity_.isMqttEnabled() ? "on" : "off");
-#endif
     b.Label("Uptime", uptime_formatter::getUptime());
     b.Label("Time", time_.timeStampString());
 

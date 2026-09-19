@@ -73,7 +73,6 @@ void OtaController::begin(const Config& config, EventHandler eventHandler, void*
   copyString(hostname_, sizeof(hostname_), config.hostname);
   copyString(password_, sizeof(password_), config.password);
   copyString(passwordHash_, sizeof(passwordHash_), config.passwordHash);
-  port_ = config.port == 0 ? 8266 : config.port;
   desiredEnabled_ = config.enabled;
   effectiveEnabled_ = config.enabled;
   eventHandler_ = eventHandler;
@@ -82,7 +81,7 @@ void OtaController::begin(const Config& config, EventHandler eventHandler, void*
 
 #ifdef USE_OTA
   ArduinoOTA.setHostname(hostname_);
-  ArduinoOTA.setPort(port_);
+  if (config.port != 0) ArduinoOTA.setPort(config.port);
   if (passwordHash_[0]) {
     ArduinoOTA.setPasswordHash(passwordHash_);
   } else if (password_[0]) {
