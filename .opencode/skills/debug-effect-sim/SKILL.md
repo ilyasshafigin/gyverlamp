@@ -117,7 +117,7 @@ Simulator-only changes need `just sim build` and `just sim test`.
 If changing production `src/**`, also run one focused firmware build:
 
 ```bash
-just build lamp1_ota
+just lamp build lamp1_ota
 ```
 
 Do not use plain `pio run` and do not upload unless explicitly requested.

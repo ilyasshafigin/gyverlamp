@@ -166,15 +166,15 @@
 5. Собрать прошивку:
 
     ```bash
-    just build lamp1_usb
+    just lamp build lamp1_usb
     ```
 
-    Для проверки собирайте ровно один целевой env; например, `just build lamp1_ota`.
+    Для проверки собирайте ровно один целевой env; например, `just lamp build lamp1_ota`.
 
 6. Первая прошивка обычно делается по USB:
 
     ```bash
-    just upload lamp1_usb
+    just lamp upload lamp1_usb
     ```
 
     После этого лампа поднимет точку доступа, где можно настроить WiFi и MQTT.
@@ -192,7 +192,7 @@
 8. Последующие прошивки можно делать через PlatformIO OTA, если listener включён, STA подключена и в `platformio.local.ini` указан правильный `upload_port`:
 
     ```bash
-    just upload lamp1_ota
+    just lamp upload lamp1_ota
     ```
 
 ### Runtime smoke checklist
@@ -215,7 +215,7 @@ just sim run
 
 `just sim run` сначала собирает WASM-артефакты, потом поднимает статический сервер на <http://localhost:8080>.
 
-Остальные команды: `just sim build`, `just sim test`, `just sim catalog`, `just sim render <args>`. Сборка и загрузка прошивки используют только `just build <env>` и `just upload <env>`; `just run sim` и `just build sim` не существуют.
+Остальные команды: `just sim build`, `just sim test`, `just sim catalog`, `just sim render <args>`.
 
 ### LSP / `compile_commands.json` (для агентов)
 

@@ -1,7 +1,7 @@
 #include "web_service.h"
 
 #include <SettingsAsync.h>
-#include <uptime_formatter.h>
+#include <UptimeFormatter.h>
 
 #include <cstring>
 
@@ -517,7 +517,7 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", Device::metricText(diagnostics.freeHeapBytes) + " bytes");
     b.Label("Max free block size", Device::metricText(diagnostics.maxFreeBlockBytes) + " bytes");
     b.Label("Heap fragmentation", Device::metricText(diagnostics.heapFragmentationPercent) + "%");
-    b.Label("Uptime", uptime_formatter::getUptime());
+    b.Label("Uptime", UptimeFormatter::uptime());
     b.Label("Time", time_.timeStampString());
 
     if (b.Button("Restart")) {

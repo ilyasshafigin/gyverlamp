@@ -109,7 +109,7 @@ just panel build input
 1. Соберите лампу с `USE_CONTROL_PAD`:
 
    ```bash
-   just build <lamp-env>
+   just lamp build <lamp-env>
    ```
 
 2. Проверьте проводку панели без radio (не обязательно):

@@ -3,7 +3,6 @@
 #ifdef USE_MQTT
 #include <WifiController.h>
 #include <cctype>
-#include <uptime_formatter.h>
 
 #include "../audio/audio_service.h"
 #include "../core/auto_off_config.h"

@@ -3,17 +3,17 @@
 ## Build and verify
 
 - PlatformIO project; `default_envs` comes from ignored `platformio.local.ini`. The committed example `platformio.local.example.ini` ships `lamp1_ota`; any additional per-lamp envs are local-only.
-- **For verification always build exactly ONE focused env. Default command: `just build lamp1_ota`.** Do not run `pio run` without `-e` and do not build multiple envs unless explicitly requested.
+- **For verification always build exactly ONE focused env. Default command: `just lamp build lamp1_ota`.** Do not run `pio run` without `-e` and do not build multiple envs unless explicitly requested.
 - Lamp 1 (`env:lamp1_base` in the example) uses board `d1_mini`, `DEVICE_NAME="GyverLamp1"` (which becomes `AP_SSID` via the default in `src/config.h`), and `CURRENT_LIMIT=3000`.
-- Available focused builds from the example: `just build lamp1_usb`, `just build lamp1_ota`. Additional `lampN_*` envs may be defined locally in `platformio.local.ini`; do not assume their names or counts.
-- There are no separate tests/lint checks for firmware; verification is the appropriate focused `just build <env>` command.
+- Available focused builds from the example: `just lamp build lamp1_usb`, `just lamp build lamp1_ota`. Additional `lampN_*` envs may be defined locally in `platformio.local.ini`; do not assume their names or counts.
+- There are no separate tests/lint checks for firmware; verification is the appropriate focused `just lamp build <env>` command.
 - Formatting: `.clang-format` (clang-format 14+) encodes the house style — 2-space indent, attached braces, type-aligned `&`/`*`, case indented under `switch`, includes **not** sorted. Run `clang-format -i <file>` to apply, or `clang-format --dry-run -Werror <file>` to check. Do not reformat files unrelated to your change.
-- Do not run `just upload <env>` unless explicitly requested to flash a device; `lamp*_ota` uses `espota` with `upload_port` (device IP) from `platformio.local.ini`.
+- Do not run `just lamp upload <env>` unless explicitly requested to flash a device; `lamp*_ota` uses `espota` with `upload_port` (device IP) from `platformio.local.ini`.
 
 ## Simulator commands
 
 - Simulator commands: `just sim run`, `just sim build`, `just sim test`, `just sim catalog`, `just sim render <args>`.
-- Build and upload firmware only with `just build <env>` and `just upload <env>`; do not use `just run sim` or `just build sim`.
+- Build and upload firmware only with `just lamp build <env>` and `just lamp upload <env>`; do not use `just run sim` or `just build sim`.
 - Deterministic WASM/Node export and request/schema format are documented in [`sim/README.md`](sim/README.md). Export results reside in ignored `.artifacts/`; the exporter rejects missing or stale WASM identity/artifacts.
 - Store local deterministic render request files in ignored `.artifacts/requests/`. Store render output in `.artifacts/sim/` or another `.artifacts/` subdirectory. Reusable shared request fixtures belong in tracked `sim/fixtures/requests/`.
 
