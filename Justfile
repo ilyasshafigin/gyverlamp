@@ -27,5 +27,25 @@ upload *envs:
         for env in {{envs}}; do pio run -e "$env" -t upload; done; \
     fi
 
+panel command="build" target="diag" port="":
+    @case "{{command}}" in \
+        build) case "{{target}}" in \
+            diag) pio run -d control-pad -e diag ;; \
+            input) pio run -d control-pad -e input ;; \
+            *) if [[ "{{target}}" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] && grep -Fqx "[env:{{target}}]" control-pad/platformio.local.ini 2>/dev/null; then pio run -d control-pad -e "{{target}}"; else echo "Unknown panel build target: {{target}}. Use: diag, input, or a provisioned profile" >&2; exit 2; fi ;; \
+            esac ;; \
+        test) case "{{target}}" in \
+            protocol) sh lib/ControlPadProtocol/tests/run.sh ;; \
+            *) echo "Unknown panel test target: {{target}}. Use: protocol" >&2; exit 2 ;; \
+            esac ;; \
+        provision) python3 control-pad/tools/provision_panel.py "{{target}}" ;; \
+        upload) if [ -z "{{port}}" ]; then echo "Specify serial port: just panel upload <profile> <port>" >&2; exit 2; fi; case "{{target}}" in \
+            diag) pio run -d control-pad -e diag -t upload --upload-port "{{port}}" ;; \
+            input) echo "panel input cannot be uploaded" >&2; exit 2 ;; \
+            *) if [[ "{{target}}" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] && grep -Fqx "[env:{{target}}]" control-pad/platformio.local.ini 2>/dev/null; then pio run -d control-pad -e "{{target}}" -t upload --upload-port "{{port}}"; else echo "Unknown panel upload target: {{target}}. Use: diag or a provisioned profile" >&2; exit 2; fi ;; \
+            esac ;; \
+        *) echo "Unknown panel command: {{command}}. Use: build, test, provision, upload" >&2; exit 2 ;; \
+    esac
+
 tidy env:
     @pio check -e "{{env}}" --fail-on-defect=medium

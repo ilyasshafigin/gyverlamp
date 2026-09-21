@@ -43,6 +43,22 @@ inline void delay(uint32_t) {
 inline void delayMicroseconds(uint32_t) {
 }
 
+inline size_t strlcpy(char* destination, const char* source, size_t size) {
+  const char* safeSource = source ? source : "";
+  size_t sourceLength = 0;
+  while (safeSource[sourceLength] != '\0') {
+    ++sourceLength;
+  }
+  if (size != 0) {
+    const size_t copyLength = sourceLength < size - 1 ? sourceLength : size - 1;
+    for (size_t index = 0; index < copyLength; ++index) {
+      destination[index] = safeSource[index];
+    }
+    destination[copyLength] = '\0';
+  }
+  return sourceLength;
+}
+
 constexpr uint8_t A0 = 0;
 constexpr uint8_t INPUT = 0;
 

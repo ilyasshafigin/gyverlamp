@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <ControlPadProtocol/ControlPadProtocol.h>
+
 #include "../audio/audio_config.h"
 #include "../core/rotation_mode.h"
 #include "../effect/ids.h"
@@ -16,6 +18,10 @@ public:
   EepromStore() {};
   bool init();
   bool isReady() const { return ready_; }
+
+  ControlPadProtocol::BindingRecord readControlPadBinding() const;
+  bool writeControlPadBinding(const ControlPadProtocol::BindingRecord& binding);
+  bool clearControlPadBinding();
 
   const WifiConfig& readWifiConfig();
   bool writeWifiConfig(const char* ssid, const char* password);
@@ -64,8 +70,8 @@ private:
   MqttConfig mqttConfigCache_ = {};
   bool ready_ = false;
 
-  void ensureLayoutVersion();
-  bool migrateLayoutV4ToV5();
-  bool writeLayoutVersion();
+  bool ensureLayoutVersion();
+  bool migrateLayoutV4ToV6();
+  bool migrateLayoutV5ToV6();
   bool initializeLayout();
 };

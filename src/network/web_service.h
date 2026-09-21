@@ -13,6 +13,9 @@
 #ifdef USE_MQTT
 #include "../network/mqtt_config.h"
 #endif
+#ifdef USE_CONTROL_PAD
+#include <ControlPadProtocol/ControlPadProtocol.h>
+#endif
 
 class AudioService;
 class EffectController;
@@ -24,6 +27,9 @@ class SettingsRepository;
 class StateNotifier;
 class TimeService;
 class TouchButton;
+#ifdef USE_CONTROL_PAD
+class ControlPadService;
+#endif
 
 class WebService {
 public:
@@ -39,6 +45,10 @@ public:
     StateNotifier& stateNotifier,
     TimeService& time,
     TouchButton& button
+#ifdef USE_CONTROL_PAD
+    ,
+    ControlPadService& controlPad
+#endif
   )
     : audio_(audio),
       connectivity_(connectivity),
@@ -50,7 +60,13 @@ public:
       settings_(settings),
       stateNotifier_(stateNotifier),
       time_(time),
-      button_(button) {}
+      button_(button)
+#ifdef USE_CONTROL_PAD
+      ,
+      controlPad_(controlPad)
+#endif
+  {
+  }
 
   void init();
   void tick();
@@ -67,6 +83,11 @@ private:
   StateNotifier& stateNotifier_;
   TimeService& time_;
   TouchButton& button_;
+#ifdef USE_CONTROL_PAD
+  ControlPadService& controlPad_;
+  char inputControlPadArtifact_[ControlPadProtocol::kArtifactBufferSize] = {};
+  bool controlPadOpenFailed_ = false;
+#endif
 
   char inputWifiSsid_[WifiConfig::kWifiSsidLen];
   char inputWifiPass_[WifiConfig::kWifiPassLen];

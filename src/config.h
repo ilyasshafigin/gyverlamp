@@ -4,6 +4,10 @@
 
 #include "platform/board_profile.h"
 
+#if defined(USE_CONTROL_PAD) && !defined(ARDUINO_ARCH_ESP32)
+#error "USE_CONTROL_PAD requires an Arduino ESP32-family target"
+#endif
+
 // ============= НАСТРОЙКИ =============
 
 #ifndef DEVICE_NAME

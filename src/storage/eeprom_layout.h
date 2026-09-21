@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <ControlPadProtocol/ControlPadProtocol.h>
+
 #include "../effect/ids.h"
 #include "../effect/settings.h"
 #include "../network/mqtt_config.h"
@@ -10,7 +12,7 @@
 static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t EffectSettings");
 
 // EEPROM.begin(kEepromSize) выделяет адреса 0..kEepromSize-1.
-// Layout v5 мигрирует известную карту v4. Остальные несовместимые карты
+// Layout v6 мигрирует известные карты v4 и v5. Остальные несовместимые карты
 // EepromStore очищает и пишет defaults текущей версии.
 //
 //  0..4      Метаданные layout, 5 байт: magic(4) + version(1).
@@ -39,12 +41,15 @@ static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t Effe
 //            50 слотов * sizeof(EffectSettings), по 3 байта на.
 //            Адрес эффекта: 300 + 3 * effectIndex.
 //
-//  450..511  Резерв, 62 байт.
+//  450..481  Control Pad binding, 32 байта: canonical encoded
+//            ControlPadProtocol::BindingRecord.
+//  482..511  Резерв, 30 байт.
 
 constexpr int kEepromSize = 512;
 constexpr uint32_t kEepromLayoutMagic = 0x474C4D50; // "GLMP"
 constexpr uint8_t kEepromLayoutVersionV4 = 4;
-constexpr uint8_t kEepromLayoutVersionCurrent = 5;
+constexpr uint8_t kEepromLayoutVersionV5 = 5;
+constexpr uint8_t kEepromLayoutVersionCurrent = 6;
 
 constexpr int kEepromLayoutMetaAddr = 0;
 constexpr int kEepromLayoutMetaSize = 5;
@@ -112,6 +117,9 @@ constexpr uint8_t kEepromAudioMarker = 0xA6;
 constexpr int kEepromEffectSettingsBase = kEepromAudioBlockAddr + kEepromAudioBlockSize; // 300
 constexpr uint8_t kEepromEffectSettingsCapacity = 50;
 
+constexpr int kEepromControlPadBindingAddr = 450;
+constexpr int kEepromControlPadBindingSize = ControlPadProtocol::kBindingRecordSize;
+
 static_assert(
   kEepromLayoutMetaAddr + kEepromLayoutMetaSize <= kEepromWifiBlockAddr,
   "EEPROM layout metadata must not overlap WiFi block"
@@ -160,6 +168,11 @@ static_assert(
 static_assert(
   kEepromEffectSettingsBase + kEepromEffectSettingsCapacity * sizeof(EffectSettings) <= kEepromSize,
   "EEPROM effect settings must fit into kEepromSize"
+);
+static_assert(kEepromControlPadBindingAddr == 450, "Control Pad binding address must remain fixed");
+static_assert(kEepromControlPadBindingSize == 32, "Control Pad binding size must remain fixed");
+static_assert(
+  kEepromControlPadBindingAddr + kEepromControlPadBindingSize <= kEepromSize, "Control Pad binding must fit into EEPROM"
 );
 
 constexpr int kEepromEffectSettingsAddr(int effectIndex) {

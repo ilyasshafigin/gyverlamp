@@ -13,6 +13,73 @@ set(HOST_SHIMS_DIR "${HOST_DIR}/shims")
 set(ROOT_DIR "${SIM_DIR}/..")
 set(WASM_DIR "${SIM_DIR}/wasm")
 
+if (NOT EMSCRIPTEN)
+    enable_testing()
+    function(add_control_pad_eeprom_fixture target)
+        add_executable(${target}
+            ${HOST_DIR}/tests/control_pad_eeprom_tests.cpp
+            ${ROOT_DIR}/src/storage/eeprom_store.cpp
+            ${ROOT_DIR}/lib/ControlPadProtocol/src/ControlPadProtocol.cpp
+        )
+        target_include_directories(${target} PRIVATE
+            ${HOST_SHIMS_DIR}
+            ${HOST_SRC_DIR}
+            ${COMMON_DIR}
+            ${ROOT_DIR}/src
+            ${ROOT_DIR}/lib/ControlPadProtocol/include
+        )
+        if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+            target_compile_options(${target} PRIVATE -Wall -Wextra -Werror)
+        endif()
+    endfunction()
+
+    add_control_pad_eeprom_fixture(control_pad_eeprom_tests)
+    add_control_pad_eeprom_fixture(control_pad_eeprom_tests_feature_on)
+    target_compile_definitions(control_pad_eeprom_tests_feature_on PRIVATE USE_CONTROL_PAD ARDUINO_ARCH_ESP32)
+
+    find_package(OpenSSL REQUIRED)
+    add_executable(control_pad_service_tests
+        ${HOST_DIR}/tests/control_pad_service_tests.cpp
+        ${ROOT_DIR}/src/network/control_pad_service.cpp
+        ${ROOT_DIR}/src/storage/eeprom_store.cpp
+        ${ROOT_DIR}/lib/ControlPadProtocol/src/ControlPadProtocol.cpp
+    )
+    target_include_directories(control_pad_service_tests PRIVATE
+        ${HOST_DIR}/tests
+        ${HOST_SHIMS_DIR}
+        ${HOST_SRC_DIR}
+        ${COMMON_DIR}
+        ${ROOT_DIR}/src
+        ${ROOT_DIR}/lib/ControlPadProtocol/include
+    )
+    target_compile_definitions(control_pad_service_tests PRIVATE USE_CONTROL_PAD ARDUINO_ARCH_ESP32 CONTROL_PAD_HOST_TEST)
+    target_link_libraries(control_pad_service_tests PRIVATE OpenSSL::Crypto)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(control_pad_service_tests PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter)
+    endif()
+
+    set(CONTROL_PAD_EEPROM_PARITY_OFF "${CMAKE_CURRENT_BINARY_DIR}/control-pad-eeprom-off.bin")
+    set(CONTROL_PAD_EEPROM_PARITY_ON "${CMAKE_CURRENT_BINARY_DIR}/control-pad-eeprom-on.bin")
+    add_test(
+        NAME control_pad_eeprom_tests_feature_off
+        COMMAND control_pad_eeprom_tests --parity-image "${CONTROL_PAD_EEPROM_PARITY_OFF}"
+    )
+    add_test(
+        NAME control_pad_eeprom_tests_feature_on
+        COMMAND control_pad_eeprom_tests_feature_on --parity-image "${CONTROL_PAD_EEPROM_PARITY_ON}"
+    )
+    add_test(
+        NAME control_pad_eeprom_image_parity
+        COMMAND ${CMAKE_COMMAND} -E compare_files "${CONTROL_PAD_EEPROM_PARITY_OFF}" "${CONTROL_PAD_EEPROM_PARITY_ON}"
+    )
+    add_test(NAME control_pad_service_tests COMMAND control_pad_service_tests)
+    set_tests_properties(
+        control_pad_eeprom_image_parity
+        PROPERTIES DEPENDS "control_pad_eeprom_tests_feature_off;control_pad_eeprom_tests_feature_on"
+    )
+    return()
+endif()
+
 file(GLOB CATALOG_SOURCES "${ROOT_DIR}/src/effect/catalog/*.cpp")
 
 foreach(name WIDTH HEIGHT CONNECTION_ANGLE STRIP_DIRECTION)
@@ -41,6 +108,7 @@ set(SIM_COMMON_SOURCES
     ${ROOT_DIR}/src/effect/palettes.cpp
     ${ROOT_DIR}/src/effect/palette_utils.cpp
     ${ROOT_DIR}/src/storage/eeprom_store.cpp
+    ${ROOT_DIR}/lib/ControlPadProtocol/src/ControlPadProtocol.cpp
     ${ROOT_DIR}/src/storage/settings_repository.cpp
     ${ROOT_DIR}/src/audio/audio_modulation.cpp
     ${ROOT_DIR}/src/audio/audio_service.cpp
@@ -65,6 +133,7 @@ target_include_directories(sim_wasm_host PUBLIC
     ${HOST_SRC_DIR}
     ${ROOT_DIR}/src
     ${ROOT_DIR}/src/effect/catalog
+    ${ROOT_DIR}/lib/ControlPadProtocol/include
 )
 
 # src/effect is added as a quoted-include path only so that firmware headers
@@ -97,6 +166,7 @@ target_include_directories(gyverlamp_sim_wasm PRIVATE
     ${HOST_SRC_DIR}
     ${ROOT_DIR}/src
     ${ROOT_DIR}/src/effect/catalog
+    ${ROOT_DIR}/lib/ControlPadProtocol/include
 )
 
 target_compile_options(gyverlamp_sim_wasm PRIVATE -iquote ${ROOT_DIR}/src/effect)

@@ -175,7 +175,22 @@ namespace {
     EEPROM.put(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
   }
 
-  void stageLayoutInitialization() {
+  bool stageControlPadBinding(const ControlPadProtocol::BindingRecord& binding) {
+    uint8_t encoded[kEepromControlPadBindingSize];
+    if (!ControlPadProtocol::encodeBindingRecord(binding, encoded)) return false;
+    for (int index = 0; index < kEepromControlPadBindingSize; ++index) {
+      EEPROM.write(kEepromControlPadBindingAddr + index, encoded[index]);
+    }
+    return true;
+  }
+
+  bool stageDefaultControlPadBinding() {
+    ControlPadProtocol::BindingRecord binding;
+    ControlPadProtocol::makeUnpairedBinding(&binding);
+    return stageControlPadBinding(binding);
+  }
+
+  bool stageLayoutInitialization() {
     for (int address = 0; address < kEepromSize; ++address) {
       EEPROM.write(address, 0);
     }
@@ -189,6 +204,7 @@ namespace {
     EEPROM.write(kEepromGlobalBrightnessAddr, 255);
     EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(RotationMode::Off));
     EEPROM.put(kEepromRotationIntervalSecAddr, kRotationIntervalSecDefault);
+    return stageDefaultControlPadBinding();
   }
 
   void stageWifiConfig(const WifiConfig& config) {
@@ -219,12 +235,16 @@ bool EepromStore::init() {
     Serial.println(F("[EEPROM] Backend initialization failed"));
     return false;
   }
-  ensureLayoutVersion();
+  if (!ensureLayoutVersion()) {
+    ready_ = false;
+    Serial.println(F("[EEPROM] Layout initialization or migration failed"));
+    return false;
+  }
   return true;
 }
 
-void EepromStore::ensureLayoutVersion() {
-  if (!ready_) return;
+bool EepromStore::ensureLayoutVersion() {
+  if (!ready_) return false;
   uint32_t magic = 0;
   uint8_t version = 0;
   EEPROM.get(kEepromLayoutMetaAddr, magic);
@@ -232,36 +252,31 @@ void EepromStore::ensureLayoutVersion() {
 
   if (magic != kEepromLayoutMagic) {
     // Legacy EEPROM from pre-versioned firmware is not migrated: start clean with current layout.
-    if (!initializeLayout()) {
-      Serial.println(F("[EEPROM] Layout initialization failed"));
-    }
-    return;
+    return initializeLayout();
   }
 
-  if (version == kEepromLayoutVersionCurrent) return;
+  if (version == kEepromLayoutVersionCurrent) return true;
   if (version == kEepromLayoutVersionV4) {
-    if (!migrateLayoutV4ToV5()) {
-      Serial.println(F("[EEPROM] Layout v4-to-v5 migration failed"));
-    }
-    return;
+    return migrateLayoutV4ToV6();
+  }
+  if (version == kEepromLayoutVersionV5) {
+    return migrateLayoutV5ToV6();
   }
 
   Serial.println(F("[EEPROM] Unsupported layout version, initializing defaults"));
-  if (!initializeLayout()) {
-    Serial.println(F("[EEPROM] Layout initialization failed"));
-  }
+  return initializeLayout();
 }
 
-bool EepromStore::migrateLayoutV4ToV5() {
+bool EepromStore::migrateLayoutV4ToV6() {
   if (!ready_) return false;
   // Snapshot all preserved v4 values before staging any EEPROM changes.
   // Effect settings and global brightness intentionally reset as in prior
   // version migrations.
-  Serial.println(F("[EEPROM] Migrating layout v4 to v5"));
+  Serial.println(F("[EEPROM] Migrating layout v4 to v6"));
 
   const V4MigrationSnapshot snapshot = readV4MigrationSnapshot();
 
-  stageLayoutInitialization();
+  if (!stageLayoutInitialization()) return false;
   stageWifiConfig(snapshot.wifi);
   stageMqttConfig(snapshot.mqtt);
   EEPROM.put(kEepromAutoOffMinutesAddr, snapshot.autoOffMinutes);
@@ -277,6 +292,7 @@ bool EepromStore::migrateLayoutV4ToV5() {
   EEPROM.write(kEepromAudioBandAddr, static_cast<uint8_t>(snapshot.audio.band));
   EEPROM.write(kEepromAudioAmountAddr, snapshot.audio.amount);
   EEPROM.write(kEepromCurrentModeAddr, snapshot.currentMode);
+  // The binding is part of the initialized v6 image; stage version last.
   stageLayoutVersion();
 
   if (!EEPROM.commit()) return false;
@@ -286,29 +302,59 @@ bool EepromStore::migrateLayoutV4ToV5() {
   return true;
 }
 
-bool EepromStore::writeLayoutVersion() {
+bool EepromStore::migrateLayoutV5ToV6() {
   if (!ready_) return false;
-  EEPROM.put(kEepromLayoutMetaAddr, kEepromLayoutMagic);
-  EEPROM.put(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
+  Serial.println(F("[EEPROM] Migrating layout v5 to v6"));
+  if (!stageDefaultControlPadBinding()) return false;
+  // v5 already has the expected magic. Preserve every byte except the new
+  // binding block and the version byte, which is deliberately staged last.
+  EEPROM.write(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
   return EEPROM.commit();
 }
 
 bool EepromStore::initializeLayout() {
   if (!ready_) return false;
-  for (int address = 0; address < kEepromSize; ++address) {
-    EEPROM.write(address, 0);
-  }
+  if (!stageLayoutInitialization()) return false;
+  stageLayoutVersion();
+  return EEPROM.commit();
+}
 
-  EEPROM.write(kEepromPowerStateAddr, 0);
-  EEPROM.write(kEepromButtonEnabledAddr, 1);
-  EEPROM.write(kEepromOtaPolicyAddr, kEepromOtaPolicyDisabled);
-  EEPROM.put(kEepromAutoOffMinutesAddr, kAutoOffMinutesDefault);
-  EEPROM.write(kEepromCurrentModeAddr, 0);
-  EEPROM.write(kEepromEffectSettingsCountAddr, 0);
-  EEPROM.write(kEepromGlobalBrightnessAddr, 255);
-  EEPROM.write(kEepromRotationModeAddr, static_cast<uint8_t>(RotationMode::Off));
-  EEPROM.put(kEepromRotationIntervalSecAddr, kRotationIntervalSecDefault);
-  return writeLayoutVersion();
+ControlPadProtocol::BindingRecord EepromStore::readControlPadBinding() const {
+  ControlPadProtocol::BindingRecord binding;
+  ControlPadProtocol::makeUnpairedBinding(&binding);
+  if (!ready_) return binding;
+
+  uint8_t encoded[kEepromControlPadBindingSize];
+  for (int index = 0; index < kEepromControlPadBindingSize; ++index) {
+    encoded[index] = EEPROM.read(kEepromControlPadBindingAddr + index);
+  }
+  ControlPadProtocol::decodeBindingRecord(encoded, sizeof(encoded), &binding);
+  return binding;
+}
+
+bool EepromStore::writeControlPadBinding(const ControlPadProtocol::BindingRecord& binding) {
+  if (!ready_) return false;
+
+  uint8_t encoded[kEepromControlPadBindingSize];
+  if (!ControlPadProtocol::encodeBindingRecord(binding, encoded)) return false;
+
+  uint8_t previous[kEepromControlPadBindingSize];
+  for (int index = 0; index < kEepromControlPadBindingSize; ++index) {
+    previous[index] = EEPROM.read(kEepromControlPadBindingAddr + index);
+    EEPROM.write(kEepromControlPadBindingAddr + index, encoded[index]);
+  }
+  if (EEPROM.commit()) return true;
+
+  for (int index = 0; index < kEepromControlPadBindingSize; ++index) {
+    EEPROM.write(kEepromControlPadBindingAddr + index, previous[index]);
+  }
+  return false;
+}
+
+bool EepromStore::clearControlPadBinding() {
+  ControlPadProtocol::BindingRecord binding;
+  ControlPadProtocol::makeUnpairedBinding(&binding);
+  return writeControlPadBinding(binding);
 }
 
 const WifiConfig& EepromStore::readWifiConfig() {

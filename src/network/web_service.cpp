@@ -3,6 +3,8 @@
 #include <SettingsAsync.h>
 #include <uptime_formatter.h>
 
+#include <cstring>
+
 #include "../audio/audio_config.h"
 #include "../audio/audio_service.h"
 #include "../core/auto_off_config.h"
@@ -15,6 +17,9 @@
 #include "../effect/palette_catalog.h"
 #include "../hardware/button.h"
 #include "../network/connectivity_coordinator.h"
+#ifdef USE_CONTROL_PAD
+#include "../network/control_pad_service.h"
+#endif
 #include "../notification/controller.h"
 #include "../notification/quiet_hours.h"
 #include "../notification/types.h"
@@ -70,6 +75,44 @@ namespace {
 
     return String(secs) + "s";
   }
+
+#ifdef USE_CONTROL_PAD
+  String formatControlPadMac(const uint8_t mac[6]) {
+    char text[18];
+    snprintf(text, sizeof(text), "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return String(text);
+  }
+
+  const char* controlPadPairingPhaseName(ControlPadService::PairingPhase phase) {
+    switch (phase) {
+      case ControlPadService::PairingPhase::Idle: return "Idle";
+      case ControlPadService::PairingPhase::HelloAccepted: return "Hello accepted";
+      case ControlPadService::PairingPhase::PairAcceptQueued: return "Pair acceptance queued";
+      case ControlPadService::PairingPhase::PairAcceptTxSucceeded: return "Pair acceptance sent";
+      case ControlPadService::PairingPhase::CandidatePeerInstalled: return "Panel prepared";
+      case ControlPadService::PairingPhase::ConfirmReceived: return "Confirmation received";
+      case ControlPadService::PairingPhase::ConfirmAccepted: return "Pairing confirmed";
+    }
+    return "Unknown";
+  }
+
+  bool hasControlPadPairAcceptTxDiagnostics(const ControlPadService::Status& status) {
+    const ControlPadService::PairingCounters& counters = status.pairingCounters;
+    return status.pairingPhase != ControlPadService::PairingPhase::Idle || status.pairAcceptTxPending ||
+           status.pairAcceptTxCompletionLatched || counters.pairAcceptQueued != 0 ||
+           counters.pairAcceptSendCallbacks != 0 || counters.pairAcceptBroadcastMacMatches != 0 ||
+           counters.pairAcceptTxLatched != 0 || counters.pairAcceptTxProcessed != 0;
+  }
+
+  String formatControlPadPairAcceptTxDiagnostics(const ControlPadService::Status& status) {
+    const ControlPadService::PairingCounters& counters = status.pairingCounters;
+    String text = "callbacks " + String(counters.pairAcceptSendCallbacks);
+    text += ", matches " + String(counters.pairAcceptBroadcastMacMatches);
+    text += ", completion " + String(counters.pairAcceptTxLatched) + "/" + String(counters.pairAcceptTxProcessed);
+    if (status.pairAcceptTxPending) text += ", pending";
+    return text;
+  }
+#endif
 
 } // namespace
 
@@ -409,6 +452,38 @@ void WebService::settingsBuilder(sets::Builder& b) {
     }
     if (b.Button("Restart OTA")) {
       connectivity_.requestOtaRestart();
+      b.reload();
+    }
+  }
+#endif
+#ifdef USE_CONTROL_PAD
+  {
+    sets::Menu g(b, "Control Pad");
+    const ControlPadService::Status status = controlPad_.status();
+    b.Label("Status", controlPad_.statusName());
+    b.Label("Panel MAC", formatControlPadMac(status.panelMac));
+    b.Label("Channel", String(status.channel));
+    b.Label("Pairing window", status.pairingOpen ? "open" : "closed");
+    if (status.pairingPhase != ControlPadService::PairingPhase::Idle)
+      b.Label("Pairing phase", controlPadPairingPhaseName(status.pairingPhase));
+    if (hasControlPadPairAcceptTxDiagnostics(status))
+      b.Label("PairAccept TX", formatControlPadPairAcceptTxDiagnostics(status));
+    if (status.rootFailure != ControlPadService::Failure::None) b.Label("Root failure", controlPad_.rootFailureName());
+    if (status.terminalFailure != ControlPadService::Failure::None)
+      b.Label("Failure", controlPad_.terminalFailureName());
+    b.Input("Pairing artifact", inputControlPadArtifact_);
+    if (controlPadOpenFailed_) b.Label("Pairing", "Unable to open pairing");
+    if (b.Button("Open pairing")) {
+      controlPadOpenFailed_ = !controlPad_.requestOpenPairing(inputControlPadArtifact_);
+      memset(inputControlPadArtifact_, 0, sizeof(inputControlPadArtifact_));
+      b.reload();
+    }
+    if (b.Button("Close pairing")) {
+      controlPad_.requestClosePairing();
+      b.reload();
+    }
+    if (b.Button("Clear binding")) {
+      controlPad_.requestClear();
       b.reload();
     }
   }

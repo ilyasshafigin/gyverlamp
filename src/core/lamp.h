@@ -26,6 +26,10 @@
 
 #include "../network/mqtt_service.h"
 
+#ifdef USE_CONTROL_PAD
+#include "../network/control_pad_service.h"
+#endif
+
 class Lamp {
 public:
   EepromStore eeprom;
@@ -47,8 +51,25 @@ public:
   OtaController ota;
   MqttService mqtt{audio, effects, notifications, power, rotation, settings, button, wifi};
   ConnectivityCoordinator connectivity{eeprom, wifi, ota, mqtt};
+#ifdef USE_CONTROL_PAD
+  ControlPadService controlPad{eeprom, wifi, power, effects, rotation, settings, notifications, stateNotifier};
+#endif
   WebService web{
-    audio, connectivity, effects, notifications, power, rotation, webSettings, settings, stateNotifier, time, button
+    audio,
+    connectivity,
+    effects,
+    notifications,
+    power,
+    rotation,
+    webSettings,
+    settings,
+    stateNotifier,
+    time,
+    button
+#ifdef USE_CONTROL_PAD
+    ,
+    controlPad
+#endif
   };
 
   void setup();

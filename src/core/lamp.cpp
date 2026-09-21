@@ -27,6 +27,9 @@ void Lamp::setup() {
   ota.begin(otaConfig, onOtaEvent, this);
   mqtt.init(connectivity.mqttConfig());
   time.init();
+#ifdef USE_CONTROL_PAD
+  controlPad.init();
+#endif
   web.init();
   rotation.init();
 }
@@ -58,6 +61,9 @@ void Lamp::loop() {
     LoopProfiler::measure(LoopProfiler::TIME, [this]() { time.tick(); });
     LoopProfiler::measure(LoopProfiler::BUTTON, [this]() { button.tick(); });
     LoopProfiler::measure(LoopProfiler::UDP, [this]() { upd.tick(); });
+#ifdef USE_CONTROL_PAD
+    controlPad.tick();
+#endif
     LoopProfiler::measure(LoopProfiler::WEB, [this]() { web.tick(); });
     yield();
     LoopProfiler::measure(LoopProfiler::MQTT, [this]() { mqtt.tick(); });
