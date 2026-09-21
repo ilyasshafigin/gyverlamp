@@ -37,9 +37,9 @@ void NotificationOverlay::fill(CRGB color) {
 
 void NotificationOverlay::clearTop() {
   for (uint8_t x = 0; x < WIDTH; x++) {
-    led_.drawPixel(x, kTopY, CRGB::Black);
+    led_.pixel(x, kTopY).fadeToBlackBy(opacity_);
     // захватим еще одну строку
-    led_.drawPixel(x, kTopY - 1, CRGB::Black);
+    led_.pixel(x, kTopY - 1).fadeToBlackBy(opacity_);
   }
 }
 
