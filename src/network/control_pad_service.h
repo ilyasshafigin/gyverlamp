@@ -14,16 +14,37 @@
 
 #include "../storage/eeprom_store.h"
 
-class EffectController;
-class NotificationController;
-class PowerController;
-class RotationController;
-class SettingsRepository;
-class StateNotifier;
 class WifiController;
 
 class ControlPadService {
 public:
+  enum class CommandType : uint8_t {
+    TogglePower,
+    NextEffect,
+    PreviousEffect,
+    ToggleRotation,
+    NextPalette,
+    SetPaletteAuto,
+    ResetCurrentEffectSettings,
+    SelectParameter,
+    AdjustParameter,
+  };
+
+  enum class ParameterTarget : uint8_t {
+    None,
+    Brightness,
+    Speed,
+    Scale,
+  };
+
+  struct CommandEvent {
+    CommandType type;
+    ParameterTarget parameter;
+    int8_t steps;
+  };
+
+  using CommandHandler = bool (*)(const CommandEvent& event, void* context);
+
   enum class Failure : uint8_t {
     None,
     PairAcceptTxFailed,
@@ -35,6 +56,7 @@ public:
     CandidateChannelChanged,
     CandidateRadioUnavailable,
     CandidateTimeout,
+    RxQueueCreateFailed,
   };
 
   enum class PairingPhase : uint8_t {
@@ -84,19 +106,11 @@ public:
     PairingCounters pairingCounters;
   };
 
-  ControlPadService(
-    EepromStore& eeprom,
-    WifiController& wifi,
-    PowerController& power,
-    EffectController& effects,
-    RotationController& rotation,
-    SettingsRepository& settings,
-    NotificationController& notifications,
-    StateNotifier& stateNotifier
-  );
+  ControlPadService(EepromStore& eeprom, WifiController& wifi);
 
   void init();
   void tick();
+  void setCommandHandler(CommandHandler handler, void* context);
 
   Status status() const;
   const char* statusName() const;
@@ -137,12 +151,8 @@ private:
 
   EepromStore& eeprom_;
   WifiController& wifi_;
-  PowerController& power_;
-  EffectController& effects_;
-  RotationController& rotation_;
-  SettingsRepository& settings_;
-  NotificationController& notifications_;
-  StateNotifier& stateNotifier_;
+  CommandHandler commandHandler_ = nullptr;
+  void* commandHandlerContext_ = nullptr;
 
   ControlPadProtocol::BindingRecord binding_ = {};
   ControlPadProtocol::Mac lampMac_ = {};
@@ -222,7 +232,7 @@ private:
     uint8_t output[45],
     uint8_t* outputLength
   );
-  bool applyCommand(const ControlPadProtocol::Command& command);
+  bool commandEvent(const ControlPadProtocol::Command& command, CommandEvent* event) const;
   void cacheCommand(
     const ControlPadProtocol::Nonce& nonce,
     uint32_t sequence,

@@ -10,9 +10,10 @@ from pathlib import Path
 
 
 PROFILE_NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}\Z")
-RESERVED_NAMES = frozenset(("diag", "input", "profile"))
+ENV_SECTION = re.compile(r"^\s*\[env:([^\]]+)\]\s*$", re.MULTILINE)
 ROOT = Path(__file__).resolve().parent.parent.parent
 CONTROL_PAD = ROOT / "control-pad"
+PLATFORMIO_CONFIG = CONTROL_PAD / "platformio.ini"
 LOCAL_PROFILE = CONTROL_PAD / "platformio.local.ini"
 ARTIFACTS = ROOT / ".artifacts" / "panels"
 
@@ -45,17 +46,21 @@ def atomic_replace(path: Path, content: str, mode: int) -> None:
             pass
 
 
+def committed_environment_names() -> frozenset[str]:
+    return frozenset(ENV_SECTION.findall(PLATFORMIO_CONFIG.read_text()))
+
+
 def main() -> int:
     if len(sys.argv) != 2 or not PROFILE_NAME.fullmatch(sys.argv[1]):
         print("Profile name must match [a-z][a-z0-9_-]{0,31}", file=sys.stderr)
         return 2
 
     name = sys.argv[1]
-    if name in RESERVED_NAMES:
-        print("Profile name is reserved", file=sys.stderr)
+    if name in committed_environment_names():
+        print("Profile name conflicts with a committed environment", file=sys.stderr)
         return 2
 
-    environment = "panel_" + name
+    environment = name
     artifact = ARTIFACTS / (name + ".pairing.txt")
     local_content = LOCAL_PROFILE.read_text() if LOCAL_PROFILE.exists() else ""
 
@@ -67,8 +72,8 @@ def main() -> int:
     key = secrets.token_bytes(16)
     key_hex = key.hex().upper()
     crc = binascii.crc32(b"\x01" + key) & 0xFFFFFFFF
-    # env:panel_profile is the production ESP-NOW source; diag/input stay radio-free.
-    profile_entry = "\n[env:{}]\nextends = env:panel_profile\ncustom_panel_pair_key = {}\n".format(environment, key_hex)
+    # env:profile is the production ESP-NOW source; diag/input stay radio-free.
+    profile_entry = "\n[env:{}]\nextends = env:profile\ncustom_panel_pair_key = {}\n".format(environment, key_hex)
     artifact_content = "GLCP1-{}-{:08X}\n".format(key_hex, crc)
 
     ARTIFACTS.mkdir(mode=0o700, parents=True, exist_ok=True)

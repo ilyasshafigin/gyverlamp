@@ -9,13 +9,6 @@
 #include "network/control_pad_service.h"
 #undef private
 
-#include "core/power_controller.h"
-#include "core/rotation_controller.h"
-#include "core/state_notifier.h"
-#include "effect/controller.h"
-#include "notification/controller.h"
-#include "storage/settings_repository.h"
-
 #include "control_pad_host_test.h"
 #include <WifiController.h>
 
@@ -24,6 +17,12 @@ uint32_t sim_millis = 0;
 namespace {
 
   int failures = 0;
+
+  struct CommandEvents {
+    uint16_t count;
+    bool accept;
+    ControlPadService::CommandEvent last;
+  } commandEvents = {};
 
   void expect(bool condition, const char* name) {
     if (!condition) {
@@ -57,16 +56,14 @@ namespace {
   }
 
   ControlPadService makeService(EepromStore& store, WifiController& wifi) {
-    return ControlPadService(
-      store,
-      wifi,
-      *reinterpret_cast<PowerController*>(static_cast<uintptr_t>(1)),
-      *reinterpret_cast<EffectController*>(static_cast<uintptr_t>(1)),
-      *reinterpret_cast<RotationController*>(static_cast<uintptr_t>(1)),
-      *reinterpret_cast<SettingsRepository*>(static_cast<uintptr_t>(1)),
-      *reinterpret_cast<NotificationController*>(static_cast<uintptr_t>(1)),
-      *reinterpret_cast<StateNotifier*>(static_cast<uintptr_t>(1))
-    );
+    return ControlPadService(store, wifi);
+  }
+
+  bool captureCommandEvent(const ControlPadService::CommandEvent& event, void* context) {
+    auto* events = static_cast<CommandEvents*>(context);
+    ++events->count;
+    events->last = event;
+    return events->accept;
   }
 
   bool encodeMessage(const ControlPadProtocol::Message& message, uint8_t output[69], size_t* length) {
@@ -79,6 +76,8 @@ namespace {
     WifiController::connected = true;
     WifiController::activeChannel = 6;
     sim_millis = 1;
+    commandEvents = CommandEvents{};
+    commandEvents.accept = true;
   }
 
   bool
@@ -265,7 +264,7 @@ namespace {
 
     ControlPadProtocol::Command command = {};
     fillNonce(&command.panelBootNonce, 0x50);
-    command.sequence = 1;
+    command.sequence = 2;
     command.code = ControlPadProtocol::CommandCode::AdjustParameter;
     command.target = ControlPadProtocol::ParameterTarget::Brightness;
     command.delta = 1;
@@ -476,6 +475,133 @@ namespace {
     );
   }
 
+  bool dispatchCommand(
+    ControlPadService& service,
+    const uint8_t panelMac[6],
+    const uint8_t key[16],
+    const ControlPadProtocol::Command& input,
+    uint32_t delayBeforeTickMs,
+    ControlPadProtocol::CommandAckStatus expectedStatus
+  ) {
+    ControlPadProtocol::Command command = input;
+    uint8_t frame[47] = {};
+    size_t length = 0;
+    if (
+      !ControlPadProtocol::signCommand(
+        &command, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+      ) ||
+      !ControlPadProtocol::encodeCommand(command, frame, sizeof(frame), &length)
+    )
+      return false;
+    const size_t sendsBefore = control_pad_host_test::sends.size();
+    control_pad_host_test::deliver(panelMac, frame, length);
+    sim_millis += delayBeforeTickMs;
+    service.tick();
+    ControlPadProtocol::CommandAck ack = {};
+    return control_pad_host_test::sends.size() == sendsBefore + 1 &&
+           ControlPadProtocol::decodeCommandAck(
+             control_pad_host_test::sends.back().data.data(), control_pad_host_test::sends.back().data.size(), &ack
+           ) &&
+           ack.status == expectedStatus;
+  }
+
+  void testControlPadCommandEventDispatch() {
+    constexpr uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x70, 0x80, 0x90};
+    uint8_t key[16] = {};
+    for (uint8_t index = 0; index < sizeof(key); ++index)
+      key[index] = static_cast<uint8_t>(0x70 + index);
+
+    resetFixture();
+    EepromStore store;
+    WifiController wifi;
+    expect(
+      store.init() && store.writeControlPadBinding(pairedBinding(panelMac, key)),
+      "command event fixture initializes bound EEPROM"
+    );
+    ControlPadService service = makeService(store, wifi);
+    service.setCommandHandler(captureCommandEvent, &commandEvents);
+    service.init();
+    service.tick();
+    ControlPadProtocol::Command command = {};
+    fillNonce(&command.panelBootNonce, 0x70);
+    command.sequence = 2;
+    command.code = ControlPadProtocol::CommandCode::AdjustParameter;
+    command.target = ControlPadProtocol::ParameterTarget::Speed;
+    command.delta = -2;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 0, ControlPadProtocol::CommandAckStatus::Applied),
+      "fresh authenticated command receives Applied acknowledgement"
+    );
+    expect(
+      commandEvents.count == 1 && commandEvents.last.type == ControlPadService::CommandType::AdjustParameter &&
+        commandEvents.last.parameter == ControlPadService::ParameterTarget::Speed && commandEvents.last.steps == -2,
+      "fresh command emits one translated event with its parameter target and steps"
+    );
+    expect(
+      dispatchCommand(service, panelMac, key, command, 0, ControlPadProtocol::CommandAckStatus::Applied) &&
+        commandEvents.count == 1,
+      "exact duplicate reuses Applied acknowledgement without another event"
+    );
+
+    command.sequence = 1;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 0, ControlPadProtocol::CommandAckStatus::Stale) &&
+        commandEvents.count == 1,
+      "stale command emits no event and receives Stale acknowledgement"
+    );
+
+    command.sequence = 3;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 501, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 1,
+      "expired command emits no event and receives Expired acknowledgement"
+    );
+
+    command.sequence = 4;
+    commandEvents.accept = false;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 0, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 2,
+      "handler rejection emits one event but never receives Applied acknowledgement"
+    );
+
+    command.sequence = 5;
+    commandEvents.accept = true;
+    service.setCommandHandler(nullptr, nullptr);
+    expect(
+      dispatchCommand(service, panelMac, key, command, 0, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 2,
+      "missing handler never receives Applied acknowledgement or emits an event"
+    );
+    service.setCommandHandler(captureCommandEvent, &commandEvents);
+
+    const size_t sendsBeforeInvalid = control_pad_host_test::sends.size();
+    const uint8_t malformed[] = {0};
+    control_pad_host_test::deliver(panelMac, malformed, sizeof(malformed));
+    ++sim_millis;
+    service.tick();
+    expect(
+      commandEvents.count == 2 && control_pad_host_test::sends.size() == sendsBeforeInvalid,
+      "malformed command emits no event or acknowledgement"
+    );
+
+    command.sequence = 6;
+    uint8_t unauthenticated[47] = {};
+    size_t unauthenticatedLength = 0;
+    expect(
+      ControlPadProtocol::signCommand(
+        &command, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+      ) &&
+        ControlPadProtocol::encodeCommand(command, unauthenticated, sizeof(unauthenticated), &unauthenticatedLength),
+      "unauthenticated command fixture encodes"
+    );
+    unauthenticated[unauthenticatedLength - 1] ^= 0xff;
+    control_pad_host_test::deliver(panelMac, unauthenticated, unauthenticatedLength);
+    ++sim_millis;
+    service.tick();
+    expect(commandEvents.count == 2, "unauthenticated command emits no event");
+  }
+
 } // namespace
 
 struct ControlPadHostQueue {
@@ -617,48 +743,11 @@ bool control_pad_host_hmac_sha256(
          outputLength == 32;
 }
 
-void PowerController::on() {
-}
-
-void PowerController::off() {
-}
-
-void EffectController::setNextEffect() {
-}
-
-void EffectController::setPreviousEffect() {
-}
-
-void EffectController::setGlobalBrightness(uint8_t) {
-}
-
-void EffectController::setEffectSpeed(uint8_t) {
-}
-
-void EffectController::setEffectScale(uint8_t) {
-}
-
-void RotationController::onManualRotation() {
-}
-
-void RotationController::setMode(RotationMode) {
-}
-
-void RotationController::disable() {
-}
-
-EffectSettings& SettingsRepository::effectSettings(Effects::Id) {
-  static EffectSettings settings = {};
-  return settings;
-}
-
-void NotificationController::startUserTextNotification(const String&, const CRGB&, uint32_t) {
-}
-
 int main() {
   testPairingTranscriptCommitAndDuplicate();
   testCommandExpiryDedupAndStaLifecycle();
   testPairAcceptFailureCommitAndChannelSafety();
+  testControlPadCommandEventDispatch();
   if (failures != 0) {
     printf("FAILED: %d control-pad service assertion(s)\n", failures);
     return 1;

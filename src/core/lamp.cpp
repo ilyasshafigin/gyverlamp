@@ -1,5 +1,20 @@
 #include "lamp.h"
 
+#ifdef USE_CONTROL_PAD
+#include "../effect/palette_catalog.h"
+
+namespace {
+
+  uint8_t clampControlPadParameter(int value) {
+    if (value < 1) return 1;
+    if (value > 255) return 255;
+    return static_cast<uint8_t>(value);
+  }
+
+} // namespace
+#endif
+
+#if !defined(CONTROL_PAD_LAMP_HOST_TEST)
 void Lamp::setup() {
   led.init();
 
@@ -28,6 +43,7 @@ void Lamp::setup() {
   mqtt.init(connectivity.mqttConfig());
   time.init();
 #ifdef USE_CONTROL_PAD
+  controlPad.setCommandHandler(onControlPadCommand, this);
   controlPad.init();
 #endif
   web.init();
@@ -106,3 +122,91 @@ void Lamp::onOtaEvent(const OtaController::Event& event, void* context) {
       break;
   }
 }
+#endif
+
+#ifdef USE_CONTROL_PAD
+bool Lamp::onControlPadCommand(const ControlPadService::CommandEvent& event, void* context) {
+  auto* lamp = static_cast<Lamp*>(context);
+  switch (event.type) {
+    case ControlPadService::CommandType::TogglePower: {
+      const bool wasOn = lamp->power.isOn();
+      lamp->power.toggle();
+      if (!wasOn && lamp->power.isOn()) lamp->notifications.onButtonPowerOn();
+      else if (wasOn && !lamp->power.isOn())
+        lamp->notifications.onButtonPowerOff();
+      return true;
+    }
+    case ControlPadService::CommandType::NextEffect:
+      lamp->rotation.onManualRotation();
+      lamp->effects.setNextEffect();
+      lamp->notifications.onEffectNext();
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::PreviousEffect:
+      lamp->rotation.onManualRotation();
+      lamp->effects.setPreviousEffect();
+      lamp->notifications.onEffectPrevious();
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::ToggleRotation: {
+      const bool wasActive = lamp->rotation.isActive();
+      lamp->rotation.setEnabled(!wasActive);
+      if (lamp->rotation.isActive() && !wasActive) lamp->notifications.onRotationEnabled();
+      else if (!lamp->rotation.isActive() && wasActive)
+        lamp->notifications.onRotationDisabled();
+      return true;
+    }
+    case ControlPadService::CommandType::NextPalette:
+      lamp->effects.setPalette(Palettes::next(lamp->effects.selectedPalette()));
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::SetPaletteAuto:
+      lamp->effects.setPalette(Palettes::Id::Auto);
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::ResetCurrentEffectSettings:
+      lamp->effects.resetCurrentEffectSettingsToDefaults();
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::SelectParameter:
+      switch (event.parameter) {
+        case ControlPadService::ParameterTarget::Brightness:
+          lamp->notifications.startUserTextNotification("BRI", CRGB::White, 1200);
+          break;
+        case ControlPadService::ParameterTarget::Speed:
+          lamp->notifications.startUserTextNotification("SPD", CRGB::White, 1200);
+          break;
+        case ControlPadService::ParameterTarget::Scale:
+          lamp->notifications.startUserTextNotification("SCL", CRGB::White, 1200);
+          break;
+        case ControlPadService::ParameterTarget::None: return false;
+      }
+      lamp->stateNotifier.stateChanged();
+      return true;
+    case ControlPadService::CommandType::AdjustParameter: {
+      const int delta = static_cast<int>(event.steps) * 15;
+      switch (event.parameter) {
+        case ControlPadService::ParameterTarget::Brightness:
+          lamp->effects.setGlobalBrightness(
+            clampControlPadParameter(static_cast<int>(lamp->settings.globalBrightness()) + delta)
+          );
+          break;
+        case ControlPadService::ParameterTarget::Speed:
+          lamp->effects.setEffectSpeed(clampControlPadParameter(
+            static_cast<int>(lamp->settings.effectSettings(lamp->effects.selectedEffectId()).speed) + delta
+          ));
+          break;
+        case ControlPadService::ParameterTarget::Scale:
+          lamp->effects.setEffectScale(clampControlPadParameter(
+            static_cast<int>(lamp->settings.effectSettings(lamp->effects.selectedEffectId()).scale) + delta
+          ));
+          break;
+        case ControlPadService::ParameterTarget::None: return false;
+      }
+      lamp->stateNotifier.stateChanged();
+      return true;
+    }
+  }
+  return false;
+}
+#endif

@@ -1,5 +1,45 @@
 #pragma once
 
+#if defined(CONTROL_PAD_LAMP_HOST_TEST)
+
+#include "../effect/controller.h"
+#include "../network/control_pad_service.h"
+#include "../notification/controller.h"
+#include "../storage/settings_repository.h"
+#include "power_controller.h"
+#include "rotation_controller.h"
+#include "state_notifier.h"
+
+class Lamp {
+public:
+  Lamp(
+    PowerController& power,
+    EffectController& effects,
+    RotationController& rotation,
+    SettingsRepository& settings,
+    NotificationController& notifications,
+    StateNotifier& stateNotifier
+  )
+    : power(power),
+      effects(effects),
+      rotation(rotation),
+      settings(settings),
+      notifications(notifications),
+      stateNotifier(stateNotifier) {}
+
+private:
+  PowerController& power;
+  EffectController& effects;
+  RotationController& rotation;
+  SettingsRepository& settings;
+  NotificationController& notifications;
+  StateNotifier& stateNotifier;
+
+  static bool onControlPadCommand(const ControlPadService::CommandEvent& event, void* context);
+};
+
+#else
+
 #include <SettingsAsync.h>
 #include <OtaController.h>
 #include <WifiController.h>
@@ -52,7 +92,7 @@ public:
   MqttService mqtt{audio, effects, notifications, power, rotation, settings, button, wifi};
   ConnectivityCoordinator connectivity{eeprom, wifi, ota, mqtt};
 #ifdef USE_CONTROL_PAD
-  ControlPadService controlPad{eeprom, wifi, power, effects, rotation, settings, notifications, stateNotifier};
+  ControlPadService controlPad{eeprom, wifi};
 #endif
   WebService web{
     audio,
@@ -80,4 +120,9 @@ private:
 
   static void onWifiEvent(const WifiController::Event& event, void* context);
   static void onOtaEvent(const OtaController::Event& event, void* context);
+#ifdef USE_CONTROL_PAD
+  static bool onControlPadCommand(const ControlPadService::CommandEvent& event, void* context);
+#endif
 };
+
+#endif

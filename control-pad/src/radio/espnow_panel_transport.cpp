@@ -99,6 +99,10 @@ namespace PanelRadio {
   bool EspNowPanelTransport::begin() {
     if (ready_) return true;
     WiFi.mode(WIFI_STA);
+#ifdef PANEL_WIFI_COUNTRY_JP
+    if (esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK || esp_wifi_set_country_code("JP", false) != ESP_OK)
+      return false;
+#endif
     if (rxQueue == nullptr) rxQueue = xQueueCreate(kRxQueueCapacity, sizeof(RxEnvelope));
     if (rxQueue == nullptr || esp_now_init() != ESP_OK) return false;
     if (esp_wifi_get_mac(WIFI_IF_STA, stationMac_) != ESP_OK) {
@@ -156,8 +160,7 @@ namespace PanelRadio {
     uint8_t pmk[16] = {};
     uint8_t lmk[16] = {};
     if (
-      !stationMacValid_ ||
-      !derivePmk(PanelCredentials::K_PAIR, hmacSha256, pmk) ||
+      !stationMacValid_ || !derivePmk(PanelCredentials::K_PAIR, hmacSha256, pmk) ||
       !deriveLmk(PanelCredentials::K_PAIR, makeMac(stationMac_), makeMac(binding.lampMac), hmacSha256, lmk) ||
       esp_now_set_pmk(pmk) != ESP_OK
     ) {

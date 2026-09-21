@@ -104,50 +104,66 @@ namespace {
     CommandCode hold;
     uint32_t pressedAt;
     bool shortClick;
+    bool pairingChordButton;
   };
 
   Button buttons[] = {
-    {button1,
-     static_cast<CommandCode>(PANEL_B1_SINGLE),
-     static_cast<CommandCode>(PANEL_B1_DOUBLE),
-     static_cast<CommandCode>(PANEL_B1_TRIPLE),
-     static_cast<CommandCode>(PANEL_B1_HOLD),
-     0,
-     false},
-    {button2,
-     static_cast<CommandCode>(PANEL_B2_SINGLE),
-     static_cast<CommandCode>(PANEL_B2_DOUBLE),
-     static_cast<CommandCode>(PANEL_B2_TRIPLE),
-     static_cast<CommandCode>(PANEL_B2_HOLD),
-     0,
-     false},
-    {button3,
-     static_cast<CommandCode>(PANEL_B3_SINGLE),
-     static_cast<CommandCode>(PANEL_B3_DOUBLE),
-     static_cast<CommandCode>(PANEL_B3_TRIPLE),
-     static_cast<CommandCode>(PANEL_B3_HOLD),
-     0,
-     false},
-    {button4,
-     static_cast<CommandCode>(PANEL_B4_SINGLE),
-     static_cast<CommandCode>(PANEL_B4_DOUBLE),
-     static_cast<CommandCode>(PANEL_B4_TRIPLE),
-     static_cast<CommandCode>(PANEL_B4_HOLD),
-     0,
-     false},
-    {button5,
-     static_cast<CommandCode>(PANEL_B5_SINGLE),
-     static_cast<CommandCode>(PANEL_B5_DOUBLE),
-     static_cast<CommandCode>(PANEL_B5_TRIPLE),
-     static_cast<CommandCode>(PANEL_B5_HOLD),
-     0,
-     false},
+    {
+      button1,
+      static_cast<CommandCode>(PANEL_B1_SINGLE),
+      static_cast<CommandCode>(PANEL_B1_DOUBLE),
+      static_cast<CommandCode>(PANEL_B1_TRIPLE),
+      static_cast<CommandCode>(PANEL_B1_HOLD),
+      0,
+      false,
+      true,
+    },
+    {
+      button2,
+      static_cast<CommandCode>(PANEL_B2_SINGLE),
+      static_cast<CommandCode>(PANEL_B2_DOUBLE),
+      static_cast<CommandCode>(PANEL_B2_TRIPLE),
+      static_cast<CommandCode>(PANEL_B2_HOLD),
+      0,
+      false,
+      false,
+    },
+    {
+      button3,
+      static_cast<CommandCode>(PANEL_B3_SINGLE),
+      static_cast<CommandCode>(PANEL_B3_DOUBLE),
+      static_cast<CommandCode>(PANEL_B3_TRIPLE),
+      static_cast<CommandCode>(PANEL_B3_HOLD),
+      0,
+      false,
+      true,
+    },
+    {
+      button4,
+      static_cast<CommandCode>(PANEL_B4_SINGLE),
+      static_cast<CommandCode>(PANEL_B4_DOUBLE),
+      static_cast<CommandCode>(PANEL_B4_TRIPLE),
+      static_cast<CommandCode>(PANEL_B4_HOLD),
+      0,
+      false,
+      false,
+    },
+    {
+      button5,
+      static_cast<CommandCode>(PANEL_B5_SINGLE),
+      static_cast<CommandCode>(PANEL_B5_DOUBLE),
+      static_cast<CommandCode>(PANEL_B5_TRIPLE),
+      static_cast<CommandCode>(PANEL_B5_HOLD),
+      0,
+      false,
+      false,
+    },
   };
 
   uint32_t encoderPressedAt = 0;
   bool encoderShortClick = false;
   PairingCombo pairingCombo;
-  uint32_t pairButtonsConsumedUntil = 0;
+  PairingChordConsumption pairingChordConsumption;
   ParameterTarget selectedTarget = ParameterTarget::Brightness;
   Telemetry lastTelemetry = {};
   bool telemetryPrinted = false;
@@ -173,17 +189,21 @@ namespace {
   }
 
   bool pairingButton(const Button& button) {
-    return &button.input == &button1 || &button.input == &button3;
+    return button.pairingChordButton;
   }
 
-  void enqueueButtonCommand(const Button& button, CommandCode command, uint8_t index, uint32_t now) {
+  PairingChordButton pairingChordButton(const Button& button) {
+    return &button.input == &button1 ? PairingChordButton::Button1 : PairingChordButton::Button3;
+  }
+
+  void enqueueButtonCommand(const Button& button, CommandCode command, uint8_t index) {
     if (!isCommandAction(command)) {
 #ifdef DEBUG
       debugAction("B no-op", index + 1);
 #endif
       return;
     }
-    if (pairingButton(button) && static_cast<int32_t>(now - pairButtonsConsumedUntil) < 0) {
+    if (pairingButton(button) && pairingChordConsumption.consumed(pairingChordButton(button))) {
 #ifdef DEBUG
       debugAction("B consumed", index + 1);
 #endif
@@ -247,9 +267,13 @@ namespace {
         debugAction("B press", index + 1);
 #endif
       }
-      if (button.input.release()) button.shortClick = !elapsed(now, button.pressedAt, kShortClickMaxMs + 1);
+      if (button.input.release()) {
+        button.shortClick = !elapsed(now, button.pressedAt, kShortClickMaxMs + 1);
+        if (pairingButton(button) && !button.shortClick)
+          pairingChordConsumption.completeClickTrain(pairingChordButton(button));
+      }
     }
-    if (button1.pressing() && button3.pressing()) pairButtonsConsumedUntil = now + 400;
+    pairingChordConsumption.consider(button1.pressing(), button3.pressing());
     if (pairingCombo.tick(now, button1.pressing(), button3.pressing())) {
 #ifdef DEBUG
       Serial.println("ACT combo=B1+B3 pairing=start");
@@ -258,13 +282,21 @@ namespace {
     }
     for (uint8_t index = 0; index < sizeof(buttons) / sizeof(buttons[0]); ++index) {
       Button& button = buttons[index];
-      if (button.input.hold()) enqueueButtonCommand(button, button.hold, index, now);
+      if (button.input.hold()) enqueueButtonCommand(button, button.hold, index);
       if (!button.shortClick) continue;
-      if (button.input.hasClicks(3)) enqueueButtonCommand(button, button.triple, index, now);
-      else if (button.input.hasClicks(2))
-        enqueueButtonCommand(button, button.doubleClick, index, now);
-      else if (button.input.hasClicks(1))
-        enqueueButtonCommand(button, button.single, index, now);
+      bool clickTrainComplete = false;
+      if (button.input.hasClicks(3)) {
+        enqueueButtonCommand(button, button.triple, index);
+        clickTrainComplete = true;
+      } else if (button.input.hasClicks(2)) {
+        enqueueButtonCommand(button, button.doubleClick, index);
+        clickTrainComplete = true;
+      } else if (button.input.hasClicks(1)) {
+        enqueueButtonCommand(button, button.single, index);
+        clickTrainComplete = true;
+      }
+      if (clickTrainComplete && pairingButton(button))
+        pairingChordConsumption.completeClickTrain(pairingChordButton(button));
     }
   }
 

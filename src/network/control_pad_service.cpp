@@ -16,14 +16,6 @@
 
 #include <cstring>
 
-#include "../core/power_controller.h"
-#include "../core/rotation_controller.h"
-#include "../core/state_notifier.h"
-#include "../effect/controller.h"
-#include "../effect/palette_catalog.h"
-#include "../notification/controller.h"
-#include "../storage/settings_repository.h"
-
 #include <WifiController.h>
 
 namespace {
@@ -63,42 +55,18 @@ namespace {
     return (binding.flags & ControlPadProtocol::kBindingFlagBound) != 0;
   }
 
-  uint8_t clampParameter(int value) {
-    if (value < 1) return 1;
-    if (value > 255) return 255;
-    return static_cast<uint8_t>(value);
-  }
-
-  Palettes::Id nextPalette(Palettes::Id current) {
-    for (uint8_t index = 0; index < Palettes::kSelectableCount; ++index) {
-      if (Palettes::kSelectableOrder[index] != current) continue;
-      return Palettes::kSelectableOrder[(index + 1) % Palettes::kSelectableCount];
-    }
-    return Palettes::kSelectableOrder[0];
-  }
-
 } // namespace
 
 ControlPadService* ControlPadService::instance_ = nullptr;
 
-ControlPadService::ControlPadService(
-  EepromStore& eeprom,
-  WifiController& wifi,
-  PowerController& power,
-  EffectController& effects,
-  RotationController& rotation,
-  SettingsRepository& settings,
-  NotificationController& notifications,
-  StateNotifier& stateNotifier
-)
+ControlPadService::ControlPadService(EepromStore& eeprom, WifiController& wifi)
   : eeprom_(eeprom),
-    wifi_(wifi),
-    power_(power),
-    effects_(effects),
-    rotation_(rotation),
-    settings_(settings),
-    notifications_(notifications),
-    stateNotifier_(stateNotifier) {
+    wifi_(wifi) {
+}
+
+void ControlPadService::setCommandHandler(CommandHandler handler, void* context) {
+  commandHandler_ = handler;
+  commandHandlerContext_ = context;
 }
 
 void ControlPadService::init() {
@@ -106,6 +74,7 @@ void ControlPadService::init() {
   esp_wifi_get_mac(WIFI_IF_STA, lampMac_.bytes);
   instance_ = this;
   if (rxQueue == nullptr) rxQueue = xQueueCreate(kRxQueueLength, sizeof(RxEnvelope));
+  if (rxQueue == nullptr) recordFailure(Failure::RxQueueCreateFailed);
 }
 
 void ControlPadService::onReceive(const uint8_t* sourceMac, const uint8_t* data, int length) {
@@ -171,10 +140,11 @@ void ControlPadService::tick() {
 ControlPadService::Status ControlPadService::status() const {
   Status result = {};
   const uint32_t nowMs = millis();
+  const bool rxQueueFailed = terminalFailure_ == Failure::RxQueueCreateFailed;
   result.bound = isBound(binding_);
   result.enabled = binding_.enabled;
-  result.radioOnline = radioOnline_;
-  result.pairingOpen = pairingOpen_;
+  result.radioOnline = radioOnline_ && !rxQueueFailed;
+  result.pairingOpen = pairingOpen_ && !rxQueueFailed;
   result.channel = activeChannel_;
   result.failure = terminalFailure_;
   result.pairingPhase = pairingPhase_;
@@ -196,6 +166,7 @@ ControlPadService::Status ControlPadService::status() const {
 }
 
 const char* ControlPadService::statusName() const {
+  if (terminalFailure_ == Failure::RxQueueCreateFailed) return "RX queue unavailable";
   if (pairingOpen_) return candidate_.active ? "Pairing candidate" : "Pairing open";
   if (!radioOnline_) return "Waiting for Wi-Fi";
   if (!isBound(binding_)) return "Unpaired";
@@ -214,6 +185,7 @@ const char* ControlPadService::failureName(Failure failure) {
     case Failure::CandidateChannelChanged: return "Candidate channel changed";
     case Failure::CandidateRadioUnavailable: return "Candidate radio unavailable";
     case Failure::CandidateTimeout: return "Candidate timed out";
+    case Failure::RxQueueCreateFailed: return "RX queue creation failed";
   }
   return "Unknown";
 }
@@ -231,6 +203,10 @@ const char* ControlPadService::terminalFailureName() const {
 }
 
 bool ControlPadService::requestOpenPairing(const char* artifact) {
+  if (rxQueue == nullptr) {
+    recordFailure(Failure::RxQueueCreateFailed);
+    return false;
+  }
   uint8_t parsed[ControlPadProtocol::kPairKeySize] = {};
   if (artifact == nullptr || !ControlPadProtocol::parseArtifact(artifact, strlen(artifact), parsed)) return false;
   const WifiController::Snapshot snapshot = wifi_.snapshot();
@@ -278,6 +254,11 @@ void ControlPadService::processRequests(uint32_t nowMs) {
   }
   if (!openRequested_) return;
   openRequested_ = false;
+  if (rxQueue == nullptr) {
+    zeroBytes(requestedKey_, sizeof(requestedKey_));
+    recordFailure(Failure::RxQueueCreateFailed);
+    return;
+  }
   const WifiController::Snapshot snapshot = wifi_.snapshot();
   if (!wifi_.staConnected() || snapshot.channel < 1 || snapshot.channel > 14) {
     zeroBytes(requestedKey_, sizeof(requestedKey_));
@@ -294,6 +275,11 @@ void ControlPadService::processRequests(uint32_t nowMs) {
 }
 
 void ControlPadService::ensureRadio(uint32_t nowMs) {
+  if (rxQueue == nullptr) {
+    if (radioOnline_) teardownRadio();
+    recordFailure(Failure::RxQueueCreateFailed);
+    return;
+  }
   const WifiController::Snapshot snapshot = wifi_.snapshot();
   const bool staReady = wifi_.staConnected() && snapshot.channel >= 1 && snapshot.channel <= 14;
   if (!staReady) {
@@ -375,7 +361,7 @@ void ControlPadService::processPairAcceptTx(uint32_t nowMs) {
     recordFailure(Failure::PairAcceptTxFailed);
     return;
   }
-  if (!candidate_.active || candidate_.encryptedPeerInstalled) return;
+  if (!candidate_.active) return;
   pairingPhase_ = PairingPhase::PairAcceptTxSucceeded;
   terminalFailure_ = Failure::None;
   incrementCounter(&pairingCounters_.pairAcceptTxSucceeded);
@@ -392,6 +378,7 @@ void ControlPadService::processPairAcceptTx(uint32_t nowMs) {
 }
 
 void ControlPadService::drainQueue(uint32_t nowMs) {
+  if (rxQueue == nullptr) return;
   for (uint8_t index = 0; index < kRxDrainPerTick; ++index) {
     RxEnvelope envelope = {};
     if (xQueueReceive(rxQueue, &envelope, 0) != pdTRUE) return;
@@ -580,11 +567,11 @@ void ControlPadService::handleCommand(const RxEnvelope& envelope, uint32_t nowMs
       sendFrame(binding_.panelMac.bytes, ack, ackLength);
     return;
   }
+  CommandEvent event = {};
+  const bool applied = !elapsed(nowMs, envelope.receivedAtMs, kCommandAgeMs) && commandEvent(command, &event) &&
+                       commandHandler_ != nullptr && commandHandler_(event, commandHandlerContext_);
   const ControlPadProtocol::CommandAckStatus status =
-    elapsed(nowMs, envelope.receivedAtMs, kCommandAgeMs)
-      ? ControlPadProtocol::CommandAckStatus::Expired
-      : (applyCommand(command) ? ControlPadProtocol::CommandAckStatus::Applied
-                               : ControlPadProtocol::CommandAckStatus::Expired);
+    applied ? ControlPadProtocol::CommandAckStatus::Applied : ControlPadProtocol::CommandAckStatus::Expired;
   if (!sendCommandAck(command, status, ack, &ackLength)) return;
   cacheCommand(command.panelBootNonce, command.sequence, envelope.data, ack, ackLength);
   sendFrame(binding_.panelMac.bytes, ack, ackLength);
@@ -697,6 +684,7 @@ bool ControlPadService::sendPairAccept(uint32_t nowMs) {
     recordFailure(Failure::PairAcceptTxFailed);
     return false;
   }
+  candidate_.encryptedPeerInstalled = false;
   ControlPadProtocol::Message accept = {};
   accept.type = ControlPadProtocol::MessageType::PairAccept;
   accept.panelMac = candidate_.panelMac;
@@ -780,65 +768,32 @@ bool ControlPadService::sendCommandAck(
   return true;
 }
 
-bool ControlPadService::applyCommand(const ControlPadProtocol::Command& command) {
+bool ControlPadService::commandEvent(const ControlPadProtocol::Command& command, CommandEvent* event) const {
+  if (event == nullptr) return false;
+  event->parameter = ParameterTarget::None;
+  event->steps = 0;
   switch (command.code) {
-    case ControlPadProtocol::CommandCode::TogglePower: power_.toggle(); return true;
-    case ControlPadProtocol::CommandCode::NextEffect:
-      rotation_.onManualRotation();
-      effects_.setNextEffect();
-      stateNotifier_.stateChanged();
-      return true;
-    case ControlPadProtocol::CommandCode::PreviousEffect:
-      rotation_.onManualRotation();
-      effects_.setPreviousEffect();
-      stateNotifier_.stateChanged();
-      return true;
-    case ControlPadProtocol::CommandCode::ToggleRotation: rotation_.setEnabled(!rotation_.isActive()); return true;
-    case ControlPadProtocol::CommandCode::NextPalette:
-      effects_.setPalette(nextPalette(effects_.selectedPalette()));
-      stateNotifier_.stateChanged();
-      return true;
-    case ControlPadProtocol::CommandCode::SetPaletteAuto:
-      effects_.setPalette(Palettes::Id::Auto);
-      stateNotifier_.stateChanged();
-      return true;
+    case ControlPadProtocol::CommandCode::TogglePower: event->type = CommandType::TogglePower; return true;
+    case ControlPadProtocol::CommandCode::NextEffect: event->type = CommandType::NextEffect; return true;
+    case ControlPadProtocol::CommandCode::PreviousEffect: event->type = CommandType::PreviousEffect; return true;
+    case ControlPadProtocol::CommandCode::ToggleRotation: event->type = CommandType::ToggleRotation; return true;
+    case ControlPadProtocol::CommandCode::NextPalette: event->type = CommandType::NextPalette; return true;
+    case ControlPadProtocol::CommandCode::SetPaletteAuto: event->type = CommandType::SetPaletteAuto; return true;
     case ControlPadProtocol::CommandCode::ResetCurrentEffectSettings:
-      effects_.resetCurrentEffectSettingsToDefaults();
-      stateNotifier_.stateChanged();
+      event->type = CommandType::ResetCurrentEffectSettings;
       return true;
-    case ControlPadProtocol::CommandCode::SelectParameter:
-      if (command.target == ControlPadProtocol::ParameterTarget::Brightness)
-        notifications_.startUserTextNotification("BRI", CRGB::White, 1200);
-      else if (command.target == ControlPadProtocol::ParameterTarget::Speed)
-        notifications_.startUserTextNotification("SPD", CRGB::White, 1200);
-      else if (command.target == ControlPadProtocol::ParameterTarget::Scale)
-        notifications_.startUserTextNotification("SCL", CRGB::White, 1200);
-      else
-        return false;
-      stateNotifier_.stateChanged();
-      return true;
-    case ControlPadProtocol::CommandCode::AdjustParameter: {
-      const int delta = static_cast<int>(command.delta) * 15;
-      switch (command.target) {
-        case ControlPadProtocol::ParameterTarget::Brightness:
-          effects_.setGlobalBrightness(clampParameter(static_cast<int>(settings_.globalBrightness()) + delta));
-          break;
-        case ControlPadProtocol::ParameterTarget::Speed:
-          effects_.setEffectSpeed(
-            clampParameter(static_cast<int>(settings_.effectSettings(effects_.selectedEffectId()).speed) + delta)
-          );
-          break;
-        case ControlPadProtocol::ParameterTarget::Scale:
-          effects_.setEffectScale(
-            clampParameter(static_cast<int>(settings_.effectSettings(effects_.selectedEffectId()).scale) + delta)
-          );
-          break;
-        case ControlPadProtocol::ParameterTarget::None: return false;
-      }
-      stateNotifier_.stateChanged();
-      return true;
-    }
+    case ControlPadProtocol::CommandCode::SelectParameter: event->type = CommandType::SelectParameter; break;
+    case ControlPadProtocol::CommandCode::AdjustParameter:
+      event->type = CommandType::AdjustParameter;
+      event->steps = command.delta;
+      break;
     case ControlPadProtocol::CommandCode::NoAction: return false;
+  }
+  switch (command.target) {
+    case ControlPadProtocol::ParameterTarget::Brightness: event->parameter = ParameterTarget::Brightness; return true;
+    case ControlPadProtocol::ParameterTarget::Speed: event->parameter = ParameterTarget::Speed; return true;
+    case ControlPadProtocol::ParameterTarget::Scale: event->parameter = ParameterTarget::Scale; return true;
+    case ControlPadProtocol::ParameterTarget::None: return false;
   }
   return false;
 }

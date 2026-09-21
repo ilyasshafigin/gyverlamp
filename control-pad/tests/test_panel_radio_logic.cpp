@@ -240,6 +240,26 @@ namespace {
     assert(combo.tick(8000, true, true));
   }
 
+  void testPairingChordConsumption() {
+    PairingChordConsumption consumption;
+    consumption.consider(true, false);
+    assert(!consumption.consumed(PairingChordButton::Button1));
+    assert(!consumption.consumed(PairingChordButton::Button3));
+
+    consumption.consider(true, true);
+    assert(consumption.consumed(PairingChordButton::Button1));
+    assert(consumption.consumed(PairingChordButton::Button3));
+
+    consumption.completeClickTrain(PairingChordButton::Button1);
+    assert(!consumption.consumed(PairingChordButton::Button1));
+    assert(consumption.consumed(PairingChordButton::Button3));
+
+    consumption.consider(false, false);
+    assert(consumption.consumed(PairingChordButton::Button3));
+    consumption.completeClickTrain(PairingChordButton::Button3);
+    assert(!consumption.consumed(PairingChordButton::Button3));
+  }
+
   void testColdStartBackoff() {
     FakeClock clock;
     FakeRandom random;
@@ -569,6 +589,7 @@ namespace {
 int main() {
   testBinding();
   testPairingCombo();
+  testPairingChordConsumption();
   testColdStartBackoff();
   testCountryScanBackoff();
   testPairingAndPersistence();

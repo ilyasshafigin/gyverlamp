@@ -138,6 +138,15 @@ Provisioning создаёт private-профиль и pairing-artifact и отк
 Для action telemetry добавляйте `-D DEBUG` только в `build_flags` нужного
 device env, а не в общий `[env]`.
 
+## Радиоканалы
+
+По умолчанию панель сканирует каналы, разрешённые текущей Wi-Fi country
+configuration; это поведение не меняется. Для deployment в Японии конкретный
+production-профиль панели может добавить `-D PANEL_WIFI_COUNTRY_JP` в свой
+`build_flags` (не в общий `[env]`). Этот флаг включает country code `JP`, чтобы
+канал 14 был доступен. Настройка хранится только в RAM и не сохраняется во
+flash; использовать канал 14 разрешено только для deployment в Японии.
+
 ## Первое pairing
 
 1. Прошейте собранную лампу и provisioned панель.

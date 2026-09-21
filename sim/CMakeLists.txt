@@ -58,6 +58,26 @@ if (NOT EMSCRIPTEN)
         target_compile_options(control_pad_service_tests PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter)
     endif()
 
+    add_executable(lamp_control_pad_orchestration_tests
+        ${HOST_DIR}/tests/lamp_control_pad_orchestration_tests.cpp
+        ${ROOT_DIR}/src/core/lamp.cpp
+    )
+    target_include_directories(lamp_control_pad_orchestration_tests PRIVATE
+        ${HOST_DIR}/tests
+        ${HOST_SHIMS_DIR}
+        ${HOST_SRC_DIR}
+        ${COMMON_DIR}
+        ${ROOT_DIR}/src
+        ${ROOT_DIR}/lib/ControlPadProtocol/include
+    )
+    target_compile_definitions(
+        lamp_control_pad_orchestration_tests
+        PRIVATE USE_CONTROL_PAD ARDUINO_ARCH_ESP32 CONTROL_PAD_HOST_TEST CONTROL_PAD_LAMP_HOST_TEST
+    )
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(lamp_control_pad_orchestration_tests PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter)
+    endif()
+
     set(CONTROL_PAD_EEPROM_PARITY_OFF "${CMAKE_CURRENT_BINARY_DIR}/control-pad-eeprom-off.bin")
     set(CONTROL_PAD_EEPROM_PARITY_ON "${CMAKE_CURRENT_BINARY_DIR}/control-pad-eeprom-on.bin")
     add_test(
@@ -73,6 +93,7 @@ if (NOT EMSCRIPTEN)
         COMMAND ${CMAKE_COMMAND} -E compare_files "${CONTROL_PAD_EEPROM_PARITY_OFF}" "${CONTROL_PAD_EEPROM_PARITY_ON}"
     )
     add_test(NAME control_pad_service_tests COMMAND control_pad_service_tests)
+    add_test(NAME lamp_control_pad_orchestration_tests COMMAND lamp_control_pad_orchestration_tests)
     set_tests_properties(
         control_pad_eeprom_image_parity
         PROPERTIES DEPENDS "control_pad_eeprom_tests_feature_off;control_pad_eeprom_tests_feature_on"

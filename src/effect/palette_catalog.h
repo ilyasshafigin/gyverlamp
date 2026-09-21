@@ -62,6 +62,14 @@ namespace Palettes {
     return index >= kSelectableCount ? Id::Auto : kSelectableOrder[index];
   }
 
+  inline Id next(Id current) {
+    for (uint8_t index = 0; index < kSelectableCount; ++index) {
+      if (kSelectableOrder[index] != current) continue;
+      return kSelectableOrder[(index + 1) % kSelectableCount];
+    }
+    return kSelectableOrder[0];
+  }
+
   const char* paletteName(Id id);
   Id parsePaletteName(const char* name);
 
