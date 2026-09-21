@@ -43,6 +43,8 @@ inline void delay(uint32_t) {
 inline void delayMicroseconds(uint32_t) {
 }
 
+#if !defined(__GLIBC__) && !defined(__APPLE__) && !defined(__FreeBSD__) && \
+    !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__)
 inline size_t strlcpy(char* destination, const char* source, size_t size) {
   const char* safeSource = source ? source : "";
   size_t sourceLength = 0;
@@ -58,6 +60,7 @@ inline size_t strlcpy(char* destination, const char* source, size_t size) {
   }
   return sourceLength;
 }
+#endif
 
 constexpr uint8_t A0 = 0;
 constexpr uint8_t INPUT = 0;
