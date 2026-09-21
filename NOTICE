@@ -18,8 +18,8 @@ project's LICENSE file for full terms.
     https://github.com/paulino/ha-mqtt-entities
     Licensed under the Apache License, Version 2.0
 
-  GyverLibs/EncButton
-    https://github.com/GyverLibs/EncButton
+  GyverLibs/uButton
+    https://github.com/GyverLibs/uButton
     Licensed under the MIT License
 
   hmueller01/pubsubclient3  (fork of knolleary/PubSubClient)

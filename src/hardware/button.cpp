@@ -12,10 +12,8 @@
 #include "../storage/settings_repository.h"
 
 void TouchButton::init() {
+  pinMode(pin_, INPUT);
   enabled_ = eeprom_.readButtonEnabled();
-  button_.init(pin_, INPUT, HIGH);
-  button_.setStepTimeout(100);
-  button_.setClickTimeout(500);
 }
 
 bool TouchButton::setEnabled(bool enabled) {
@@ -24,7 +22,7 @@ bool TouchButton::setEnabled(bool enabled) {
 }
 
 void TouchButton::tick() {
-  button_.tick();
+  button_.poll(digitalRead(pin_) == HIGH);
 
   if (!enabled_) return;
 

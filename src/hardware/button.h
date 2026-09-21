@@ -2,7 +2,13 @@
 
 #include <Arduino.h>
 #ifdef USE_BUTTON
-#include <EncButton.h>
+#ifndef UB_STEP_TIME
+#define UB_STEP_TIME 100
+#endif
+#ifndef UB_CLICK_TIME
+#define UB_CLICK_TIME 500
+#endif
+#include <uButton.h>
 #endif
 
 class EepromStore;
@@ -67,8 +73,8 @@ private:
   RotationController& rotation_;
   SettingsRepository& settings_;
   StateNotifier& stateNotifier_;
-  Button button_;
   int8_t pin_;
+  uButtonVirt button_;
   bool enabled_ = true;
   bool brightDirection_ = false;
 #endif

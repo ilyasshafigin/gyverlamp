@@ -66,7 +66,7 @@
   - `fastled/FastLED` - работа со светодиодной матрицей
   - `GyverLibs/Settings` - web ui
   - `paulino/HaMqttEntities` - MQTT + Home Assisntant
-  - `gyverlibs/EncButton` - работа с сенсорной кнопкой
+  - `gyverlibs/uButton` - работа с сенсорной кнопкой
 
 ### Симулятор
 
