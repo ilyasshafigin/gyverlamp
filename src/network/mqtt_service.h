@@ -109,7 +109,6 @@ private:
   HASelect haAudioBand_;
   HANumber haAudioAmount_;
   HASensorText haAudioAvailable_;
-  HASensorNumeric haUptime_;
   HASensorNumeric haRssi_;
   HASensorNumeric haRssiPct_;
   HASensorNumeric haChannel_;
@@ -120,7 +119,7 @@ private:
 #endif
   HASensorText haResetReason_;
 
-  HAEntity* entityRegistry_[34] = {};
+  HAEntity* entityRegistry_[33] = {};
   WiFiClient wifiClient_;
   PubSubClient client_{wifiClient_};
   HAMQTTController controller_;

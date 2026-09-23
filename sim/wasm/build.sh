@@ -27,6 +27,19 @@ if ! command -v emcc >/dev/null 2>&1; then
     exit 1
 fi
 
+# A Homebrew Emscripten upgrade can leave CMakeSystem.cmake pointing at the
+# removed version's toolchain. CMake then fails before it can refresh the cache.
+if [[ -d "${BUILD_DIR}/CMakeFiles" ]]; then
+    while IFS= read -r cached_toolchain; do
+        if [[ ! -f "${cached_toolchain}" ]]; then
+            echo "Removing stale WASM CMake cache (missing toolchain: ${cached_toolchain})"
+            rm -rf "${BUILD_DIR}"
+            break
+        fi
+    done < <(grep -hE 'include\(".*Emscripten\.cmake"\)' "${BUILD_DIR}"/CMakeFiles/*/CMakeSystem.cmake 2>/dev/null \
+        | sed -E 's/.*include\("([^"]*)".*/\1/')
+fi
+
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${OUT_DIR}"
 

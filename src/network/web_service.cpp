@@ -1,7 +1,7 @@
 #include "web_service.h"
 
+#include <LittleFS.h>
 #include <SettingsAsync.h>
-#include <UptimeFormatter.h>
 
 #include <cstring>
 
@@ -135,6 +135,11 @@ void WebService::init() {
   }
 #endif
 
+#ifdef ESP32
+  LittleFS.begin(false, "/littlefs", 10, "littlefs");
+#else
+  LittleFS.begin();
+#endif
   webSettings_.begin(false, nullptr);
   webSettings_.onBuild([this](sets::Builder& b) { settingsBuilder(b); });
   webSettings_.onUpdate([this](sets::Updater& upd) { settingsUpdate(upd); });
@@ -503,11 +508,9 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Wi-Fi channel", String(status.channel));
     b.Label("Wi-Fi RSSI", String(status.rssi));
     b.Label("Wi-Fi RSSI %", String(2 * (status.rssi + 100)));
-    b.Label(
-      "VCC",
-      diagnostics.vccMillivolts.available ? String(static_cast<float>(diagnostics.vccMillivolts.value) / 1000.0f)
-                                          : Device::kUnavailable
-    );
+    if (diagnostics.vccMillivolts.available) {
+      b.Label("VCC", String(static_cast<float>(diagnostics.vccMillivolts.value) / 1000.0f));
+    }
     b.Label("Reset reason", diagnostics.resetReason);
     b.Label("Core version", diagnostics.coreVersion);
     b.Label("CPU freq", Device::metricText(diagnostics.cpuFrequencyMhz) + " MHz");
@@ -517,7 +520,6 @@ void WebService::settingsBuilder(sets::Builder& b) {
     b.Label("Free heap", Device::metricText(diagnostics.freeHeapBytes) + " bytes");
     b.Label("Max free block size", Device::metricText(diagnostics.maxFreeBlockBytes) + " bytes");
     b.Label("Heap fragmentation", Device::metricText(diagnostics.heapFragmentationPercent) + "%");
-    b.Label("Uptime", UptimeFormatter::uptime());
     b.Label("Time", time_.timeStampString());
 
     if (b.Button("Restart")) {

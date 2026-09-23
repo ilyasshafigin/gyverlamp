@@ -128,7 +128,6 @@ MqttService::MqttService(
     haAudioBand_("_audio_band", "Audio Band", haDevice_, 3, kAudioBandOptions),
     haAudioAmount_("_audio_amount", "Audio Amount", haDevice_, 0, 255, 1),
     haAudioAvailable_("_audio_available", "Audio Available", haDevice_, 8),
-    haUptime_("_uptime", "Uptime", haDevice_, "s", 0),
     haRssi_("_rssi", "RSSI", haDevice_, "dBm", 0),
     haRssiPct_("_rssi_pct", "RSSI %", haDevice_, "%", 0),
     haChannel_("_channel", "WiFi Channel", haDevice_, nullptr, 0),
@@ -362,7 +361,6 @@ bool MqttService::registerEntities() {
     &haAudioBand_,
     &haAudioAmount_,
     &haAudioAvailable_,
-    &haUptime_,
     &haRssi_,
     &haRssiPct_,
     &haChannel_,
@@ -433,7 +431,6 @@ void MqttService::fullRefresh() {
 
 void MqttService::telemetryTimerCallback() {
   haAudioAvailable_.setState(audio_.frame().available ? "yes" : "no");
-  haUptime_.setState(millis() / 1000);
   haRssi_.setState(WiFi.RSSI());
   haRssiPct_.setState(2 * (WiFi.RSSI() + 100));
   haChannel_.setState(WiFi.channel());

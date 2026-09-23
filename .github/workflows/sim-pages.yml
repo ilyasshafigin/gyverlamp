@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .github/workflows/sim-pages.yml
+      - platformio.ini
       - sim/**
       - src/**
   workflow_dispatch:
