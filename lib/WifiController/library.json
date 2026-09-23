@@ -1,7 +1,0 @@
-{
-  "name": "WifiController",
-  "version": "1.0.0",
-  "description": "Platform-neutral Wi-Fi lifecycle controller",
-  "frameworks": "arduino",
-  "platforms": ["espressif8266", "espressif32"]
-}

@@ -84,7 +84,8 @@ just sim render --request .artifacts/requests/<name>.json --out .artifacts/sim
 
 ## Library dependency sources
 
-- PlatformIO downloads dependency source trees into `.pio/libdeps/<env>/` (e.g. `.pio/libdeps/lamp1_ota/FastLED/`, `.../Settings/`, `.../HaMqttEntities/`).
+- EspConnectivity is supplied by the immutable Git dependency in shared `[env].lib_deps`, replacing the former project-local HaMqttEntities, MqttController, OtaController, and WifiController libraries.
+- PlatformIO downloads dependency source trees into `.pio/libdeps/<env>/` (e.g. `.pio/libdeps/lamp1_ota/FastLED/`, `.../Settings/`).
 - `.pio` is gitignored, so the directory is not in git but exists locally after the first `pio run -e <env>`. For `lamp1_ota` look under `.pio/libdeps/lamp1_ota/`.
 - Before fetching library docs externally, check whether the source is already readable locally under `.pio/libdeps/` and read it there — this matches the exact versions pinned by `platformio.ini` / `lib_deps`.
 - The `clonedeps` skill remains the tool for cloning an upstream repo into a separate workspace when `.pio/libdeps/` is insufficient (forks, older snapshots, cross-referencing).
