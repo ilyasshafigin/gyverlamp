@@ -122,12 +122,14 @@ void ControlPadService::onSend(const uint8_t* destinationMac, esp_now_send_statu
 }
 
 void ControlPadService::tick() {
-  const uint32_t nowMs = millis();
+  uint32_t nowMs = millis();
   processRequests(nowMs);
-  ensureRadio(nowMs);
+  ensureRadio(millis());
   if (!radioOnline_) return;
+  nowMs = millis();
   if (pairingOpen_ && elapsed(nowMs, pairingOpenedAtMs_, kPairingWindowMs)) closePairing();
-  processPairAcceptTx(nowMs);
+  processPairAcceptTx(millis());
+  nowMs = millis();
   if (candidate_.active && elapsed(nowMs, candidate_.startedAtMs, kCandidateTimeoutMs)) {
     incrementCounter(&pairingCounters_.candidateTimedOut);
     recordFailure(Failure::CandidateTimeout);
@@ -382,6 +384,9 @@ void ControlPadService::drainQueue(uint32_t nowMs) {
   for (uint8_t index = 0; index < kRxDrainPerTick; ++index) {
     RxEnvelope envelope = {};
     if (xQueueReceive(rxQueue, &envelope, 0) != pdTRUE) return;
+    // RX callbacks and preceding handlers can advance time after tick started.
+    // Sample after dequeue so unsigned age cannot underflow a fresh packet.
+    nowMs = millis();
     handleEnvelope(envelope, nowMs);
   }
 }

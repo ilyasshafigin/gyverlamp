@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <functional>
+#include <utility>
+
 #define private public
 #include "network/control_pad_service.h"
 #undef private
@@ -14,6 +17,11 @@
 
 uint32_t sim_millis = 0;
 
+namespace control_pad_host_test {
+  // One-shot scheduling point: a callback can enqueue RX after tick sampled its clock.
+  std::function<void()> beforeQueueReceive;
+} // namespace control_pad_host_test
+
 namespace {
 
   int failures = 0;
@@ -22,6 +30,7 @@ namespace {
     uint16_t count;
     bool accept;
     ControlPadService::CommandEvent last;
+    std::function<void()> afterEvent;
   } commandEvents = {};
 
   void expect(bool condition, const char* name) {
@@ -63,6 +72,11 @@ namespace {
     auto* events = static_cast<CommandEvents*>(context);
     ++events->count;
     events->last = event;
+    if (events->afterEvent) {
+      auto hook = std::move(events->afterEvent);
+      events->afterEvent = nullptr;
+      hook();
+    }
     return events->accept;
   }
 
@@ -313,6 +327,36 @@ namespace {
         control_pad_host_test::peerAdds.back().encrypted,
       "STA reconnect on changed channel reinitializes encrypted bound peer"
     );
+
+    ControlPadProtocol::Message probe = {};
+    probe.type = ControlPadProtocol::MessageType::Probe;
+    probe.panelMac = service.binding_.panelMac;
+    probe.lampMac = service.lampMac_;
+    fillNonce(&probe.firstNonce, 0x80);
+    uint8_t probeFrame[69] = {};
+    size_t probeLength = 0;
+    expect(
+      ControlPadProtocol::signMessage(&probe, key, control_pad_host_hmac_sha256) &&
+        encodeMessage(probe, probeFrame, &probeLength),
+      "recovery Probe signs and encodes"
+    );
+    const size_t sendsBeforeProbe = control_pad_host_test::sends.size();
+    control_pad_host_test::beforeQueueReceive = [&] {
+      ++sim_millis;
+      control_pad_host_test::deliver(panelMac, probeFrame, probeLength);
+    };
+    service.tick();
+    ControlPadProtocol::Message probeAck = {};
+    expect(
+      control_pad_host_test::sends.size() == sendsBeforeProbe + 1 &&
+        ControlPadProtocol::decodeMessage(
+          control_pad_host_test::sends.back().data.data(), control_pad_host_test::sends.back().data.size(), &probeAck
+        ) &&
+        probeAck.type == ControlPadProtocol::MessageType::ProbeAck && probeAck.channel == 11 &&
+        sameBytes(probeAck.firstNonce.bytes, probe.firstNonce.bytes, sizeof(probe.firstNonce.bytes)) &&
+        ControlPadProtocol::authenticateMessage(probeAck, key, control_pad_host_hmac_sha256),
+      "fresh signed Probe arriving during tick recovers authenticated channel 11 after STA reconnect"
+    );
   }
 
   void testPairAcceptFailureCommitAndChannelSafety() {
@@ -505,6 +549,145 @@ namespace {
            ack.status == expectedStatus;
   }
 
+  void testPerPacketClockAndRollover() {
+    constexpr uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x71, 0x81, 0x91};
+    uint8_t key[16] = {};
+    for (uint8_t index = 0; index < sizeof(key); ++index)
+      key[index] = static_cast<uint8_t>(0x30 + index);
+
+    resetFixture();
+    EepromStore store;
+    WifiController wifi;
+    expect(
+      store.init() && store.writeControlPadBinding(pairedBinding(panelMac, key)), "clock fixture persists binding"
+    );
+    ControlPadService service = makeService(store, wifi);
+    service.setCommandHandler(captureCommandEvent, &commandEvents);
+    service.init();
+    service.tick();
+    sim_millis = 100;
+
+    ControlPadProtocol::Command command = {};
+    fillNonce(&command.panelBootNonce, 0x60);
+    command.sequence = 1;
+    command.code = ControlPadProtocol::CommandCode::TogglePower;
+    uint8_t firstFrame[47] = {};
+    size_t firstLength = 0;
+    expect(
+      ControlPadProtocol::signCommand(
+        &command, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+      ) &&
+        ControlPadProtocol::encodeCommand(command, firstFrame, sizeof(firstFrame), &firstLength),
+      "during-tick first command signs and encodes"
+    );
+    control_pad_host_test::beforeQueueReceive = [&] {
+      ++sim_millis; // tick starts at T, receive callback stamps T+1.
+      control_pad_host_test::deliver(panelMac, firstFrame, firstLength);
+    };
+    service.tick();
+    ControlPadProtocol::CommandAck firstAck = {};
+    expect(
+      commandEvents.count == 1 && control_pad_host_test::sends.size() == 1 &&
+        ControlPadProtocol::decodeCommandAck(
+          control_pad_host_test::sends.back().data.data(), control_pad_host_test::sends.back().data.size(), &firstAck
+        ) &&
+        firstAck.sequence == 1 && firstAck.status == ControlPadProtocol::CommandAckStatus::Applied &&
+        ControlPadProtocol::authenticateCommandAck(
+          firstAck, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+        ),
+      "command received at T+1 after tick starts T applies once with authenticated Applied ACK"
+    );
+    const auto firstAckFrame = control_pad_host_test::sends.back().data;
+    control_pad_host_test::deliver(panelMac, firstFrame, firstLength);
+    service.tick();
+    expect(
+      commandEvents.count == 1 && control_pad_host_test::sends.size() == 2 &&
+        control_pad_host_test::sends.back().data == firstAckFrame,
+      "during-tick command duplicate reuses exact cached Applied ACK without applying again"
+    );
+
+    commandEvents.count = 0;
+    command.sequence = 2;
+    expect(
+      ControlPadProtocol::signCommand(
+        &command, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+      ) &&
+        ControlPadProtocol::encodeCommand(command, firstFrame, sizeof(firstFrame), &firstLength),
+      "handler race first command signs and encodes"
+    );
+    command.sequence = 3;
+    uint8_t secondFrame[47] = {};
+    size_t secondLength = 0;
+    expect(
+      ControlPadProtocol::signCommand(
+        &command, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+      ) &&
+        ControlPadProtocol::encodeCommand(command, secondFrame, sizeof(secondFrame), &secondLength),
+      "handler race second command signs and encodes"
+    );
+    // The first handler advances time and queues another command during the same drain.
+    commandEvents.afterEvent = [&] {
+      sim_millis += 7;
+      control_pad_host_test::deliver(panelMac, secondFrame, secondLength);
+    };
+    control_pad_host_test::deliver(panelMac, firstFrame, firstLength);
+    service.tick();
+    ControlPadProtocol::CommandAck secondAck = {};
+    expect(
+      commandEvents.count == 2 && control_pad_host_test::sends.size() == 4 &&
+        ControlPadProtocol::decodeCommandAck(
+          control_pad_host_test::sends.back().data.data(), control_pad_host_test::sends.back().data.size(), &secondAck
+        ) &&
+        secondAck.sequence == 3 && secondAck.status == ControlPadProtocol::CommandAckStatus::Applied &&
+        ControlPadProtocol::authenticateCommandAck(
+          secondAck, key, service.binding_.panelMac, service.lampMac_, control_pad_host_hmac_sha256
+        ),
+      "second packet arriving after preceding handler advances clock applies within the same tick"
+    );
+    const auto secondAckFrame = control_pad_host_test::sends.back().data;
+    control_pad_host_test::deliver(panelMac, secondFrame, secondLength);
+    service.tick();
+    expect(
+      commandEvents.count == 2 && control_pad_host_test::sends.size() == 5 &&
+        control_pad_host_test::sends.back().data == secondAckFrame,
+      "handler-race second command duplicate receives cached Applied ACK without another event"
+    );
+
+    commandEvents.count = 0;
+    command.sequence = 4;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 499, ControlPadProtocol::CommandAckStatus::Applied) &&
+        commandEvents.count == 1,
+      "499 ms command remains fresh"
+    );
+    command.sequence = 5;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 500, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 1,
+      "500 ms command expires exactly at deadline without applying"
+    );
+    command.sequence = 6;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 501, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 1,
+      "truly expired command is not masked by fresh per-packet clock"
+    );
+    sim_millis = UINT32_MAX - 10;
+    command.sequence = 7;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 20, ControlPadProtocol::CommandAckStatus::Applied) &&
+        commandEvents.count == 2 && sim_millis == 9,
+      "fresh command across uint32 clock rollover uses unsigned elapsed age"
+    );
+    sim_millis = UINT32_MAX - 100;
+    command.sequence = 8;
+    expect(
+      dispatchCommand(service, panelMac, key, command, 500, ControlPadProtocol::CommandAckStatus::Expired) &&
+        commandEvents.count == 2,
+      "500 ms command across uint32 clock rollover still expires"
+    );
+  }
+
   void testControlPadCommandEventDispatch() {
     constexpr uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x70, 0x80, 0x90};
     uint8_t key[16] = {};
@@ -632,6 +815,7 @@ namespace control_pad_host_test {
     callback = nullptr;
     sendCallback = nullptr;
     nextSendToComplete = 0;
+    beforeQueueReceive = nullptr;
   }
 
   void deliver(const uint8_t sourceMac[6], const uint8_t* data, size_t length) {
@@ -658,6 +842,11 @@ BaseType_t xQueueSend(QueueHandle_t queue, const void* item, uint32_t) {
 }
 
 BaseType_t xQueueReceive(QueueHandle_t queue, void* item, uint32_t) {
+  if (control_pad_host_test::beforeQueueReceive) {
+    auto hook = std::move(control_pad_host_test::beforeQueueReceive);
+    control_pad_host_test::beforeQueueReceive = nullptr;
+    hook();
+  }
   if (queue == nullptr || item == nullptr || queue->items.empty()) return pdFALSE;
   memcpy(item, queue->items.front().data(), queue->itemSize);
   queue->items.erase(queue->items.begin());
@@ -748,6 +937,7 @@ int main() {
   testCommandExpiryDedupAndStaLifecycle();
   testPairAcceptFailureCommitAndChannelSafety();
   testControlPadCommandEventDispatch();
+  testPerPacketClockAndRollover();
   if (failures != 0) {
     printf("FAILED: %d control-pad service assertion(s)\n", failures);
     return 1;

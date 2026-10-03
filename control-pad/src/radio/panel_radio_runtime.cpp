@@ -378,7 +378,7 @@ namespace PanelRadio {
     }
   }
 
-  void PanelRadioRuntime::drainRx(uint32_t now) {
+  void PanelRadioRuntime::drainRx(uint32_t) {
     for (uint8_t index = 0; index < 4; ++index) {
       RxEnvelope envelope = {};
       if (!transport_.next(&envelope)) return;
@@ -398,7 +398,8 @@ namespace PanelRadio {
       const uint32_t age = packet.kind == PacketKind::PairAccept   ? 1000
                            : packet.kind == PacketKind::ConfirmAck ? 2000
                                                                    : 500;
-      if (elapsed(now, envelope.receivedAtMs, age)) {
+      // RX and preceding handlers may advance time after tick() starts.
+      if (elapsed(clock_.nowMs(), envelope.receivedAtMs, age)) {
         if (packet.kind == PacketKind::PairAccept) ++pairAcceptGuardRejected_;
         continue;
       }
@@ -418,7 +419,17 @@ namespace PanelRadio {
 
   void PanelRadioRuntime::commandTick(uint32_t now) {
     if (state_ != State::Normal || !binding_.bound) return;
-    if (!ensureTransport(now) || !transport_.activateBoundPeer(binding_)) return;
+    // Expiry must progress even when peer activation keeps failing.
+    if (inFlight_.active && elapsed(now, inFlight_.sentAtMs, kCommandExpiryMs)) {
+      beginRecovery();
+      return;
+    }
+    const bool peerReady = ensureTransport(now) && transport_.activateBoundPeer(binding_);
+    now = clock_.nowMs();
+    if (!peerReady) {
+      if (!inFlight_.active || elapsed(now, inFlight_.sentAtMs, kCommandExpiryMs)) beginRecovery();
+      return;
+    }
     if (inFlight_.active) {
       if (elapsed(now, inFlight_.sentAtMs, kCommandExpiryMs)) {
         beginRecovery();
@@ -451,7 +462,7 @@ namespace PanelRadio {
     inFlight_.retried = false;
     inFlight_.sequence = sequence;
     inFlight_.length = length;
-    inFlight_.sentAtMs = now;
+    inFlight_.sentAtMs = clock_.nowMs();
 #ifdef DEBUG
     const bool queued = transport_.send(inFlight_.frame, inFlight_.length);
     Serial.printf(
@@ -511,6 +522,7 @@ namespace PanelRadio {
           nextConfirmAttemptMs_ = now + kConfirmEnqueueRetryMs;
         }
       }
+      now = clock_.nowMs();
       if (elapsed(now, confirmStartedMs_, 2500)) {
         state_ = State::PairScan;
         scanCount_ = 0;
@@ -521,8 +533,8 @@ namespace PanelRadio {
     } else if (state_ == State::Recovery) {
       scanTick(now, false);
     }
-    aggregationTick(now);
-    commandTick(now);
+    aggregationTick(clock_.nowMs());
+    commandTick(clock_.nowMs());
   }
 
   State PanelRadioRuntime::state() const {

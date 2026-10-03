@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <vector>
@@ -14,8 +15,13 @@ namespace {
   const uint8_t kLamp[kMacSize] = {2, 0, 0, 0, 0, 2};
 
   struct FakeClock : Clock {
-    uint32_t now = 0;
-    uint32_t nowMs() const override { return now; }
+    mutable uint32_t now = 0;
+    uint32_t advanceOnRead = 0;
+    uint32_t nowMs() const override {
+      const uint32_t sampled = now;
+      now += advanceOnRead;
+      return sampled;
+    }
   };
 
   struct FakeRandom : Random {
@@ -63,6 +69,7 @@ namespace {
     bool countryAvailable = true;
     bool activateAvailable = true;
     bool advanceClockOnActivate = false;
+    bool advanceClockOnNext = false;
     FakeClock* clockToAdvance = nullptr;
     uint32_t activateCalls = 0;
     std::vector<bool> sendResults;
@@ -120,6 +127,7 @@ namespace {
       if (rx.empty()) return false;
       *envelope = rx.front();
       rx.erase(rx.begin());
+      if (advanceClockOnNext && clockToAdvance != nullptr) ++clockToAdvance->now;
       return true;
     }
     bool countryChannels(uint8_t* channels, uint8_t* count, uint8_t capacity) override {
@@ -584,9 +592,202 @@ namespace {
     assert(protocol.commands.back().target == ParameterTarget::Speed && protocol.commands.back().delta == 8);
   }
 
+  struct BoundRuntimeFixture {
+    FakeClock clock;
+    FakeRandom random;
+    FakeTransport transport;
+    FakeStore store;
+    FakeProtocol protocol;
+    PanelRadioRuntime runtime;
+
+    BoundRuntimeFixture()
+      : runtime(clock, random, transport, store, protocol) {
+      store.loaded = bound();
+      transport.legal = {6};
+      transport.clockToAdvance = &clock;
+      runtime.begin();
+    }
+
+    void queueAck(PacketKind kind, uint32_t receivedAt, uint32_t sequence = 1) {
+      DecodedPacket ack = packet(kind, 6, sequence);
+      const uint8_t first = kind == PacketKind::ProbeAck ? 17 : 1;
+      for (size_t index = 0; index < kNonceSize; ++index)
+        ack.firstNonce[index] = first + index;
+      protocol.packets.push_back(ack);
+      transport.rx.push_back(envelope(receivedAt));
+    }
+
+    void sendCommand() {
+      assert(runtime.enqueue(CommandCode::TogglePower, ParameterTarget::None, 0));
+      runtime.tick();
+      assert(protocol.commands.size() == 1);
+    }
+
+    void recover() {
+      clock.now += 500;
+      runtime.tick();
+      assert(runtime.state() == State::Recovery);
+      runtime.tick();
+      assert(transport.probeChannels.back() == 6);
+    }
+  };
+
+  void testFreshCommandAckDuringDrain() {
+    BoundRuntimeFixture f;
+    f.sendCommand();
+    assert(f.runtime.enqueue(CommandCode::NextEffect, ParameterTarget::None, 0));
+    f.clock.now = 100;
+    f.transport.advanceClockOnNext = true;
+    f.queueAck(PacketKind::CommandAck, 101);
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 2 && f.transport.sent.back()[1] == 2);
+  }
+
+  void testFreshProbeAckDuringDrain() {
+    BoundRuntimeFixture f;
+    f.sendCommand();
+    f.recover();
+    f.transport.advanceClockOnNext = true;
+    f.queueAck(PacketKind::ProbeAck, f.clock.now + 1);
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal);
+    assert(f.protocol.commands.size() == 1);
+  }
+
+  void testSecondRxAfterHandlerAdvancesClock() {
+    BoundRuntimeFixture f;
+    f.runtime.startPairing();
+    f.runtime.tick();
+    f.transport.advanceClockOnActivate = true;
+    DecodedPacket accept = packet(PacketKind::PairAccept);
+    matchingPairNonce(&accept);
+    memcpy(accept.secondNonce, "abcdefghijklmnop", kNonceSize);
+    f.protocol.packets.push_back(accept);
+    f.transport.rx.push_back(envelope(f.clock.now));
+    // PairAccept activates the peer and advances time before the second RX.
+    DecodedPacket ack = accept;
+    ack.kind = PacketKind::ConfirmAck;
+    f.protocol.packets.push_back(ack);
+    f.transport.rx.push_back(envelope(f.clock.now + 1));
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal);
+    assert(f.store.blobs.size() == 1);
+  }
+
+  void testCommandAckRolloverAndExpiry() {
+    BoundRuntimeFixture f;
+    f.clock.now = UINT32_MAX - 100;
+    f.sendCommand();
+    assert(f.runtime.enqueue(CommandCode::NextEffect, ParameterTarget::None, 0));
+    f.clock.now = 0;
+    f.transport.advanceClockOnNext = true;
+    f.queueAck(PacketKind::CommandAck, 1);
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 2);
+    f.transport.advanceClockOnNext = false;
+    assert(f.runtime.enqueue(CommandCode::PreviousEffect, ParameterTarget::None, 0));
+    // An ACK exactly 500 ms old must be discarded across rollover.
+    f.clock.now = 100;
+    f.queueAck(PacketKind::CommandAck, f.clock.now - 500, 2);
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 2);
+    f.queueAck(PacketKind::CommandAck, f.clock.now - 499, 2);
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 3);
+  }
+
+  void testInFlightPeerFailureExpiresWithoutReplay() {
+    BoundRuntimeFixture f;
+    f.sendCommand();
+    assert(f.runtime.enqueue(CommandCode::NextEffect, ParameterTarget::None, 0));
+    f.runtime.onEncoderRawTurn(1);
+    f.transport.activateAvailable = false;
+    f.clock.now = 150;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal && f.transport.sent.size() == 1);
+    f.clock.now = 499;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal);
+    f.clock.now = 500;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Recovery);
+    f.transport.activateAvailable = true;
+    f.runtime.tick();
+    f.queueAck(PacketKind::ProbeAck, f.clock.now);
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal && f.protocol.commands.size() == 1);
+    f.clock.now += 1000;
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 1);
+    assert(f.runtime.enqueue(CommandCode::NextEffect, ParameterTarget::None, 0));
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 2 && f.transport.sent.back()[1] == 2);
+  }
+
+  void testPeerFailureBeforeFirstSendRecoversWithoutReplay() {
+    BoundRuntimeFixture f;
+    assert(f.runtime.enqueue(CommandCode::TogglePower, ParameterTarget::None, 0));
+    f.runtime.onEncoderRawTurn(1);
+    f.transport.activateAvailable = false;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Recovery && f.protocol.commands.empty());
+    f.transport.activateAvailable = true;
+    f.runtime.tick();
+    f.queueAck(PacketKind::ProbeAck, f.clock.now);
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal && f.protocol.commands.empty());
+    f.clock.now += 1000;
+    f.runtime.tick();
+    assert(f.protocol.commands.empty());
+  }
+
+  void testAggregationEnqueueClockRefresh() {
+    BoundRuntimeFixture f;
+    f.runtime.onEncoderRawTurn(1);
+    f.clock.now = 40;
+    f.clock.advanceOnRead = 1;
+    f.runtime.tick();
+    assert(f.protocol.commands.size() == 1);
+    assert(f.protocol.commands.back().code == CommandCode::AdjustParameter);
+    assert(f.protocol.commands.back().delta == 1);
+  }
+
+  void testInFlightExpiryAcrossRollover() {
+    BoundRuntimeFixture f;
+    const uint32_t started = UINT32_MAX - 100;
+    f.clock.now = started;
+    f.sendCommand();
+    const std::vector<uint8_t> original = f.transport.sent.back();
+    f.clock.now = started + 150;
+    f.runtime.tick();
+    assert(f.transport.sent.size() == 2 && f.transport.sent.back() == original);
+    f.clock.now = started + 499;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Normal && f.transport.sent.size() == 2);
+    f.clock.now = started + 500;
+    f.runtime.tick();
+    assert(f.runtime.state() == State::Recovery && f.transport.sent.size() == 2);
+  }
+
 } // namespace
 
 int main() {
+  const char* selected = getenv("PANEL_RADIO_TEST");
+#define RUN_REGRESSION(name)                                 \
+  if (selected == nullptr || strcmp(selected, #name) == 0) { \
+    name();                                                  \
+    if (selected != nullptr) return 0;                       \
+  }
+  RUN_REGRESSION(testFreshCommandAckDuringDrain);
+  RUN_REGRESSION(testFreshProbeAckDuringDrain);
+  RUN_REGRESSION(testSecondRxAfterHandlerAdvancesClock);
+  RUN_REGRESSION(testCommandAckRolloverAndExpiry);
+  RUN_REGRESSION(testInFlightPeerFailureExpiresWithoutReplay);
+  RUN_REGRESSION(testPeerFailureBeforeFirstSendRecoversWithoutReplay);
+  RUN_REGRESSION(testAggregationEnqueueClockRefresh);
+  RUN_REGRESSION(testInFlightExpiryAcrossRollover);
+#undef RUN_REGRESSION
+  assert(selected == nullptr);
   testBinding();
   testPairingCombo();
   testPairingChordConsumption();
