@@ -9,5 +9,3 @@
 compile_commands.json
 platformio.local.ini
 .artifacts/
-sim/web/public/firmware-version.txt
-sim/web/public/sim-version.txt

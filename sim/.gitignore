@@ -1,5 +1,7 @@
 node_modules/
 build/
 web/public/wasm/
+web/public/firmware-version.txt
+web/public/sim-version.txt
 .DS_Store
 *.log
