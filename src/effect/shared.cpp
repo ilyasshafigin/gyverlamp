@@ -22,6 +22,7 @@ float trackingObjectShift[trackingObjectMaxCount];
 uint8_t trackingObjectHue[trackingObjectMaxCount];
 uint8_t trackingObjectState[trackingObjectMaxCount];
 bool trackingObjectIsShift[trackingObjectMaxCount];
+LivingMembraneWorkspace livingMembraneWorkspace;
 uint8_t enlargedObjectNum;
 
 CRGBPalette16 rgbPalette(PartyColors_p);

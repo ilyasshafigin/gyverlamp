@@ -29,6 +29,7 @@ namespace Effects {
     SilkRibbons,
     VelvetFolds,
     StainedGlass,
+    LivingMembrane,
     COUNT,
     INVALID = 255,
   };

@@ -59,6 +59,19 @@ extern float trackingObjectShift[trackingObjectMaxCount];
 extern uint8_t trackingObjectHue[trackingObjectMaxCount];
 extern uint8_t trackingObjectState[trackingObjectMaxCount];
 extern bool trackingObjectIsShift[trackingObjectMaxCount];
+
+// Living Membrane owns these buffers only while it is the active effect.
+struct LivingMembraneWorkspace {
+  uint8_t maps[2][WIDTH * HEIGHT];
+  uint8_t queue[WIDTH * HEIGHT];
+  uint16_t overlap[8][8];
+  uint16_t componentArea[8], trackArea[8], absenceAge[8], birthAge[8], mergeAge[8];
+  uint8_t primary[8], bestOldComponent[8], mergeGroup[8];
+  uint8_t mapIndex, componentCount;
+  uint16_t birthSerial;
+};
+extern LivingMembraneWorkspace livingMembraneWorkspace;
+
 // максимальное количество сложных отслеживаемых объектов (меньше, чем trackingObjectMaxCount)
 constexpr uint8_t enlargedObjectMaxCount = WIDTH * 2;
 // используемое в эффекте количество объектов

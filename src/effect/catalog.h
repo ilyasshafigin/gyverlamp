@@ -5,7 +5,6 @@
 
 #include "effect.h"
 #include "effects.h"
-#include "catalog/stained_glass.h"
 #include "ids.h"
 #include "settings.h"
 
@@ -33,7 +32,8 @@
   X(EffectOctopus)         \
   X(EffectSilkRibbons)     \
   X(EffectVelvetFolds)     \
-  X(EffectStainedGlass)
+  X(EffectStainedGlass)    \
+  X(EffectLivingMembrane)
 
 namespace Effects {
 
