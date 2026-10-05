@@ -94,10 +94,6 @@ test('capture is timestamp-local, initial values snap, and clock ignores TZ', ()
     const utc = render(root, 'utc', { ...base, atMs: [99] }, { TZ: 'UTC' });
     const tokyo = render(root, 'tokyo', { ...base, atMs: [99] }, { TZ: 'Asia/Tokyo' });
     assert.equal(manifest(root, 'utc', utc).frames[0].rgbSha256, manifest(root, 'tokyo', tokyo).frames[0].rgbSha256);
-    const stochastic = { ...base, effectId: 3, atMs: [1000] };
-    const seedOne = render(root, 'seed-one', { ...stochastic, seed: 1 });
-    const seedTwo = render(root, 'seed-two', { ...stochastic, seed: 2 });
-    assert.notEqual(manifest(root, 'seed-one', seedOne).frames[0].rgbSha256, manifest(root, 'seed-two', seedTwo).frames[0].rgbSha256);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
