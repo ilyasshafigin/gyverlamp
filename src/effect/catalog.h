@@ -17,17 +17,14 @@
   X(EffectNoise)           \
   X(EffectMatrix)          \
   X(EffectPaintball)       \
-  X(EffectSpiral)          \
   X(EffectWarmLight)       \
   X(EffectTwinkles)        \
-  X(EffectShadows)         \
   X(EffectButterflys)      \
   X(EffectThunderstorm)    \
   X(EffectNexus)           \
   X(EffectClock)           \
   X(EffectLiquidLamp)      \
   X(EffectNorthernLights)  \
-  X(EffectPicasso)         \
   X(EffectEqualizer)       \
   X(EffectOctopus)         \
   X(EffectSilkRibbons)     \

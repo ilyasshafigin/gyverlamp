@@ -8,8 +8,8 @@ public:
   static constexpr const char* kName = "Fire";
   static inline constexpr EffectSettingsSpec kSettings = {
     255, // brightness
-    160, // speed
-    15,  // scale
+    80, // speed
+    128, // scale: flame height and texture
   };
 
   void setup(EffectContext& ctx) override;
