@@ -209,18 +209,26 @@
         padding: 12px;
         gap: 12px;
       }
+      .stage {
+        position: static;
+      }
       .panel {
         order: 2;
-        max-height: none;
       }
     }
 
     .stage {
+      position: sticky;
+      top: 72px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 12px;
       min-height: 0;
+    }
+
+    @media (max-width: 900px) {
+      .stage { position: static; }
     }
 
     .matrix-wrap {
@@ -268,8 +276,6 @@
       flex-direction: column;
       gap: 14px;
       min-width: 0;
-      max-height: calc(100vh - 80px);
-      overflow-y: auto;
     }
 
     .card {
@@ -303,6 +309,24 @@
       color: var(--text);
       font-weight: 500;
     }
+
+    .paused-indicator {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 3px 8px;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--accent-2);
+      font-size: 0.65rem;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .status-card { position: relative; }
 
     .telemetry {
       display: grid;
@@ -532,6 +556,7 @@
     <aside class="panel">
       <section class="card status-card">
         <h2>Status / Telemetry</h2>
+        <span id="pausedIndicator" class="paused-indicator" role="status" aria-live="polite" hidden>Paused</span>
         <div id="statusDetail" class="status-detail">
           <span class="label">Effect:</span> <span class="value">—</span><br>
           <span class="label">Palette:</span> <span class="value">—</span>
@@ -576,6 +601,9 @@
           <label for="scale">Scale</label>
           <input id="scale" type="range" min="0" max="255" value="128">
           <span id="scaleValue">128</span>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button id="resetDefaults" type="button">Reset to defaults</button>
         </div>
       </section>
 
@@ -669,7 +697,6 @@
         <div class="btn-row">
           <button id="pause" type="button" class="primary">Pause</button>
           <button id="step" type="button" disabled>Step</button>
-          <button id="resetDefaults" type="button">Reset</button>
         </div>
         <p class="hint">Space pauses or resumes. Right arrow steps one frame while paused. R resets the current effect.</p>
       </section>

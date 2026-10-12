@@ -15,6 +15,42 @@ set(WASM_DIR "${SIM_DIR}/wasm")
 
 if (NOT EMSCRIPTEN)
     enable_testing()
+    function(add_led_wrapped_x_fixture target width height angle direction)
+        math(EXPR num_leds "${width} * ${height}")
+        add_executable(${target}
+            ${HOST_DIR}/tests/led_wrapped_x_tests.cpp
+            ${HOST_SRC_DIR}/host_led.cpp
+        )
+        target_include_directories(${target} PRIVATE
+            ${HOST_SHIMS_DIR}
+            ${HOST_SRC_DIR}
+            ${COMMON_DIR}
+            ${ROOT_DIR}/src
+        )
+        target_compile_definitions(${target} PRIVATE
+            FIRMWARE_WIDTH=${width}
+            FIRMWARE_HEIGHT=${height}
+            FIRMWARE_NUM_LEDS=${num_leds}
+            FIRMWARE_CONNECTION_ANGLE=${angle}
+            FIRMWARE_STRIP_DIRECTION=${direction}
+            SIMULATOR_AUDIO_INPUT
+        )
+        if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+            target_compile_options(${target} PRIVATE -Wall -Wextra -Werror)
+        endif()
+        add_test(NAME ${target} COMMAND ${target})
+    endfunction()
+
+    add_led_wrapped_x_fixture(led_wrapped_x_tests 5 3 0 0)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_01 5 3 0 1)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_10 5 3 1 0)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_13 5 3 1 3)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_22 5 3 2 2)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_23 5 3 2 3)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_32 5 3 3 2)
+    add_led_wrapped_x_fixture(led_wrapped_x_wiring_31 5 3 3 1)
+    add_led_wrapped_x_fixture(led_wrapped_x_width_one 1 3 0 0)
+
     function(add_control_pad_eeprom_fixture target)
         add_executable(${target}
             ${HOST_DIR}/tests/control_pad_eeprom_tests.cpp

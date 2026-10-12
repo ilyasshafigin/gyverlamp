@@ -2,7 +2,7 @@
 
 #include "../shared.h"
 
-// Effect: Living Membrane - ### Живая мембрана
+// Effect: Living Membrane - Живая мембрана
 // Крупные световые острова растут, делятся, соединяются и вытесняют друг друга. Иногда пятно вытягивается в перемычку, которая затем разрывается.
 // Authors: ilyasshafigin + Codex
 
@@ -423,7 +423,7 @@ namespace LivingMembraneTracking {
     for (int8_t dy = -1; dy <= 1; dy++) {
       const uint8_t sy = constrain(static_cast<int16_t>(y) + dy, 0, HEIGHT - 1);
       for (int8_t dx = -1; dx <= 1; dx++) {
-        const uint8_t sx = (x + WIDTH + dx) % WIDTH;
+        const uint8_t sx = static_cast<uint8_t>(wrapX(static_cast<int16_t>(x) + dx));
         const uint8_t other = owner(map[sy * WIDTH + sx]);
         const uint8_t k = (dx == 0 ? 2 : 1) * (dy == 0 ? 2 : 1);
         sum += k * (other && active(other - 1) ? displayed(other - 1) : fallback);
@@ -433,6 +433,19 @@ namespace LivingMembraneTracking {
     return sum / weight;
   }
 } // namespace LivingMembraneTracking
+} // namespace
+
+namespace {
+constexpr uint16_t kBirthOff = 0xffff;
+constexpr uint16_t kBirthWeakTrigger = 36;
+constexpr uint16_t kBirthPulseSteps = 432;
+constexpr uint16_t kBirthCooldownSteps = 720;
+constexpr uint32_t kBirthSeedMix = 0xA511E9B3U;
+
+uint16_t birthSmoothstepQ8(uint16_t index) {
+  const uint32_t t = (static_cast<uint32_t>(index) * 256U + 71U) / 143U;
+  return static_cast<uint16_t>((t * t * (768U - 2U * t) + 32768U) / 65536U);
+}
 } // namespace
 
 uint32_t EffectLivingMembrane::randomBits() {
@@ -481,6 +494,166 @@ void EffectLivingMembrane::setup(EffectContext& ctx) {
       }
     }
   }
+  resetBirthState();
+}
+
+void EffectLivingMembrane::resetBirthState() {
+  birthRandomState_ = randomState_ ^ kBirthSeedMix;
+  birthRandomState_ ^= birthRandomState_ << 13;
+  birthRandomState_ ^= birthRandomState_ >> 17;
+  birthRandomState_ ^= birthRandomState_ << 5;
+  if (birthRandomState_ == 0) birthRandomState_ = 1;
+  birthStep_ = kBirthOff;
+  birthWeakSteps_ = 0;
+  birthCooldownSteps_ = 0;
+  birthCenterX_ = 0xff;
+  birthCenterY_ = 0xff;
+}
+
+uint32_t EffectLivingMembrane::birthRandom() {
+  birthRandomState_ ^= birthRandomState_ << 13;
+  birthRandomState_ ^= birthRandomState_ >> 17;
+  birthRandomState_ ^= birthRandomState_ << 5;
+  return birthRandomState_;
+}
+
+void EffectLivingMembrane::chooseBirthCenter() {
+  uint8_t bestX = 0;
+  uint8_t bestY = 2;
+  uint32_t bestV = UINT32_MAX;
+  uint32_t bestU = 0;
+  bool found = false;
+
+  for (uint8_t candidate = 0; candidate < 7; candidate++) {
+    const uint8_t x = static_cast<uint8_t>(birthRandom() % WIDTH);
+    const uint8_t y = HEIGHT > 4 ? static_cast<uint8_t>(2 + birthRandom() % (HEIGHT - 4))
+                                 : static_cast<uint8_t>(birthRandom() % HEIGHT);
+    if (birthCenterX_ != 0xff) {
+      const uint8_t directX = x > birthCenterX_ ? x - birthCenterX_ : birthCenterX_ - x;
+      const uint8_t distanceX = directX < WIDTH - directX ? directX : WIDTH - directX;
+      const uint8_t distanceY = y > birthCenterY_ ? y - birthCenterY_ : birthCenterY_ - y;
+      if (distanceX + distanceY < 4) continue;
+    }
+
+    uint32_t sumV = 0;
+    uint32_t sumU = 0;
+    for (int8_t dy = -2; dy <= 2; dy++) {
+      const int16_t sourceY = static_cast<int16_t>(y) + dy;
+      if (sourceY < 0 || sourceY >= HEIGHT) continue;
+      for (int8_t dx = -2; dx <= 2; dx++) {
+        const uint8_t px = static_cast<uint8_t>(wrapX(static_cast<int16_t>(x) + dx));
+        if (WIDTH < 5) {
+          bool duplicate = false;
+          for (int8_t previousDx = -2; previousDx < dx; previousDx++) {
+            if (wrapX(static_cast<int16_t>(x) + previousDx) == px) duplicate = true;
+          }
+          if (duplicate) continue;
+        }
+        sumV += noise3d[1][px][sourceY];
+        sumU += noise3d[0][px][sourceY];
+      }
+    }
+
+    if (!found || sumV < bestV || (sumV == bestV && sumU > bestU)) {
+      found = true;
+      bestX = x;
+      bestY = y;
+      bestV = sumV;
+      bestU = sumU;
+    }
+  }
+
+  if (!found) {
+    if (birthCenterX_ == 0xff) {
+      bestX = WIDTH / 2;
+      bestY = HEIGHT / 2;
+    } else {
+      bestX = static_cast<uint8_t>(wrapX(static_cast<int>(birthCenterX_) + WIDTH / 2));
+      bestY = birthCenterY_;
+    }
+  }
+  birthCenterX_ = bestX;
+  birthCenterY_ = bestY;
+}
+
+void EffectLivingMembrane::applyBirthSource() {
+  const uint16_t phase = birthStep_;
+  const uint16_t envelope =
+    phase <= 143 ? birthSmoothstepQ8(phase) : (phase <= 287 ? 256 : birthSmoothstepQ8(kBirthPulseSteps - 1 - phase));
+
+  for (int8_t dy = -2; dy <= 2; dy++) {
+    const int16_t sourceY = static_cast<int16_t>(birthCenterY_) + dy;
+    if (sourceY < 0 || sourceY >= HEIGHT) continue;
+    for (int8_t dx = -2; dx <= 2; dx++) {
+      const uint8_t sourceX = static_cast<uint8_t>(wrapX(static_cast<int16_t>(birthCenterX_) + dx));
+      if (WIDTH < 5) {
+        bool duplicate = false;
+        for (int8_t previousDx = -2; previousDx < dx; previousDx++) {
+          if (wrapX(static_cast<int16_t>(birthCenterX_) + previousDx) == sourceX) duplicate = true;
+        }
+        if (duplicate) continue;
+      }
+
+      const uint8_t distanceSquared = static_cast<uint8_t>(dx * dx + dy * dy);
+      const uint8_t weight = distanceSquared <= 2 ? 4 : (distanceSquared <= 5 ? 3 : 1);
+      uint8_t& u = noise3d[0][sourceX][sourceY];
+      uint8_t& v = noise3d[1][sourceX][sourceY];
+      const uint16_t targetV = static_cast<uint16_t>((80U * envelope * weight + 512U) / 1024U);
+      const uint16_t gap = targetV > v ? targetV - v : 0;
+      uint16_t delta = static_cast<uint16_t>((gap + ((phase + sourceX + 2U * sourceY) & 3U)) / 4U);
+      if (delta > 2) delta = 2;
+      if (delta > u) delta = u;
+      u = static_cast<uint8_t>(u - delta);
+      v = static_cast<uint8_t>(v + delta);
+    }
+  }
+
+  if (phase + 1 >= kBirthPulseSteps) {
+    birthStep_ = kBirthOff;
+    birthCooldownSteps_ = kBirthCooldownSteps;
+  } else {
+    birthStep_ = phase + 1;
+  }
+}
+
+void EffectLivingMembrane::tickBirth() {
+  if (birthStep_ != kBirthOff) {
+    applyBirthSource();
+    return;
+  }
+  if (birthCooldownSteps_ > 0) {
+    birthCooldownSteps_--;
+    birthWeakSteps_ = 0;
+    return;
+  }
+
+  uint8_t moderateCells = 0;
+  bool weak = true;
+  for (uint8_t x = 0; x < WIDTH && weak; x++) {
+    for (uint8_t y = 0; y < HEIGHT; y++) {
+      const uint8_t v = noise3d[1][x][y];
+      if (v >= 46) {
+        weak = false;
+        break;
+      }
+      if (v >= 40 && ++moderateCells >= 3) {
+        weak = false;
+        break;
+      }
+    }
+  }
+
+  if (!weak) {
+    birthWeakSteps_ = 0;
+    return;
+  }
+  if (birthWeakSteps_ < kBirthWeakTrigger) birthWeakSteps_++;
+  if (birthWeakSteps_ == kBirthWeakTrigger) {
+    chooseBirthCenter();
+    birthStep_ = 0;
+    birthWeakSteps_ = 0;
+    applyBirthSource();
+  }
 }
 
 void EffectLivingMembrane::advance(uint16_t diffusionU, uint16_t diffusionV) {
@@ -516,6 +689,7 @@ void EffectLivingMembrane::advance(uint16_t diffusionU, uint16_t diffusionV) {
       }
     }
   }
+  tickBirth();
 }
 
 void EffectLivingMembrane::render(EffectContext& ctx) {
@@ -590,7 +764,7 @@ void EffectLivingMembrane::render(EffectContext& ctx) {
         pixel = CHSV(static_cast<uint8_t>(155.0F - 55.0F * mask), 230, 255);
       }
       pixel.nscale8(intensity);
-      ctx.led.drawPixel((static_cast<uint16_t>(x) + displayOffsetX_) % WIDTH, y, pixel);
+      ctx.led.drawPixel(wrapX(static_cast<int>(x) + displayOffsetX_), y, pixel);
     }
   }
 }

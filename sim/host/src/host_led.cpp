@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstring>
 
+#include "util/wrap.h"
+
 static uint16_t ledXYFunction(uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
   (void)width;
   (void)height;
@@ -38,26 +40,34 @@ void Led::copyLedsBuffToLeds() {
   std::memmove(leds_, ledsbuff_, sizeof(leds_));
 }
 
-void Led::drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color) {
-  float xt = x + 1, yt = y + 1;
-  if (xt < 0 || yt < 0) return;
-  uint8_t xx = static_cast<uint8_t>((xt - static_cast<int>(xt)) * 255);
-  uint8_t yy = static_cast<uint8_t>((yt - static_cast<int>(yt)) * 255);
-  uint8_t ix = 255 - xx;
-  uint8_t iy = 255 - yy;
-
-#define WU_WEIGHT(a, b) static_cast<uint8_t>((((a) * (b) + (a) + (b)) >> 8))
-  uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy), WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
+void Led::drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color, bool wrapX) {
+  int x0 = 0, y0 = 0;
+  uint8_t xx, yy;
+  if (wrapX) {
+    if (!std::isfinite(x) || !std::isfinite(y) || WIDTH <= 0 || y <= -1.0f || y >= HEIGHT) return;
+    const float wrappedX = CoordinateWrap::wrap(x, WIDTH);
+    x0 = static_cast<int>(std::floor(wrappedX));
+    y0 = static_cast<int>(std::floor(y));
+    xx = static_cast<uint8_t>((wrappedX - x0) * 255.0f);
+    yy = static_cast<uint8_t>((y - y0) * 255.0f);
+  } else {
+    const float xt = x + 1, yt = y + 1;
+    if (xt < 0 || yt < 0) return; //не похоже, чтобы отрицательные значения хоть как-нибудь учитывались тут
+    xx = static_cast<uint8_t>((xt - static_cast<int>(xt)) * 255);
+    yy = static_cast<uint8_t>((yt - static_cast<int>(yt)) * 255);
+  }
+  const uint8_t ix = 255 - xx, iy = 255 - yy;
+#define WU_WEIGHT(a, b) (static_cast<uint8_t>(((a) * (b) + (a) + (b)) >> 8))
+  const uint8_t wu[4] = {WU_WEIGHT(ix, iy), WU_WEIGHT(xx, iy), WU_WEIGHT(ix, yy), WU_WEIGHT(xx, yy)};
 #undef WU_WEIGHT
-
-  for (uint8_t i = 0; i < 4; i++) {
-    int16_t xn = static_cast<int16_t>(x + (i & 1));
-    int16_t yn = static_cast<int16_t>(y + ((i >> 1) & 1));
+  for (uint8_t i = 0; i < 4; ++i) {
+    const int xn = wrapX ? CoordinateWrap::wrap(x0 + (i & 1), WIDTH) : static_cast<int16_t>(x + (i & 1));
+    const int yn = wrapX ? y0 + ((i >> 1) & 1) : static_cast<int16_t>(y + ((i >> 1) & 1));
     CRGB clr = isValidXY(xn, yn) ? buff[pixelNumber(xn, yn)] : CRGB::Black;
     clr.r = qadd8(clr.r, (color.r * wu[i]) >> 8);
     clr.g = qadd8(clr.g, (color.g * wu[i]) >> 8);
     clr.b = qadd8(clr.b, (color.b * wu[i]) >> 8);
-    drawPixelSafe(buff, xn, yn, clr);
+    drawPixelSafe(buff, xn, yn, clr, wrapX);
   }
 }
 
@@ -148,9 +158,9 @@ void Led::drawLine(CRGB* buff, uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, c
   int signY = y1 < y2 ? 1 : -1;
   int error = deltaX - deltaY;
 
-  drawPixelSafe(buff, x2, y2, color);
+  drawPixelSafe(buff, x2, y2, color, false);
   while (x1 != x2 || y1 != y2) {
-    drawPixelSafe(buff, x1, y1, color);
+    drawPixelSafe(buff, x1, y1, color, false);
     int error2 = error * 2;
     if (error2 > -deltaY) {
       error -= deltaY;
@@ -174,7 +184,7 @@ void Led::drawLine(CRGB* buff, float x1, float y1, float x2, float y2, const CRG
   while (x1 != x2 || y1 != y2) {
     if ((signX > 0 && x1 > x2 + signX) || (signX < 0 && x1 < x2 + signX)) break;
     if ((signY > 0 && y1 > y2 + signY) || (signY < 0 && y1 < y2 + signY)) break;
-    drawPixelSafe(buff, x1, y1, color);
+    drawPixelSafe(buff, x1, y1, color, false);
     float error2 = error;
     if (error2 > -deltaY) {
       error -= deltaY;
@@ -187,15 +197,15 @@ void Led::drawLine(CRGB* buff, float x1, float y1, float x2, float y2, const CRG
   }
 }
 
-void Led::drawCircle(CRGB* buff, float x0, float y0, float radius, const CRGB& color) {
+void Led::drawCircle(CRGB* buff, float x0, float y0, float radius, const CRGB& color, bool wrapX) {
   float x = 0, y = radius, error = 0;
   float delta = 1.0f - 2.0f * radius;
 
   while (y >= 0) {
-    drawPixelSafe(buff, std::fmod(x0 + x + WIDTH, WIDTH), y0 + y, color);
-    drawPixelSafe(buff, std::fmod(x0 + x + WIDTH, WIDTH), y0 - y, color);
-    drawPixelSafe(buff, std::fmod(x0 - x + WIDTH, WIDTH), y0 + y, color);
-    drawPixelSafe(buff, std::fmod(x0 - x + WIDTH, WIDTH), y0 - y, color);
+    drawPixelSafe(buff, x0 + x, y0 + y, color, wrapX);
+    drawPixelSafe(buff, x0 + x, y0 - y, color, wrapX);
+    drawPixelSafe(buff, x0 - x, y0 + y, color, wrapX);
+    drawPixelSafe(buff, x0 - x, y0 - y, color, wrapX);
     error = 2.0f * (delta + y) - 1.0f;
     if (delta < 0 && error <= 0) {
       ++x;

@@ -21,14 +21,6 @@ namespace {
     return min(distance, static_cast<float>(WIDTH) - distance);
   }
 
-  float wrapX(float x) {
-    while (x < 0.0F)
-      x += WIDTH;
-    while (x >= WIDTH)
-      x -= WIDTH;
-    return x;
-  }
-
   float waveOffset(uint8_t phase, float amplitude) {
     return (static_cast<int16_t>(sin8(phase)) - 128) * amplitude / 128.0F;
   }

@@ -3,6 +3,7 @@
 #include <FastLED.h>
 
 #include "../config.h"
+#include "../util/wrap.h"
 
 // **************** НАСТРОЙКА МАТРИЦЫ ****************
 #if (CONNECTION_ANGLE == 0 && STRIP_DIRECTION == 0)
@@ -133,10 +134,16 @@ public:
 
   void drawPixel(uint8_t x, uint8_t y, const CRGB& color) { leds_[pixelNumber(x, y)] = color; }
   void drawPixelBuff(uint8_t x, uint8_t y, const CRGB& color) { ledsbuff_[pixelNumber(x, y)] = color; }
-  void drawPixelSafe(int x, int y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
-  void drawPixelSafeBuff(int x, int y, const CRGB& color) { drawPixelSafe(ledsbuff_, x, y, color); }
-  void drawPixelSafe(float x, float y, const CRGB& color) { drawPixelSafe(leds_, x, y, color); }
-  void drawPixelSafeBuff(float x, float y, const CRGB& color) { drawPixelSafe(ledsbuff_, x, y, color); }
+  void drawPixelSafe(int x, int y, const CRGB& color, bool wrapX = false) { drawPixelSafe(leds_, x, y, color, wrapX); }
+  void drawPixelSafeBuff(int x, int y, const CRGB& color, bool wrapX = false) {
+    drawPixelSafe(ledsbuff_, x, y, color, wrapX);
+  }
+  void drawPixelSafe(float x, float y, const CRGB& color, bool wrapX = false) {
+    drawPixelSafe(leds_, x, y, color, wrapX);
+  }
+  void drawPixelSafeBuff(float x, float y, const CRGB& color, bool wrapX = false) {
+    drawPixelSafe(ledsbuff_, x, y, color, wrapX);
+  }
 
   // Плавно гасит цвета для всех пикселей
   void fadePixelToBlack(uint8_t x, uint8_t y, uint8_t step);
@@ -176,9 +183,11 @@ public:
   void drawLineBuff(float x1, float y1, float x2, float y2, const CRGB& color) {
     drawLine(ledsbuff_, x1, y1, x2, y2, color);
   }
-  void drawCircle(float x0, float y0, float radius, const CRGB& color) { drawCircle(leds_, x0, y0, radius, color); }
-  void drawCircleBuff(float x0, float y0, float radius, const CRGB& color) {
-    drawCircle(ledsbuff_, x0, y0, radius, color);
+  void drawCircle(float x0, float y0, float radius, const CRGB& color, bool wrapX = false) {
+    drawCircle(leds_, x0, y0, radius, color, wrapX);
+  }
+  void drawCircleBuff(float x0, float y0, float radius, const CRGB& color, bool wrapX = false) {
+    drawCircle(ledsbuff_, x0, y0, radius, color, wrapX);
   }
 
   const fl::XYMap& xyMap() const { return xyMap_; }
@@ -201,13 +210,18 @@ private:
     return packColor(buff[pixelNumber(x, y)]);
   }
 
-  void drawPixelSafe(CRGB* buff, int x, int y, const CRGB& color) {
-    if (!isValidXY(x, y)) return;
-    buff[pixelNumber(x, y)] = color;
+  void drawPixelSafe(CRGB* buff, int x, int y, const CRGB& color, bool wrapX) {
+    if (wrapX) {
+      if (WIDTH <= 0 || static_cast<unsigned>(y) >= HEIGHT) return;
+      buff[pixelNumber(CoordinateWrap::wrap(x, WIDTH), y)] = color;
+    } else {
+      if (!isValidXY(x, y)) return;
+      buff[pixelNumber(x, y)] = color;
+    }
   }
-  void drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color);
+  void drawPixelSafe(CRGB* buff, float x, float y, const CRGB& color, bool wrapX);
 
   void drawLine(CRGB* buff, uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, const CRGB& color);
   void drawLine(CRGB* buff, float x1, float y1, float x2, float y2, const CRGB& color);
-  void drawCircle(CRGB* buff, float x0, float y0, float radius, const CRGB& color);
+  void drawCircle(CRGB* buff, float x0, float y0, float radius, const CRGB& color, bool wrapX);
 };

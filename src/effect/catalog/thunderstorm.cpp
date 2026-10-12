@@ -21,14 +21,6 @@ CRGB solidRainColor = CRGB(60, 80, 90);
 static constexpr uint8_t kCloudHeight = (HEIGHT * 2U) / 5U + 1U;
 static uint8_t cloudNoise[WIDTH * kCloudHeight];
 
-static uint8_t wrapX(int8_t x) {
-  return (x + WIDTH) % WIDTH;
-}
-
-static uint8_t wrapY(int8_t y) {
-  return (y + HEIGHT) % HEIGHT;
-}
-
 static void rain(
   Led& led,
   uint8_t backgroundDepth,

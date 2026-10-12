@@ -21,8 +21,19 @@ private:
   uint32_t paletteClockMs_ = 0;
   uint8_t displayOffsetX_ = 0;
   float brightnessGain_ = 1.0F;
+  uint32_t birthRandomState_ = 1;
+  uint16_t birthStep_ = 0xffff;
+  uint16_t birthWeakSteps_ = 0;
+  uint16_t birthCooldownSteps_ = 0;
+  uint8_t birthCenterX_ = 0xff;
+  uint8_t birthCenterY_ = 0xff;
 
   uint32_t randomBits();
   uint8_t quantize(int32_t value);
   void advance(uint16_t diffusionU, uint16_t diffusionV);
+  void resetBirthState();
+  uint32_t birthRandom();
+  void chooseBirthCenter();
+  void applyBirthSource();
+  void tickBirth();
 };

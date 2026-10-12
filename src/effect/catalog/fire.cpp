@@ -39,12 +39,6 @@ namespace {
     return ColorFromPalette(HeatColors_p, paletteIndex, heat);
   }
 
-  uint8_t wrapColumn(int16_t x) {
-    int16_t wrapped = x % WIDTH;
-    if (wrapped < 0) wrapped += WIDTH;
-    return static_cast<uint8_t>(wrapped);
-  }
-
   uint8_t ringTurbulence(uint8_t x, uint8_t y, uint8_t radiusStep, uint8_t phase) {
     // Embed X on a circle before sampling 3D noise. At the conceptual X=WIDTH
     // endpoint angle wraps to zero, so both the field and advection join there.
@@ -97,6 +91,7 @@ void EffectFire::render(EffectContext& ctx) {
 
   // Speed changes phase evolution, never the number of simulation steps.
   const uint16_t phaseAdvanceQ8 = phaseStepQ8(ctx.speed);
+  const uint16_t baseCooling = 120U / flameHeight;
 
   while (ff_y >= kFireStepMs) {
     ff_y -= kFireStepMs;
@@ -107,7 +102,13 @@ void EffectFire::render(EffectContext& ctx) {
     const uint8_t destinationLayer = 1U - sourceLayer;
 
     for (int16_t y = 0; y < HEIGHT; y++) {
+      const uint16_t heightCooling = (y * 6U) / flameHeight;
       for (int16_t x = 0; x < WIDTH; x++) {
+        if (y >= flameHeight) {
+          noise3d[destinationLayer][x][y] = 0U;
+          continue;
+        }
+
         const uint8_t turbulence = ringTurbulence(x, y, radiusStep, phase);
         const int16_t flicker = (static_cast<int16_t>(turbulence) - 128) / 5;
         uint8_t heat = 0U;
@@ -117,7 +118,7 @@ void EffectFire::render(EffectContext& ctx) {
           // so it reads as an uneven ignition line, not a uniform bright band.
           const uint16_t fuel = 24U + (static_cast<uint16_t>(turbulence) * 7U) / 8U;
           heat = fuel > 255U ? 255U : static_cast<uint8_t>(fuel);
-        } else if (y < flameHeight) {
+        } else {
           // Carry heat upward with a small cyclic lateral drift. The weighted
           // center tap keeps tongues narrow while side taps let them split.
           int16_t flowX = x;
@@ -127,9 +128,9 @@ void EffectFire::render(EffectContext& ctx) {
             flowX--;
           }
 
-          const uint8_t center = wrapColumn(flowX);
-          const uint8_t left = wrapColumn(static_cast<int16_t>(center) - 1);
-          const uint8_t right = wrapColumn(static_cast<int16_t>(center) + 1);
+          const uint8_t center = static_cast<uint8_t>(wrapX(flowX));
+          const uint8_t left = static_cast<uint8_t>(wrapX(static_cast<int16_t>(center) - 1));
+          const uint8_t right = static_cast<uint8_t>(wrapX(static_cast<int16_t>(center) + 1));
           const uint8_t belowY = y - 1;
           const uint16_t transported = static_cast<uint16_t>(noise3d[sourceLayer][center][belowY]) * 6U +
                                        noise3d[sourceLayer][left][belowY] + noise3d[sourceLayer][right][belowY];
@@ -137,7 +138,7 @@ void EffectFire::render(EffectContext& ctx) {
 
           // Scale sets target height and turbulence coarseness. Cooling grows
           // with altitude so the tops fade instead of ending as a flat cut.
-          const uint16_t cooling = 120U / flameHeight + (y * 6U) / flameHeight;
+          const uint16_t cooling = baseCooling + heightCooling;
           const int16_t cooled = static_cast<int16_t>(risingHeat) - cooling + flicker;
           const bool ignites = y > 1 || risingHeat >= ignitionHeat;
           if (ignites && risingHeat >= kVisibleHeat && cooled > 0) {

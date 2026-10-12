@@ -141,7 +141,7 @@ namespace sim {
       case CommandType::SetBrightness: _effects->setEffectBrightness(static_cast<uint8_t>(cmd.intValue)); break;
       case CommandType::SetSpeed: _effects->setEffectSpeed(static_cast<uint8_t>(cmd.intValue)); break;
       case CommandType::SetScale: _effects->setEffectScale(static_cast<uint8_t>(cmd.intValue)); break;
-      case CommandType::ResetEffectSettings: _effects->resetEffectSettingsToDefaults(); break;
+      case CommandType::ResetEffectSettings: _effects->resetCurrentEffectSettingsToDefaults(); break;
       case CommandType::SetFps:
         if (cmd.intValue > 0) {
           _fps.store(static_cast<uint8_t>(cmd.intValue));

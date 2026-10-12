@@ -10,6 +10,7 @@ const stageInfo = document.getElementById('stageInfo');
 const pauseBtn = document.getElementById('pause');
 const stepBtn = document.getElementById('step');
 const resetBtn = document.getElementById('resetDefaults');
+const pausedIndicator = document.getElementById('pausedIndicator');
 const audioMicToggleBtn = document.getElementById('audioMicToggle');
 const audioControls = document.getElementById('audioControls');
 const audioStatusValue = document.getElementById('audioStatusValue');
@@ -557,13 +558,10 @@ blurInput.addEventListener('input', updateRenderInfo);
 bloomInput.addEventListener('input', updateRenderInfo);
 
 function updateStatusDetail() {
-  const pauseLine = paused
-    ? `<br><span class="value" style="color:var(--accent-2)">Paused</span>`
-    : '';
   statusDetail.innerHTML =
     `<span class="label">Effect:</span> <span class="value">${currentEffectName}</span><br>` +
-    `<span class="label">Palette:</span> <span class="value">${currentPaletteName}</span>` +
-    pauseLine;
+    `<span class="label">Palette:</span> <span class="value">${currentPaletteName}</span>`;
+  pausedIndicator.hidden = !paused;
 }
 
 function populateEffects(effects, current) {
@@ -635,9 +633,13 @@ function resetDefaults() {
       const value = entry.settings[key];
       setSlider(key, value);
       saveState(key, value);
+      // Cancel any older debounced drag value and synchronously send the
+      // default before the reset command.
       flushSend(key, value);
     }
   }
+  // Keep the existing reset command: the simulator resets only the active
+  // effect's settings to its firmware catalog defaults.
   send('reset', 1);
 }
 

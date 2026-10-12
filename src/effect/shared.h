@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cstring>
 #include <FastLED.h>
+#include <cstring>
 
 #include "../config.h"
+#include "../util/wrap.h"
 
 #include "math.h"
 #include "palette_catalog.h"
@@ -91,4 +92,21 @@ void resetEveryMs(uint8_t& latch, uint16_t intervalMs, uint32_t nowMs = millis()
 // Масштабирует скорость (1-255) в интервал
 static inline uint16_t speedToIntervalMs(uint8_t speed, uint16_t slowMs, uint16_t fastMs) {
   return map(speed, 1U, 255U, slowMs, fastMs);
+}
+
+// Wrap logical matrix coordinates; physical LED wiring is handled elsewhere.
+inline int wrapX(int value) {
+  return CoordinateWrap::wrap(value, WIDTH);
+}
+
+inline int wrapY(int value) {
+  return CoordinateWrap::wrap(value, HEIGHT);
+}
+
+inline float wrapX(float value) {
+  return CoordinateWrap::wrap(value, WIDTH);
+}
+
+inline float wrapY(float value) {
+  return CoordinateWrap::wrap(value, HEIGHT);
 }
