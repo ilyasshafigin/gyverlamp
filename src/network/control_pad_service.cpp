@@ -77,16 +77,16 @@ void ControlPadService::init() {
   if (rxQueue == nullptr) recordFailure(Failure::RxQueueCreateFailed);
 }
 
-void ControlPadService::onReceive(const uint8_t* sourceMac, const uint8_t* data, int length) {
+void ControlPadService::onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int length) {
   if (
-    instance_ == nullptr || sourceMac == nullptr || data == nullptr || length <= 0 ||
+    instance_ == nullptr || info == nullptr || info->src_addr == nullptr || data == nullptr || length <= 0 ||
     length > static_cast<int>(ControlPadProtocol::kMaxFrameSize) || rxQueue == nullptr
   ) {
     return;
   }
   RxEnvelope envelope = {};
   for (uint8_t index = 0; index < sizeof(envelope.sourceMac); ++index)
-    envelope.sourceMac[index] = sourceMac[index];
+    envelope.sourceMac[index] = info->src_addr[index];
   envelope.length = static_cast<uint8_t>(length);
   for (uint8_t index = 0; index < envelope.length; ++index)
     envelope.data[index] = data[index];
@@ -99,8 +99,9 @@ void ControlPadService::onReceive(const uint8_t* sourceMac, const uint8_t* data,
   portEXIT_CRITICAL(&telemetryMux);
 }
 
-void ControlPadService::onSend(const uint8_t* destinationMac, esp_now_send_status_t status) {
+void ControlPadService::onSend(const esp_now_send_info_t* info, esp_now_send_status_t status) {
   if (instance_ == nullptr) return;
+  const uint8_t* destinationMac = info != nullptr ? info->des_addr : nullptr;
   uint8_t difference = 0;
   if (destinationMac != nullptr) {
     for (uint8_t index = 0; index < sizeof(kBroadcastMac); ++index)

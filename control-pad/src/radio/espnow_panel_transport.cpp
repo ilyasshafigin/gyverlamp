@@ -41,7 +41,9 @@ namespace PanelRadio {
       return finish == 0;
     }
 
-    void receiveCallback(const uint8_t* mac, const uint8_t* data, int length) {
+    void receiveCallback(const esp_now_recv_info_t* info, const uint8_t* data, int length) {
+      if (info == nullptr || info->src_addr == nullptr) return;
+      const uint8_t* mac = info->src_addr;
       if (
         rxQueue == nullptr || mac == nullptr || data == nullptr || length <= 0 ||
         length > static_cast<int>(kMaxFrameSize)
@@ -59,7 +61,7 @@ namespace PanelRadio {
       }
     }
 
-    void sendCallback(const uint8_t*, esp_now_send_status_t status) {
+    void sendCallback(const esp_now_send_info_t*, esp_now_send_status_t status) {
       portENTER_CRITICAL_ISR(&telemetryMux);
       if (status == ESP_NOW_SEND_SUCCESS) ++txSuccessCount;
       else

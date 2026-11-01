@@ -131,6 +131,120 @@ namespace {
            encodeMessage(confirm, output, outputLength);
   }
 
+  void testReceiveMetadataAndBufferLifetime() {
+    uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x12, 0x34, 0x56};
+    uint8_t otherMac[6] = {0x24, 0x6f, 0x28, 0x65, 0x43, 0x21};
+    uint8_t key[16] = {};
+    for (uint8_t index = 0; index < sizeof(key); ++index)
+      key[index] = static_cast<uint8_t>(0xa0 + index);
+    resetFixture();
+    EepromStore store;
+    WifiController wifi;
+    expect(store.init(), "RX metadata fixture initializes EEPROM");
+    ControlPadService service = makeService(store, wifi);
+    service.init();
+    char artifact[ControlPadProtocol::kArtifactBufferSize] = {};
+    expect(
+      ControlPadProtocol::formatArtifact(key, artifact, sizeof(artifact)) && service.requestOpenPairing(artifact),
+      "RX metadata fixture opens pairing"
+    );
+    service.tick();
+    ControlPadProtocol::Message hello = {};
+    hello.type = ControlPadProtocol::MessageType::PairHello;
+    copyMac(&hello.panelMac, panelMac);
+    fillNonce(&hello.firstNonce, 0x20);
+    uint8_t frame[69] = {};
+    size_t length = 0;
+    expect(
+      ControlPadProtocol::signMessage(&hello, key, control_pad_host_hmac_sha256) &&
+        encodeMessage(hello, frame, &length),
+      "RX metadata hello signs and encodes"
+    );
+    esp_now_recv_info_t info = {};
+    info.des_addr = panelMac;
+    ControlPadService::onReceive(nullptr, frame, static_cast<int>(length));
+    ControlPadService::onReceive(&info, frame, static_cast<int>(length));
+    service.tick();
+    expect(
+      !service.candidate_.active && control_pad_host_test::sends.empty(),
+      "null RX metadata or source is ignored even with a valid destination and payload"
+    );
+
+    info.src_addr = panelMac;
+    info.des_addr = otherMac;
+    ControlPadService::onReceive(&info, frame, static_cast<int>(length));
+    expect(
+      !service.candidate_.active && control_pad_host_test::peerAdds.empty() && control_pad_host_test::sends.empty(),
+      "RX callback only queues the copied frame"
+    );
+    info.src_addr = otherMac;
+    memset(panelMac, 0, sizeof(panelMac));
+    memset(frame, 0, sizeof(frame));
+    service.tick();
+    expect(
+      service.candidate_.active && service.pairAcceptTxPending_ &&
+        sameBytes(service.candidate_.panelMac.bytes, hello.panelMac.bytes, sizeof(panelMac)) &&
+        control_pad_host_test::sends.size() == 1,
+      "queued RX owns source and payload copies independently of callback metadata and buffers"
+    );
+  }
+
+  void testSendMetadataDestinationAndNulls() {
+    uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x13, 0x35, 0x57};
+    uint8_t broadcast[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    uint8_t key[16] = {};
+    for (uint8_t index = 0; index < sizeof(key); ++index)
+      key[index] = static_cast<uint8_t>(0xa0 + index);
+    resetFixture();
+    EepromStore store;
+    WifiController wifi;
+    expect(store.init(), "TX metadata fixture initializes EEPROM");
+    ControlPadService service = makeService(store, wifi);
+    service.init();
+    expect(queuePairAccept(service, key, panelMac, 0x20), "TX metadata fixture queues PairAccept");
+
+    esp_now_send_info_t info = {};
+    info.src_addr = broadcast;
+    for (uint8_t index = 0; index < 3; ++index) {
+      if (index == 2) info.des_addr = panelMac;
+      ControlPadService::onSend(index == 0 ? nullptr : &info, ESP_NOW_SEND_SUCCESS);
+      const auto status = service.status();
+      expect(
+        status.pairAcceptTxPending && !status.pairAcceptTxCompletionLatched &&
+          status.pairingCounters.pairAcceptSendCallbacks == index + 1 &&
+          status.pairingCounters.pairAcceptBroadcastMacMatches == 0 && status.pairingCounters.pairAcceptTxLatched == 0,
+        "null TX info, null destination, and unicast destination count callbacks without completing broadcast TX"
+      );
+      service.tick();
+      expect(
+        service.pairAcceptTxPending_ && !service.candidate_.encryptedPeerInstalled &&
+          control_pad_host_test::peerAdds.size() == 1 && control_pad_host_test::peerRemovals.empty() &&
+          service.status().pairingCounters.pairAcceptTxProcessed == 0,
+        "ignored TX metadata leaves the broadcast peer and pending transmission unchanged in tick"
+      );
+    }
+    info.src_addr = panelMac;
+    info.des_addr = broadcast;
+    ControlPadService::onSend(&info, ESP_NOW_SEND_SUCCESS);
+    const auto status = service.status();
+    expect(
+      status.pairAcceptTxPending && status.pairAcceptTxCompletionLatched &&
+        status.pairingCounters.pairAcceptSendCallbacks == 4 &&
+        status.pairingCounters.pairAcceptBroadcastMacMatches == 1 && status.pairingCounters.pairAcceptTxLatched == 1 &&
+        status.pairingCounters.pairAcceptTxProcessed == 0 && control_pad_host_test::peerAdds.size() == 1 &&
+        control_pad_host_test::peerRemovals.empty(),
+      "broadcast destination with distinct unicast source only latches TX completion in callback"
+    );
+    service.tick();
+    expect(
+      !service.pairAcceptTxPending_ && service.candidate_.encryptedPeerInstalled &&
+        service.status().pairingCounters.pairAcceptTxProcessed == 1 &&
+        service.status().pairingCounters.pairAcceptTxSucceeded == 1 && control_pad_host_test::peerAdds.size() == 2 &&
+        control_pad_host_test::peerRemovals.size() == 1,
+      "tick processes broadcast destination success and replaces the peer"
+    );
+  }
+
   void testPairingTranscriptCommitAndDuplicate() {
     constexpr uint8_t panelMac[6] = {0x24, 0x6f, 0x28, 0x10, 0x20, 0x30};
     uint8_t key[16] = {};
@@ -819,12 +933,18 @@ namespace control_pad_host_test {
   }
 
   void deliver(const uint8_t sourceMac[6], const uint8_t* data, size_t length) {
-    if (callback != nullptr) callback(sourceMac, data, static_cast<int>(length));
+    uint8_t source[6] = {};
+    if (sourceMac != nullptr) memcpy(source, sourceMac, sizeof(source));
+    esp_now_recv_info_t info = {};
+    info.src_addr = sourceMac != nullptr ? source : nullptr;
+    if (callback != nullptr) callback(&info, data, static_cast<int>(length));
   }
 
   void completeNextSend(bool success) {
     if (sendCallback == nullptr || nextSendToComplete >= sends.size()) return;
-    sendCallback(sends[nextSendToComplete].destination, success ? ESP_NOW_SEND_SUCCESS : ESP_NOW_SEND_FAIL);
+    esp_now_send_info_t info = {};
+    info.des_addr = sends[nextSendToComplete].destination;
+    sendCallback(&info, success ? ESP_NOW_SEND_SUCCESS : ESP_NOW_SEND_FAIL);
     ++nextSendToComplete;
   }
 
@@ -933,6 +1053,8 @@ bool control_pad_host_hmac_sha256(
 }
 
 int main() {
+  testReceiveMetadataAndBufferLifetime();
+  testSendMetadataDestinationAndNulls();
   testPairingTranscriptCommitAndDuplicate();
   testCommandExpiryDedupAndStaLifecycle();
   testPairAcceptFailureCommitAndChannelSafety();

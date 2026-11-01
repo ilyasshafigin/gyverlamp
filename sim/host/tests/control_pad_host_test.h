@@ -17,9 +17,19 @@ struct esp_now_peer_info_t {
   bool encrypt;
 };
 
-using esp_now_recv_cb_t = void (*)(const uint8_t* sourceMac, const uint8_t* data, int length);
+struct esp_now_recv_info_t {
+  uint8_t* src_addr;
+  uint8_t* des_addr;
+};
+
+struct esp_now_send_info_t {
+  uint8_t* des_addr;
+  uint8_t* src_addr;
+};
+
+using esp_now_recv_cb_t = void (*)(const esp_now_recv_info_t* info, const uint8_t* data, int length);
 enum esp_now_send_status_t : uint8_t { ESP_NOW_SEND_SUCCESS, ESP_NOW_SEND_FAIL };
-using esp_now_send_cb_t = void (*)(const uint8_t* destinationMac, esp_now_send_status_t status);
+using esp_now_send_cb_t = void (*)(const esp_now_send_info_t* info, esp_now_send_status_t status);
 
 struct ControlPadHostQueue;
 using QueueHandle_t = ControlPadHostQueue*;

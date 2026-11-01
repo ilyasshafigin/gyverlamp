@@ -196,8 +196,8 @@ private:
   uint8_t lastAckLength_ = 0;
   RetiredNonce retiredNonces_[4] = {};
   static ControlPadService* instance_;
-  static void onReceive(const uint8_t* sourceMac, const uint8_t* data, int length);
-  static void onSend(const uint8_t* destinationMac, esp_now_send_status_t status);
+  static void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int length);
+  static void onSend(const esp_now_send_info_t* info, esp_now_send_status_t status);
 
   void processRequests(uint32_t nowMs);
   void ensureRadio(uint32_t nowMs);
