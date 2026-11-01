@@ -14,6 +14,12 @@ namespace {
   constexpr uint8_t kVisibleHeat = 22U;
   constexpr uint8_t kWhiteCoreHeat = 236U;
 
+  void updateAudioEnvelope(float& envelope, uint8_t source, float amount, float attack, float release) {
+    const float target = source / 255.0F * amount;
+    envelope += (target - envelope) * (target > envelope ? attack : release);
+    if (target == 0.0F && envelope < 0.0001F) envelope = 0.0F;
+  }
+
   uint16_t phaseStepQ8(uint8_t speed) {
     // Keep speed 0/1 at the old 1.0 rate, and reach exactly 4.5 at 255.
     if (speed <= 1U) return kPhaseOneQ8;
@@ -61,6 +67,8 @@ namespace {
 } // namespace
 
 void EffectFire::setup(EffectContext&) {
+  // Shared audio envelopes: Level, Bass, Treble.
+  emitterX = emitterY = emitterZ = 0.0F;
   // Reuse the shared counters while Fire is active: ff_x is an 8.8 phase,
   // ff_y its sub-step millisecond accumulator, and ff_z its heat-layer index.
   ff_x = 0U;
@@ -93,8 +101,20 @@ void EffectFire::render(EffectContext& ctx) {
   const uint16_t phaseAdvanceQ8 = phaseStepQ8(ctx.speed);
   const uint16_t baseCooling = 120U / flameHeight;
 
+  // All three inputs have independent roles; band selection and beat are unused.
+  const bool audioEnabled =
+    ctx.audioConfig.mode == AudioMode::Effect && ctx.audio.available && ctx.audioConfig.amount > 0;
+  if (!audioEnabled) emitterX = emitterY = emitterZ = 0.0F;
+  const float amount = ctx.audioConfig.amount / 255.0F;
+
   while (ff_y >= kFireStepMs) {
     ff_y -= kFireStepMs;
+    if (audioEnabled) {
+      // Fixed-step coefficients: 1 - exp(-20 / tauMs). No render-rate dependence.
+      updateAudioEnvelope(emitterX, ctx.audio.level, amount, 0.10516068F, 0.03921056F);  // 180/500 ms
+      updateAudioEnvelope(emitterY, ctx.audio.bass, amount, 0.48658288F, 0.07688365F);   // 30/250 ms
+      updateAudioEnvelope(emitterZ, ctx.audio.treble, amount, 0.48658288F, 0.13312210F); // 30/140 ms
+    }
     ff_x += phaseAdvanceQ8;
     const uint8_t phase = static_cast<uint8_t>(ff_x >> 8U);
 
@@ -154,9 +174,27 @@ void EffectFire::render(EffectContext& ctx) {
   }
 
   const uint8_t displayLayer = static_cast<uint8_t>(ff_z);
+  const uint8_t phase = static_cast<uint8_t>(ff_x >> 8U);
   for (int16_t x = 0; x < WIDTH; x++) {
     for (int16_t y = 0; y < HEIGHT; y++) {
-      ctx.led.pixel(x, y) = fireColor(noise3d[displayLayer][x][y], ctx.palette);
+      const uint8_t heat = noise3d[displayLayer][x][y];
+      uint8_t displayHeat = heat;
+      if (heat >= kVisibleHeat && y > 0 && y < flameHeight && (emitterX > 0.0F || emitterY > 0.0F || emitterZ > 0.0F)) {
+        // Modulate only existing flame pixels; the simulation and black sky stay intact.
+        const uint8_t turbulence = ringTurbulence(x, y, radiusStep, phase);
+        const float tongue = constrain((turbulence - 80.0F) / 112.0F, 0.0F, 1.0F);
+        const float upper = constrain((4.0F * y / flameHeight - 0.5F) / 1.5F, 0.0F, 1.0F);
+        const uint8_t tipNoise = ringTurbulence(x, y, radiusStep, static_cast<uint8_t>(phase * 3U + 67U));
+        const float tip = constrain((tipNoise - 80.0F) / 112.0F, 0.0F, 1.0F);
+        const float glow =
+          85.0F * emitterX * (0.55F + 0.45F * tongue) + 150.0F * emitterY * tongue + 190.0F * emitterZ * upper * tip;
+        // Do not turn highlights white or dim an existing naturally hot core.
+        const int16_t headroom = heat < 200U ? 200 - heat : 0;
+        int16_t boost = static_cast<int16_t>(glow + 0.5F);
+        if (boost > headroom) boost = headroom;
+        displayHeat = heat + boost;
+      }
+      ctx.led.pixel(x, y) = fireColor(displayHeat, ctx.palette);
     }
   }
 }

@@ -6,7 +6,7 @@ uint8_t step;
 uint8_t pcnt;
 uint8_t deltaValue;
 float speedfactor;
-float emitterX, emitterY;
+float emitterX, emitterY, emitterZ;
 uint16_t ff_x, ff_y, ff_z;
 
 uint8_t noise3d[kNumLayersMax][WIDTH][HEIGHT];

@@ -35,7 +35,7 @@ extern uint8_t deltaValue;
 // регулятор скорости в эффектах реального времени
 extern float speedfactor;
 // какие-то динамичные координаты
-extern float emitterX, emitterY;
+extern float emitterX, emitterY, emitterZ;
 // большие счётчики
 extern uint16_t ff_x, ff_y, ff_z;
 

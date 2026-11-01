@@ -6,6 +6,7 @@
 .vscode/ipch
 .omo
 .slim/deepwork/
+.cortexkit
 compile_commands.json
 platformio.local.ini
 .artifacts/

@@ -9,19 +9,19 @@ namespace {
   enum class EqualizerMode : uint8_t {
     Classic,
     Mirror,
-    Fire,
     Plasma,
   };
 
   inline EqualizerMode modeFromScale(uint8_t scale) {
-    if (scale < 64) return EqualizerMode::Classic;
-    if (scale < 128) return EqualizerMode::Mirror;
-    if (scale < 192) return EqualizerMode::Fire;
+    if (scale < 85) return EqualizerMode::Classic;
+    if (scale < 170) return EqualizerMode::Mirror;
     return EqualizerMode::Plasma;
   }
 
   inline uint8_t modeAmount(uint8_t scale) {
-    return (scale & 0x3F) << 2; // 0..252 inside selected mode
+    if (scale < 85) return map(scale, 0, 84, 0, 255);
+    if (scale < 170) return map(scale, 85, 169, 0, 255);
+    return map(scale, 170, 255, 0, 255);
   }
 
   inline uint8_t smoothVisual(uint8_t current, uint8_t target) {
@@ -81,39 +81,6 @@ namespace {
     return paletteColor(palette, index, value);
   }
 
-  CRGB fireColor(
-    const CRGBPalette16* palette,
-    uint8_t x,
-    uint8_t y,
-    uint8_t heat,
-    uint8_t bass,
-    uint8_t treble,
-    uint8_t power,
-    uint32_t nowMs
-  ) {
-    if (palette) {
-      // Fire специально НЕ локальная колонка. Это поле жара.
-      const uint8_t flicker = inoise8(x * map(power, 0, 255, 20, 55), y * 38, nowMs / map(power, 0, 255, 45, 14));
-
-      const uint8_t lift = scale8(bass, 80);
-      const uint8_t sparks = y > HEIGHT / 2 ? scale8(treble, 55) : 0;
-
-      uint8_t index = qadd8(heat, scale8(flicker, 90));
-      index = qadd8(index, lift);
-      index = qadd8(index, sparks);
-
-      // compress into warm-ish palette range, but still palette-aware.
-      index = scale8(index, 180);
-
-      const uint8_t value = qadd8(20, qadd8(scale8(heat, 190), scale8(flicker, 70)));
-      return paletteColor(palette, index, value);
-    } else {
-      const uint8_t index = scale8(heat, 235); // не лезем часто в белый верх
-      const uint8_t value = qadd8(20, scale8(heat, 210));
-      return ColorFromPalette(HeatColors_p, index, value);
-    }
-  }
-
   CRGB beatColor(const CRGBPalette16* palette, uint8_t value) {
     return paletteColor(palette, 32, value);
   }
@@ -160,39 +127,6 @@ namespace {
       if (upperY < HEIGHT) {
         ctx.led.drawPixel(x, upperY, color);
       }
-    }
-  }
-
-  void drawFireColumn(EffectContext& ctx, uint8_t x, uint8_t energy, uint8_t bass, uint8_t treble, uint8_t power) {
-    const uint8_t wind = map(power, 0, 255, 14, 42);
-    const uint16_t time = ctx.nowMs / map(ctx.speed, 0, 255, 42, 11);
-
-    // Bass = топливо снизу.
-    const uint8_t fuel = qadd8(scale8(energy, 120), scale8(bass, 135));
-
-    for (uint8_t y = 0; y < HEIGHT; y++) {
-      // Чем выше, тем сильнее охлаждение.
-      const uint8_t falloff = (static_cast<uint16_t>(y) * map(power, 0, 255, 175, 245)) / HEIGHT;
-
-      uint8_t heat = qsub8(fuel, falloff);
-
-      // Языки пламени. Шум добавляет форму, но не забивает всё поле.
-      const uint8_t tongue = inoise8(x * wind, y * 45, time);
-      heat = qadd8(heat, scale8(tongue, 75));
-
-      // Treble даёт верхние всполохи, не белые искры.
-      if (y >= HEIGHT / 2) {
-        heat = qadd8(heat, scale8(treble, 35));
-      }
-
-      // Верх дополнительно гасим, чтобы вся матрица не заливалась.
-      if (y >= (HEIGHT * 3) / 4) {
-        heat = scale8(heat, 150);
-      }
-
-      if (heat < 38) continue;
-
-      ctx.led.drawPixel(x, y, fireColor(ctx.palette, x, y, heat, bass, treble, power, ctx.nowMs));
     }
   }
 
@@ -333,11 +267,6 @@ void EffectEqualizer::render(EffectContext& ctx) {
         break;
       }
 
-      case EqualizerMode::Fire:
-        drawFireColumn(ctx, x, energy, bass_, treble_, power);
-        peak_[x] = 0;
-        break;
-
       case EqualizerMode::Plasma:
         drawPlasmaColumn(ctx, x, level_, bass_, treble_, power);
         peak_[x] = 0;
@@ -348,7 +277,6 @@ void EffectEqualizer::render(EffectContext& ctx) {
   if (beat) {
     switch (mode) {
       case EqualizerMode::Classic:
-      case EqualizerMode::Fire:
         for (uint8_t x = 0; x < WIDTH; x++) {
           ctx.led.addPixel(x, 0, beatColor(ctx.palette, 32));
           if (HEIGHT > 1) {

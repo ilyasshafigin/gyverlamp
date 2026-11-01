@@ -10,6 +10,7 @@ public:
     255, // brightness
     128, // speed
     160, // scale
+    Effects::EFFECT_SPEC_USES_AUDIO,
   };
 
   void setup(EffectContext& ctx) override;
@@ -28,6 +29,7 @@ private:
   uint8_t birthCenterX_ = 0xff;
   uint8_t birthCenterY_ = 0xff;
 
+  void tickAudio(const EffectContext& ctx);
   uint32_t randomBits();
   uint8_t quantize(int32_t value);
   void advance(uint16_t diffusionU, uint16_t diffusionV);
