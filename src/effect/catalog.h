@@ -21,14 +21,12 @@
   X(EffectTwinkles)        \
   X(EffectButterflys)      \
   X(EffectThunderstorm)    \
-  X(EffectNexus)           \
   X(EffectClock)           \
   X(EffectLiquidLamp)      \
   X(EffectNorthernLights)  \
   X(EffectEqualizer)       \
   X(EffectOctopus)         \
   X(EffectSilkRibbons)     \
-  X(EffectVelvetFolds)     \
   X(EffectStainedGlass)    \
   X(EffectLivingMembrane)
 

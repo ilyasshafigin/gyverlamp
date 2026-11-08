@@ -10,6 +10,7 @@ public:
     255, // brightness
     120, // speed
     100, // scale: 255 - плавное изменение цвета, остальное - настройка цвета
+    Effects::EFFECT_SPEC_USES_AUDIO,
   };
 
   void setup(EffectContext& ctx) override;

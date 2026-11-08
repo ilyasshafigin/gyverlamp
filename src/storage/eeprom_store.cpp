@@ -257,11 +257,14 @@ bool EepromStore::ensureLayoutVersion() {
 
   if (version == kEepromLayoutVersionCurrent) return true;
   if (version == kEepromLayoutVersionV4) {
-    return migrateLayoutV4ToV6();
+    if (!migrateLayoutV4ToV6()) return false;
+    version = kEepromLayoutVersionV6;
   }
   if (version == kEepromLayoutVersionV5) {
-    return migrateLayoutV5ToV6();
+    if (!migrateLayoutV5ToV6()) return false;
+    version = kEepromLayoutVersionV6;
   }
+  if (version == kEepromLayoutVersionV6) return migrateLayoutV6ToV7();
 
   Serial.println(F("[EEPROM] Unsupported layout version, initializing defaults"));
   return initializeLayout();
@@ -292,10 +295,8 @@ bool EepromStore::migrateLayoutV4ToV6() {
   EEPROM.write(kEepromAudioBandAddr, static_cast<uint8_t>(snapshot.audio.band));
   EEPROM.write(kEepromAudioAmountAddr, snapshot.audio.amount);
   EEPROM.write(kEepromCurrentModeAddr, snapshot.currentMode);
-  // The binding is part of the initialized v6 image; stage version last.
-  stageLayoutVersion();
-
-  if (!EEPROM.commit()) return false;
+  // Historical migration stages v6 only; the final transition owns the commit.
+  EEPROM.write(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionV6);
 
   wifiConfigCache_ = snapshot.wifi;
   mqttConfigCache_ = snapshot.mqtt;
@@ -306,9 +307,21 @@ bool EepromStore::migrateLayoutV5ToV6() {
   if (!ready_) return false;
   Serial.println(F("[EEPROM] Migrating layout v5 to v6"));
   if (!stageDefaultControlPadBinding()) return false;
-  // v5 already has the expected magic. Preserve every byte except the new
-  // binding block and the version byte, which is deliberately staged last.
-  EEPROM.write(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionCurrent);
+  // Stage v6 without committing an intermediate layout.
+  EEPROM.write(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionV6);
+  return true;
+}
+
+bool EepromStore::migrateLayoutV6ToV7() {
+  if (!ready_) return false;
+  Serial.println(F("[EEPROM] Migrating layout v6 to v7"));
+  // IDs changed. Invalidate every old slot; SettingsRepository::init supplies
+  // the real catalog defaults through ensureEffectSettings on this same boot.
+  // That usual initialization completes the reset in a second commit.
+  EEPROM.write(kEepromEffectSettingsCountAddr, 0);
+  EEPROM.write(kEepromCurrentModeAddr, Effects::toIndex(Effects::kDefaultId));
+  EEPROM.put(kEepromLayoutMetaAddr, kEepromLayoutMagic);
+  EEPROM.write(kEepromLayoutMetaAddr + sizeof(kEepromLayoutMagic), kEepromLayoutVersionV7);
   return EEPROM.commit();
 }
 

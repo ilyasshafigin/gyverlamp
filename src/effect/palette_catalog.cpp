@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "palette_catalog.h"
 
 #include <string.h>

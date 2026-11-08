@@ -73,5 +73,6 @@ private:
   bool ensureLayoutVersion();
   bool migrateLayoutV4ToV6();
   bool migrateLayoutV5ToV6();
+  bool migrateLayoutV6ToV7();
   bool initializeLayout();
 };

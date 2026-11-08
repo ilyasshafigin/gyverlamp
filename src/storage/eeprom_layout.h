@@ -12,7 +12,7 @@
 static_assert(sizeof(EffectSettings) == 3, "EEPROM layout expects 3-uint8_t EffectSettings");
 
 // EEPROM.begin(kEepromSize) выделяет адреса 0..kEepromSize-1.
-// Layout v6 мигрирует известные карты v4 и v5. Остальные несовместимые карты
+// Layout v7 мигрирует известные карты v4, v5 и v6. Остальные несовместимые карты
 // EepromStore очищает и пишет defaults текущей версии.
 //
 //  0..4      Метаданные layout, 5 байт: magic(4) + version(1).
@@ -49,7 +49,9 @@ constexpr int kEepromSize = 512;
 constexpr uint32_t kEepromLayoutMagic = 0x474C4D50; // "GLMP"
 constexpr uint8_t kEepromLayoutVersionV4 = 4;
 constexpr uint8_t kEepromLayoutVersionV5 = 5;
-constexpr uint8_t kEepromLayoutVersionCurrent = 6;
+constexpr uint8_t kEepromLayoutVersionV6 = 6;
+constexpr uint8_t kEepromLayoutVersionV7 = 7;
+constexpr uint8_t kEepromLayoutVersionCurrent = kEepromLayoutVersionV7;
 
 constexpr int kEepromLayoutMetaAddr = 0;
 constexpr int kEepromLayoutMetaSize = 5;

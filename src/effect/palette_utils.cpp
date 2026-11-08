@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "palette_utils.h"
 
 // Не используем здесь FastLED fill_gradient_RGB().

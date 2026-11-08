@@ -85,17 +85,36 @@ void EffectNorthernLights::render(EffectContext& ctx) {
     buildHsvGradientPalette(rgbPalette, MBAuroraColors_arr, hue + deltaHue, 5U, hue & 0x01);
   }
 
+  // This multi-signal response uses level, bass and treble; band and beat are unused.
+  const bool active = ctx.audioConfig.mode == AudioMode::Effect && ctx.audio.available && ctx.audioConfig.amount > 0;
+  const float amount = active ? ctx.audioConfig.amount / 255.0f : 0.0f;
+  const float bass = active ? ctx.audio.bass / 255.0f : 0.0f;
+  const float level = active ? ctx.audio.level / 255.0f : 0.0f;
+  const float treble = active ? ctx.audio.treble / 255.0f : 0.0f;
+  const float time = ctx.nowMs / 1000.0f;
   for (uint8_t y = 0; y < HEIGHT; y++) {
     const uint8_t t = fabs(static_cast<float>(HEIGHT) / 2.0 - static_cast<float>(y)) * emitterX;
+    const float edge = fabs(static_cast<float>(HEIGHT) / 2.0f - static_cast<float>(y)) * emitterX;
     for (uint8_t x = 0; x < WIDTH; x++) {
       polarTimer++;
-      ctx.led.drawPixel(
-        x,
-        y,
-        ColorFromPalette(
-          rgbPalette, qsub8(inoise8(polarTimer % 2 + x * ff_z, y * 16 + polarTimer % 16, polarTimer / speedfactor), t)
-        )
+      float wave = 0.0f;
+      uint8_t taper = t;
+      if (active) {
+        wave = 0.5f + 0.5f * sinf(x * 0.65f + y * 0.15f - time * 2.5f);
+        taper = static_cast<uint8_t>(edge * (1.0f - amount * 0.22f * bass * wave));
+      }
+      CRGB color = ColorFromPalette(
+        rgbPalette, qsub8(inoise8(polarTimer % 2 + x * ff_z, y * 16 + polarTimer % 16, polarTimer / speedfactor), taper)
       );
+      if (active) {
+        const float glint = 0.5f + 0.5f * sinf(x * 1.1f + y * 0.8f - time * 4.0f);
+        const float gain = (1.0f - 0.5f * amount) + 0.13f * amount * level + 0.34f * amount * bass * wave +
+                           0.18f * amount * treble * glint * glint * glint * glint;
+        color.r = static_cast<uint8_t>(fminf(255.0f, color.r * gain));
+        color.g = static_cast<uint8_t>(fminf(255.0f, color.g * gain));
+        color.b = static_cast<uint8_t>(fminf(255.0f, color.b * gain));
+      }
+      ctx.led.drawPixel(x, y, color);
     }
   }
 }

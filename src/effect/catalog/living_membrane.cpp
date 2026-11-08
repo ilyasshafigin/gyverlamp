@@ -447,76 +447,84 @@ namespace {
     return static_cast<uint16_t>((t * t * (768U - 2U * t) + 32768U) / 65536U);
   }
 
-  void updateAudioEnvelope(float& envelope, uint8_t source, float amount, uint32_t elapsedMs) {
-    const float target = source / 255.0F * amount;
-    const float responseMs = target > envelope ? 35.0F : 180.0F;
+  void updateAudioEnvelope(
+    float& envelope, uint8_t source, uint32_t elapsedMs, float attackMs = 35.0F, float releaseMs = 180.0F
+  ) {
+    const float target = source / 255.0F;
+    const float responseMs = target > envelope ? attackMs : releaseMs;
     envelope += (target - envelope) * (1.0F - expf(-static_cast<float>(elapsedMs) / responseMs));
     if (target == 0.0F && envelope < 0.0001F) envelope = 0.0F;
   }
 
-  CRGB audioAccent(const CRGB& pixel, uint8_t x, float rowWeight, float light, float color) {
-    if (light == 0.0F && color == 0.0F) return pixel;
-    const float peak = max(pixel.r, max(pixel.g, pixel.b));
-    const float minimum = min(pixel.r, min(pixel.g, pixel.b));
-    const float chroma = peak - minimum;
-    if (peak <= 20.0F || chroma < 0.1F * peak) return pixel;
-    float tissue = constrain((peak - 20.0F) / 70.0F, 0.0F, 1.0F);
-    tissue = tissue * tissue * (3.0F - 2.0F * tissue);
-    const float around = 0.45F + 0.55F * (1.0F + cosf(LivingMembraneTracking::kTau * (x + 0.5F) / WIDTH)) / 2.0F;
-    const float spatial = tissue * rowWeight * around;
+  float audioCurve(float envelope) {
+    // Compare normalized values first: (3 / 255.F) * 255.F can exceed 3
+    // through float rounding and otherwise leak a tiny shear/hue at the deadzone.
+    if (envelope <= 3.0F / 255.0F) return 0.0F;
+    return sqrtf(max(0.0F, (envelope * 255.0F - 3.0F) / 252.0F));
+  }
 
-    // Standard RGB/HSV sectors (colorsys), not FastLED's different hue curve.
-    const float rc = (peak - pixel.r) / chroma;
-    const float gc = (peak - pixel.g) / chroma;
-    const float bc = (peak - pixel.b) / chroma;
-    float hue = pixel.r == peak ? bc - gc : (pixel.g == peak ? 2.0F + rc - bc : 4.0F + gc - rc);
-    hue = hue / 6.0F + 0.10F * color * spatial;
-    hue -= floorf(hue);
-    const float saturation = chroma / peak;
-    const float sector = hue * 6.0F;
-    const int index = static_cast<int>(sector);
-    const float fraction = sector - index;
-    const float p = peak * (1.0F - saturation);
-    const float q = peak * (1.0F - saturation * fraction);
-    const float t = peak * (1.0F - saturation * (1.0F - fraction));
-    float r, g, b;
-    switch (index % 6) {
-      case 0:
-        r = peak;
-        g = t;
-        b = p;
-        break;
-      case 1:
-        r = q;
-        g = peak;
-        b = p;
-        break;
-      case 2:
-        r = p;
-        g = peak;
-        b = t;
-        break;
-      case 3:
-        r = p;
-        g = q;
-        b = peak;
-        break;
-      case 4:
-        r = t;
-        g = p;
-        b = peak;
-        break;
-      default:
-        r = peak;
-        g = p;
-        b = q;
-        break;
+  CRGB audioAccent(double r, double g, double b, uint8_t x, float rowWeight, float gain, float color) {
+    const double peak = max(r, max(g, b));
+    const double minimum = min(r, min(g, b));
+    const double chroma = peak - minimum;
+    // Dark/near-gray tissue skips hue only; Level still modulates every pixel.
+    if (color != 0.0F && peak > 20.0 && chroma >= 0.1 * peak) {
+      double tissue = constrain((peak - 20.0) / 70.0, 0.0, 1.0);
+      tissue = tissue * tissue * (3.0 - 2.0 * tissue);
+      const double around = 0.45 + 0.55 * (1.0 + cos(LivingMembraneTracking::kTau * (x + 0.5) / WIDTH)) / 2.0;
+      const double spatial = tissue * rowWeight * around;
+
+      // Standard RGB/HSV sectors (colorsys), not FastLED's different hue curve.
+      const double rc = (peak - r) / chroma;
+      const double gc = (peak - g) / chroma;
+      const double bc = (peak - b) / chroma;
+      double hue = r == peak ? bc - gc : (g == peak ? 2.0 + rc - bc : 4.0 + gc - rc);
+      hue = hue / 6.0 + 0.19 * color * spatial;
+      hue -= floor(hue);
+      const double saturation = chroma / peak;
+      const double sector = hue * 6.0;
+      const int index = static_cast<int>(sector);
+      const double fraction = sector - index;
+      const double p = peak * (1.0 - saturation);
+      const double q = peak * (1.0 - saturation * fraction);
+      const double t = peak * (1.0 - saturation * (1.0 - fraction));
+      switch (index % 6) {
+        case 0:
+          r = peak;
+          g = t;
+          b = p;
+          break;
+        case 1:
+          r = q;
+          g = peak;
+          b = p;
+          break;
+        case 2:
+          r = p;
+          g = peak;
+          b = t;
+          break;
+        case 3:
+          r = p;
+          g = q;
+          b = peak;
+          break;
+        case 4:
+          r = t;
+          g = p;
+          b = peak;
+          break;
+        default:
+          r = peak;
+          g = p;
+          b = q;
+          break;
+      }
     }
-    const float gain = peak <= 250.0F ? min(1.0F + 0.40F * light * spatial, 250.0F / peak) : 1.0F;
     return CRGB(
-      static_cast<uint8_t>(constrain(r * gain + 0.5F, 0.0F, 255.0F)),
-      static_cast<uint8_t>(constrain(g * gain + 0.5F, 0.0F, 255.0F)),
-      static_cast<uint8_t>(constrain(b * gain + 0.5F, 0.0F, 255.0F))
+      static_cast<uint8_t>(constrain(r * gain + 0.5, 0.0, 255.0)),
+      static_cast<uint8_t>(constrain(g * gain + 0.5, 0.0, 255.0)),
+      static_cast<uint8_t>(constrain(b * gain + 0.5, 0.0, 255.0))
     );
   }
 } // namespace
@@ -774,10 +782,9 @@ void EffectLivingMembrane::tickAudio(const EffectContext& ctx) {
   }
   // This effect intentionally assigns all three inputs independent roles;
   // AudioConfig.band and beat do not select or trigger its display response.
-  const float amount = ctx.audioConfig.amount / 255.0F;
-  updateAudioEnvelope(emitterX, ctx.audio.level, amount, ctx.deltaMs);
-  updateAudioEnvelope(emitterY, ctx.audio.bass, amount, ctx.deltaMs);
-  updateAudioEnvelope(emitterZ, ctx.audio.treble, amount, ctx.deltaMs);
+  updateAudioEnvelope(emitterX, ctx.audio.level, ctx.deltaMs, 50.0F, 300.0F);
+  updateAudioEnvelope(emitterY, ctx.audio.bass, ctx.deltaMs);
+  updateAudioEnvelope(emitterZ, ctx.audio.treble, ctx.deltaMs);
 }
 
 void EffectLivingMembrane::render(EffectContext& ctx) {
@@ -815,9 +822,14 @@ void EffectLivingMembrane::render(EffectContext& ctx) {
   const float blend = constrain(static_cast<float>(elapsed) / smoothingMs, 0.0F, 1.0F);
   brightnessGain_ += (targetGain - brightnessGain_) * blend;
 
+  const bool audioActive =
+    ctx.audioConfig.mode == AudioMode::Effect && ctx.audio.available && ctx.audioConfig.amount > 0;
+  const float amount = ctx.audioConfig.amount / 255.0F;
+  const float gain = audioActive ? 1.0F - amount * 0.75F * (1.0F - audioCurve(emitterX)) : 1.0F;
+  const float bass = audioActive ? amount * audioCurve(emitterY) : 0.0F;
+  const float treble = audioActive ? amount * audioCurve(emitterZ) : 0.0F;
   for (uint8_t y = 0; y < HEIGHT; y++) {
     CRGB row[WIDTH];
-    const bool audioActive = emitterY != 0.0F || emitterX != 0.0F || emitterZ != 0.0F;
     const float rowWave = audioActive ? sinf(LivingMembraneTracking::kTau * (HEIGHT - 1 - y + 0.5F) / HEIGHT) : 0.0F;
     const float rowWeight = 0.65F + 0.35F * rowWave * rowWave;
     for (uint8_t x = 0; x < WIDTH; x++) {
@@ -858,16 +870,20 @@ void EffectLivingMembrane::render(EffectContext& ctx) {
       }
       pixel.nscale8(intensity);
       const uint8_t displayedX = wrapX(static_cast<int>(x) + displayOffsetX_);
-      if (emitterY == 0.0F) {
-        ctx.led.drawPixel(displayedX, y, audioAccent(pixel, displayedX, rowWeight, emitterX, emitterZ));
+      if (bass == 0.0F) {
+        ctx.led.drawPixel(
+          displayedX,
+          y,
+          audioActive ? audioAccent(pixel.r, pixel.g, pixel.b, displayedX, rowWeight, gain, treble) : pixel
+        );
       } else {
         row[displayedX] = pixel;
       }
     }
-    if (emitterY != 0.0F) {
+    if (bass != 0.0F) {
       // Match the top-to-bottom physical row profile; translate already colored
       // pixels, with a cylindrical seam and no vertical resampling.
-      const float shift = 1.5F * emitterY * rowWave;
+      const float shift = 2.5F * bass * rowWave;
       for (uint8_t x = 0; x < WIDTH; x++) {
         // Keep the fractional coordinate precise: subtracting a tiny shift from
         // float(x) can round an RGB half-step upward before the HSV/light pass.
@@ -876,11 +892,11 @@ void EffectLivingMembrane::render(EffectContext& ctx) {
         const double fraction = source - left;
         const uint8_t a = static_cast<uint8_t>((left % WIDTH + WIDTH) % WIDTH);
         const uint8_t b = static_cast<uint8_t>((a + 1) % WIDTH);
-        CRGB pixel;
-        pixel.r = static_cast<uint8_t>(row[a].r * (1.0 - fraction) + row[b].r * fraction + 0.5);
-        pixel.g = static_cast<uint8_t>(row[a].g * (1.0 - fraction) + row[b].g * fraction + 0.5);
-        pixel.b = static_cast<uint8_t>(row[a].b * (1.0 - fraction) + row[b].b * fraction + 0.5);
-        ctx.led.drawPixel(x, y, audioAccent(pixel, x, rowWeight, emitterX, emitterZ));
+        // Keep fractional RGB through HSV and Level; round only at final output.
+        const double r = row[a].r * (1.0 - fraction) + row[b].r * fraction;
+        const double g = row[a].g * (1.0 - fraction) + row[b].g * fraction;
+        const double bChannel = row[a].b * (1.0 - fraction) + row[b].b * fraction;
+        ctx.led.drawPixel(x, y, audioAccent(r, g, bChannel, x, rowWeight, gain, treble));
       }
     }
   }

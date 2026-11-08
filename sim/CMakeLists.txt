@@ -64,8 +64,9 @@ if (NOT EMSCRIPTEN)
             ${ROOT_DIR}/src
             ${ROOT_DIR}/lib/ControlPadProtocol/include
         )
+        target_compile_definitions(${target} PRIVATE SIMULATOR_AUDIO_INPUT)
         if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-            target_compile_options(${target} PRIVATE -Wall -Wextra -Werror)
+            target_compile_options(${target} PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter)
         endif()
     endfunction()
 

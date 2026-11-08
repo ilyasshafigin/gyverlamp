@@ -10,7 +10,9 @@ public:
     255, // brightness
     80,  // speed
     128, // scale: ribbon density and width
+    Effects::EFFECT_SPEC_USES_AUDIO,
   };
 
+  void setup(EffectContext& ctx) override;
   void render(EffectContext& ctx) override;
 };

@@ -10,6 +10,7 @@ public:
     210, // brightness
     56,  // speed: slow cell drift
     128, // scale: cell size
+    Effects::EFFECT_SPEC_USES_AUDIO,
   };
 
   void setup(EffectContext& ctx) override;

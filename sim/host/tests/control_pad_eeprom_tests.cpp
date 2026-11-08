@@ -6,6 +6,7 @@
 
 #include "storage/eeprom_layout.h"
 #include "storage/eeprom_store.h"
+#include "effect/catalog.h"
 
 namespace {
 
@@ -81,6 +82,42 @@ namespace {
     return binding;
   }
 
+  // Focused equivalent of SettingsRepository::init's defaults/ensure/read path
+  // with the real catalog specs, without linking effect renderers.
+  void completeEffectDefaults(EepromStore& store) {
+    const EffectSettingsSpec specs[] = {
+      EffectColor::kSettings,        EffectColorChange::kSettings,    EffectGradient::kSettings,
+      EffectFire::kSettings,         EffectRainbow::kSettings,        EffectNoise::kSettings,
+      EffectMatrix::kSettings,       EffectPaintball::kSettings,      EffectWarmLight::kSettings,
+      EffectTwinkles::kSettings,     EffectButterflys::kSettings,     EffectThunderstorm::kSettings,
+      EffectClock::kSettings,        EffectLiquidLamp::kSettings,     EffectNorthernLights::kSettings,
+      EffectEqualizer::kSettings,    EffectOctopus::kSettings,        EffectSilkRibbons::kSettings,
+      EffectStainedGlass::kSettings, EffectLivingMembrane::kSettings,
+    };
+    static_assert(sizeof(specs) / sizeof(specs[0]) == Effects::kCount, "fixture covers catalog");
+    EffectSettings defaults[Effects::kCount];
+    for (uint8_t index = 0; index < Effects::kCount; ++index) {
+      defaults[index] = EffectSettings::fromSpec(specs[index]);
+    }
+    store.ensureEffectSettings(defaults);
+    for (uint8_t index = 0; index < Effects::kCount; ++index) {
+      EffectSettings actual;
+      store.readEffectSettings(Effects::toId(index), actual);
+      expect(memcmp(&actual, &defaults[index], sizeof(actual)) == 0, "boot loads actual catalog defaults");
+      expect(
+        EEPROM.persistedAt(kEepromEffectSettingsAddr(index)) == defaults[index].brightness &&
+          EEPROM.persistedAt(kEepromEffectSettingsAddr(index) + 1) == defaults[index].speed &&
+          EEPROM.persistedAt(kEepromEffectSettingsAddr(index) + 2) == defaults[index].scale,
+        "boot persists actual catalog defaults"
+      );
+    }
+    expect(EEPROM.persistedAt(kEepromEffectSettingsCountAddr) == Effects::kCount, "all current slots initialized");
+  }
+
+  bool isEffectResetAddress(int address) {
+    return address == kEepromCurrentModeAddr || address == kEepromEffectSettingsCountAddr;
+  }
+
   void testFreshAndUnsupported() {
     uint8_t canonical[kEepromControlPadBindingSize];
     canonicalUnpaired(canonical);
@@ -91,7 +128,7 @@ namespace {
     expect(
       EEPROM.persistedAt(kEepromLayoutMetaAddr + sizeof(uint32_t)) == kEepromLayoutVersionCurrent &&
         persistedBindingEquals(canonical) && EEPROM.commitCount() == 1,
-      "fresh EEPROM writes v6 and canonical binding once"
+      "fresh EEPROM writes v7 and canonical binding once"
     );
 
     uint8_t unsupported[kEepromSize];
@@ -103,7 +140,7 @@ namespace {
     expect(
       EEPROM.persistedAt(kEepromLayoutMetaAddr + sizeof(uint32_t)) == kEepromLayoutVersionCurrent &&
         persistedBindingEquals(canonical) && EEPROM.persistedAt(511) == 0 && EEPROM.commitCount() == 1,
-      "unsupported layout resets to v6 defaults once"
+      "unsupported layout resets to v7 defaults once"
     );
   }
 
@@ -124,16 +161,30 @@ namespace {
     uint8_t canonical[kEepromControlPadBindingSize];
     canonicalUnpaired(canonical);
     expect(
-      equalBytes(persisted + 5, before + 5, 445) && equalBytes(persisted + 482, before + 482, 30) &&
-        persisted[4] == kEepromLayoutVersionCurrent &&
+      persisted[4] == kEepromLayoutVersionCurrent &&
         equalBytes(persisted + kEepromControlPadBindingAddr, canonical, sizeof(canonical)) && EEPROM.commitCount() == 1,
       "v5 migration preserves required bytes and commits once"
     );
+    for (int address = 5; address < kEepromSize; ++address) {
+      if (
+        isEffectResetAddress(address) || (address >= kEepromControlPadBindingAddr &&
+                                          address < kEepromControlPadBindingAddr + kEepromControlPadBindingSize)
+      )
+        continue;
+      expect(persisted[address] == before[address], "v5 preserves every unrelated byte");
+    }
+    expect(
+      store.readCurrentEffectId() == Effects::kDefaultId && persisted[kEepromEffectSettingsCountAddr] == 0,
+      "v5 stages selected default and invalidates old settings"
+    );
+    completeEffectDefaults(store);
+    expect(EEPROM.commitCount() == 2, "v5 boot completes defaults in second commit");
+    EEPROM.copyPersisted(persisted, sizeof(persisted));
     memcpy(parityImage, persisted, sizeof(parityImage));
     parityImageReady = true;
   }
 
-  void testV4MigrationAndV6Records() {
+  void testV4MigrationAndCurrentRecords() {
     uint8_t image[kEepromSize];
     memset(image, 0, sizeof(image));
     writeMagicAndVersion(image, kEepromLayoutVersionV4);
@@ -171,7 +222,7 @@ namespace {
     expect(
       EEPROM.persistedAt(4) == kEepromLayoutVersionCurrent && persistedBindingEquals(canonical) &&
         EEPROM.commitCount() == 1,
-      "v4 migration stages v6 binding and version in one commit"
+      "v4 migration stages v7 binding and version in one commit"
     );
     const WifiConfig& wifi = v4.readWifiConfig();
     const MqttConfig& mqtt = v4.readMqttConfig();
@@ -188,7 +239,7 @@ namespace {
         v4.readAutoOffMinutes() == 987 && !v4.readButtonEnabled() && v4.readGlobalPaletteId() == Palettes::Id::Xmas &&
         quietHours.enabled && quietHours.startMinutes == 101 && quietHours.endMinutes == 1234 &&
         audio.mode == AudioMode::Effect && audio.band == AudioBand::Treble && audio.amount == 213 &&
-        v4.readCurrentEffectId() == Effects::Id::Rainbow,
+        v4.readCurrentEffectId() == Effects::kDefaultId,
       "v4 migration preserves controller and notification fields"
     );
     expect(
@@ -198,22 +249,110 @@ namespace {
       "v4 migration intentionally resets brightness and effect settings"
     );
 
-    uint8_t validV6[kEepromSize];
-    memset(validV6, 0x5A, sizeof(validV6));
-    writeMagicAndVersion(validV6, kEepromLayoutVersionCurrent);
-    memcpy(validV6 + kEepromControlPadBindingAddr, canonical, sizeof(canonical));
-    EEPROM.loadPersisted(validV6, sizeof(validV6));
-    EepromStore valid;
-    expect(valid.init() && EEPROM.commitCount() == 0, "valid v6 does not rewrite EEPROM");
+    completeEffectDefaults(v4);
+    expect(EEPROM.commitCount() == 2, "v4 boot completes defaults in second commit");
 
-    validV6[kEepromControlPadBindingAddr] ^= 0x01;
-    EEPROM.loadPersisted(validV6, sizeof(validV6));
+    uint8_t current[kEepromSize];
+    memset(current, 0x5A, sizeof(current));
+    writeMagicAndVersion(current, kEepromLayoutVersionCurrent);
+    memcpy(current + kEepromControlPadBindingAddr, canonical, sizeof(canonical));
+    EEPROM.loadPersisted(current, sizeof(current));
+    EepromStore valid;
+    expect(valid.init() && EEPROM.commitCount() == 0, "valid v7 does not rewrite EEPROM");
+
+    current[kEepromControlPadBindingAddr] ^= 0x01;
+    EEPROM.loadPersisted(current, sizeof(current));
     EepromStore malformed;
     expect(
       malformed.init() && EEPROM.commitCount() == 0 && !malformed.readControlPadBinding().enabled &&
-        EEPROM.persistedAt(kEepromControlPadBindingAddr) == validV6[kEepromControlPadBindingAddr],
-      "malformed v6 binding reads safe-unpaired without reset"
+        EEPROM.persistedAt(kEepromControlPadBindingAddr) == current[kEepromControlPadBindingAddr],
+      "malformed v7 binding reads safe-unpaired without reset"
     );
+  }
+
+  void testV6MigrationAndBoot() {
+    uint8_t image[kEepromSize];
+    for (int address = 0; address < kEepromSize; ++address) {
+      image[address] = static_cast<uint8_t>(address * 37 + 19);
+    }
+    writeMagicAndVersion(image, kEepromLayoutVersionV6);
+    const auto binding = pairedBinding();
+    expect(
+      ControlPadProtocol::encodeBindingRecord(binding, image + kEepromControlPadBindingAddr),
+      "v6 paired binding fixture encodes"
+    );
+    image[kEepromEffectSettingsCountAddr] = 22;
+    image[kEepromCurrentModeAddr] = 21;
+    EEPROM.loadPersisted(image, sizeof(image));
+    EepromStore store;
+    expect(store.init() && EEPROM.commitCount() == 1, "v6 migration commits once");
+    uint8_t persisted[kEepromSize];
+    EEPROM.copyPersisted(persisted, sizeof(persisted));
+    for (int address = 0; address < kEepromSize; ++address) {
+      if (address == 4 || isEffectResetAddress(address)) continue;
+      expect(persisted[address] == image[address], "v6 migration preserves every unrelated byte");
+    }
+    expect(
+      persisted[4] == 7 && persisted[kEepromEffectSettingsCountAddr] == 0 &&
+        store.readCurrentEffectId() == Effects::kDefaultId && store.readControlPadBinding().enabled,
+      "v6 migration invalidates old slots and retains paired binding"
+    );
+    completeEffectDefaults(store);
+    expect(EEPROM.commitCount() == 2, "v6 boot completes defaults in second commit");
+    EEPROM.copyPersisted(persisted, sizeof(persisted));
+    for (int address = 0; address < kEepromSize; ++address) {
+      if (
+        address == 4 || isEffectResetAddress(address) ||
+        (address >= kEepromEffectSettingsBase && address < kEepromEffectSettingsAddr(Effects::kCount))
+      )
+        continue;
+      expect(persisted[address] == image[address], "full v6 boot preserves every non-target byte");
+    }
+    EEPROM.loadPersisted(persisted, sizeof(persisted));
+    EepromStore reboot;
+    expect(reboot.init(), "current v7 reboot succeeds");
+    completeEffectDefaults(reboot);
+    uint8_t rebooted[kEepromSize];
+    EEPROM.copyPersisted(rebooted, sizeof(rebooted));
+    expect(
+      EEPROM.commitCount() == 0 && equalBytes(rebooted, persisted, sizeof(persisted)),
+      "current v7 full boot is idempotent"
+    );
+
+    for (uint8_t version = 4; version <= 6; ++version) {
+      writeMagicAndVersion(image, version);
+      EEPROM.loadPersisted(image, sizeof(image));
+      EEPROM.failNextCommit();
+      EepromStore failed;
+      expect(
+        !failed.init() && !failed.isReady() && EEPROM.commitCount() == 1, "failed migration leaves store unavailable"
+      );
+      EEPROM.copyPersisted(rebooted, sizeof(rebooted));
+      expect(equalBytes(rebooted, image, sizeof(image)), "failed migration preserves entire persisted image");
+      EEPROM.loadPersisted(rebooted, sizeof(rebooted));
+      EepromStore retry;
+      expect(retry.init(), "migration retries after reboot");
+      completeEffectDefaults(retry);
+    }
+
+    writeMagicAndVersion(image, 6);
+    EEPROM.loadPersisted(image, sizeof(image));
+    EepromStore interrupted;
+    expect(interrupted.init(), "interrupted default initialization fixture migrates");
+    EEPROM.copyPersisted(persisted, sizeof(persisted));
+    EEPROM.failNextCommit();
+    EffectSettings defaults[Effects::kCount] = {};
+    interrupted.ensureEffectSettings(defaults);
+    EEPROM.copyPersisted(rebooted, sizeof(rebooted));
+    expect(
+      equalBytes(rebooted, persisted, sizeof(persisted)) && rebooted[kEepromEffectSettingsCountAddr] == 0,
+      "failed defaults commit retains persisted zero count for retry"
+    );
+    EEPROM.loadPersisted(rebooted, sizeof(rebooted));
+    EepromStore retryDefaults;
+    expect(retryDefaults.init() && EEPROM.commitCount() == 0, "v7 zero count resumes without migration");
+    completeEffectDefaults(retryDefaults);
+    expect(EEPROM.commitCount() == 1, "resumed boot commits defaults once");
   }
 
   void testFailedMigrationAndBindingRollback() {
@@ -265,14 +404,15 @@ int main(int argc, char* argv[]) {
   }
   testFreshAndUnsupported();
   testV5Migration();
-  testV4MigrationAndV6Records();
+  testV4MigrationAndCurrentRecords();
+  testV6MigrationAndBoot();
   testFailedMigrationAndBindingRollback();
   if (parityPath != nullptr) {
     FILE* parityFile = fopen(parityPath, "wb");
     expect(
       parityImageReady && parityFile != nullptr &&
         fwrite(parityImage, 1, sizeof(parityImage), parityFile) == sizeof(parityImage),
-      "writes deterministic v6 parity image"
+      "writes deterministic v7 parity image"
     );
     if (parityFile != nullptr) fclose(parityFile);
   }
@@ -280,6 +420,6 @@ int main(int argc, char* argv[]) {
     printf("FAILED: %d EEPROM fixture assertion(s)\n", failures);
     return 1;
   }
-  printf("PASS: EEPROM v6 migration and binding rollback fixtures\n");
+  printf("PASS: EEPROM v7 migration, catalog defaults and binding rollback fixtures\n");
   return 0;
 }

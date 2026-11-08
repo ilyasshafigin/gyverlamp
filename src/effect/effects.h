@@ -10,7 +10,6 @@
 #include "catalog/liquid_lamp.h"
 #include "catalog/living_membrane.h"
 #include "catalog/matrix.h"
-#include "catalog/nexus.h"
 #include "catalog/northern_lights.h"
 #include "catalog/noise.h"
 #include "catalog/octopus.h"
@@ -20,5 +19,4 @@
 #include "catalog/stained_glass.h"
 #include "catalog/thunderstorm.h"
 #include "catalog/twinkles.h"
-#include "catalog/velvet_folds.h"
 #include "catalog/warmlight.h"
